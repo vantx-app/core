@@ -165,3 +165,14 @@
 .animate-fade-in-delayed {
   animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) 400ms both;
 }
+
+/* Reducir el espacio superior excesivo en las páginas del dashboard */
+.group main > div[class*="mx-auto"] {
+  padding-top: 0.75rem !important;
+}
+
+@media (min-width: 1024px) {
+  .group main > div[class*="mx-auto"] {
+    padding-top: 1rem !important;
+  }
+}

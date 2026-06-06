@@ -247,26 +247,11 @@ function ReportsPageContent() {
 
   return (
     <div
-      className={`p-6 max-w-7xl mx-auto ${activeTab === "daily"
-        ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:flex lg:flex-col lg:space-y-4"
-        : "space-y-6"
+      className={`p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${activeTab === "daily"
+        ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:space-y-4"
+        : ""
         }`}
     >
-      {/* Volver */}
-      <div>
-        {isManagementRole ? (
-          <BackButton
-            fallbackHref={
-              targetOrgId ? `/admin?targetOrgId=${targetOrgId}` : "/admin"
-            }
-          >
-            Volver a administración
-          </BackButton>
-        ) : (
-          <BackButton fallbackHref="/">Volver al Dashboard</BackButton>
-        )}
-      </div>
-
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-base-100/50 backdrop-blur-md p-6 rounded-2xl border border-base-200">
         <div>

@@ -10,7 +10,6 @@ import {
   Loader2,
   Maximize2,
   Minimize2,
-  ChevronDown,
   Gauge,
   Zap,
   Truck,
@@ -55,7 +54,6 @@ export default function TripsHistoryView({
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isListExpanded, setIsListExpanded] = useState(true);
 
   const groupedTrips = useMemo(() => {
     const groups: Record<string, VehicleTripsTrip[]> = {};
@@ -483,72 +481,19 @@ export default function TripsHistoryView({
         <div
           className={`
           ${isFullscreen ? "hidden" : "lg:hidden"} 
-          mt-3 order-2 bg-base-100/80 backdrop-blur-md border border-base-200 rounded-2xl overflow-hidden shadow-md
+          ${selectedTripId !== null ? "hidden" : "flex flex-col bg-base-100/50 border border-base-200 rounded-2xl overflow-hidden shadow-sm p-4 space-y-3"}
         `}
         >
-          <button
-            onClick={() => setIsListExpanded((prev) => !prev)}
-            className="w-full flex items-center justify-between px-4 py-3.5 text-left select-none"
-            aria-expanded={isListExpanded}
-          >
-            <div className="flex items-center gap-2.5">
-              {selectedTrip && (
-                <span
-                  className={`size-2 rounded-full shrink-0 ${!selectedTrip.endTime ? "bg-blue-500 animate-pulse" : "bg-base-300"}`}
-                />
-              )}
-              <div>
-                <span className="font-bold text-sm text-base-content/90">
-                  {isListExpanded
-                    ? "Selecciona un Recorrido"
-                    : selectedTrip
-                      ? "Viaje Seleccionado"
-                      : "Historial de Viajes"}
-                </span>
-                {selectedTrip && !isListExpanded && (
-                  <p className="text-[10px] text-base-content/45 mt-0.5 flex items-center gap-1.5 flex-wrap">
-                    <span className="font-semibold text-primary">
-                      {formatTripDate(selectedTrip.startTime)}
-                    </span>
-                    <span>·</span>
-                    <span className="flex items-center gap-0.5">
-                      <Clock className="size-2.5" />
-                      {formatTripDuration(
-                        selectedTrip.startTime,
-                        selectedTrip.endTime,
-                      )}
-                    </span>
-                    {trips.length > 1 && (
-                      <>
-                        <span>·</span>
-                        <span className="font-semibold text-base-content/60">
-                          {trips.length} viajes
-                        </span>
-                      </>
-                    )}
-                  </p>
-                )}
-                {isListExpanded && (
-                  <p className="text-[10px] text-base-content/45 mt-0.5">
-                    {trips.length} viajes registrados en total
-                  </p>
-                )}
-              </div>
-            </div>
-            <ChevronDown
-              className={`size-4 text-base-content/40 transition-transform duration-200 shrink-0 ${isListExpanded ? "rotate-180" : ""}`}
-            />
-          </button>
-
-          <div
-            className={`
-            overflow-hidden transition-all duration-300 ease-in-out
-            ${isListExpanded ? "max-h-[50svh] opacity-100 p-3 border-t border-base-200/60" : "max-h-0 opacity-0 p-0 border-t-0 border-transparent"}
-          `}
-          >
-            <div className="space-y-2.5 max-h-[calc(50svh-24px)] overflow-y-auto font-sans">
-              {renderTripList()}
-            </div>
+          <div className="shrink-0 pb-2 border-b border-base-200">
+            <h2 className="font-bold text-sm text-base-content/80">
+              {isDriverCentric ? "Tus Recorridos" : "Lista de Recorridos"}
+            </h2>
+            <p className="text-[10px] text-base-content/50 mt-0.5">
+              Selecciona un viaje para ver su reconstrucción de ruta.
+            </p>
+          </div>
+          <div className="space-y-2.5">
+            {renderTripList()}
           </div>
         </div>
 
@@ -564,7 +509,7 @@ export default function TripsHistoryView({
             }
             ${
               !isFullscreen
-                ? "order-1 h-[45svh] min-h-[250px] lg:h-full lg:min-h-0 lg:order-2"
+                ? `${selectedTripId !== null ? "flex h-[65svh] min-h-[350px]" : "hidden"} lg:flex lg:h-full lg:min-h-0 lg:order-2`
                 : ""
             }
           `}
@@ -576,6 +521,21 @@ export default function TripsHistoryView({
               isFullscreen={isFullscreen}
             />
           </div>
+
+          {/* Botón Volver (Móvil, cuando hay viaje seleccionado y no está en pantalla completa) */}
+          {!isFullscreen && selectedTripId && (
+            <button
+              onClick={() => {
+                setSelectedTripId(null);
+                setRouteCoordinates([]);
+                setIsLoadingRoute(false);
+              }}
+              className="absolute top-4 left-4 z-[45] btn btn-sm gap-1.5 bg-base-100/90 backdrop-blur-md border border-base-200 shadow-md hover:bg-base-100 text-base-content lg:hidden"
+            >
+              <ArrowLeft className="size-4" />
+              <span>Volver</span>
+            </button>
+          )}
 
           {/* Cabecera en pantalla completa */}
           {isFullscreen && (
