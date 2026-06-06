@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  vantx_server:
+    # Descarga tu imagen desde GitHub (puedes usar una rama/tag específica como :dev)
+    image: ghcr.io/vantx-app/crm-api:latest
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 450M
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m' # Máximo 10 MB por archivo de log
+        max-file: '3' # Máximo 3 archivos (rotación)
+    restart: 'no'
+    env_file:
+      - .env # Este .env vive en la EC2, no en GitHub
+    environment:
+      - NODE_ENV=development # Mantiene logs detallados y mensajes de error explícitos
+    ports:
+      # La API se ata a localhost para que solo Nginx la pueda ver
+      - '127.0.0.1:8000:8000'
+      # El Ingestor TCP SÍ se abre al mundo para que los Teltonika se conecten
+      - '0.0.0.0:9000:9000'
+    # NO HAY VOLUMENES DE CÓDIGO. Corre puramente la imagen de GHCR.
+    depends_on:
+      vantx_db:
+        condition: service_healthy
+
+  vantx_db:
+    image: postgres:17
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+    restart: 'no'
+    env_file:
+      - .env
+    environment:
+      # Mapeamos tus variables a las que la imagen oficial entiende
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+      - DB_PORT=${DB_PORT}
+    volumes:
+      - db-data-dev:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:${DB_PORT:-5432}:5432' # Restringido a localhost por seguridad
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${DB_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data-dev:
+
+networks:
+  vantx-network:
+    external: true

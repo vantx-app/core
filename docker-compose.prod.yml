@@ -1,0 +1,118 @@
+services:
+  # ----------------------------------
+  # FRONTEND (Next.js Standalone)
+  # ----------------------------------
+  vantx_frontend:
+    image: ghcr.io/vantx-app/dashboard:latest
+    container_name: vantx_frontend
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - INTERNAL_API_URL=http://vantx_server:8000
+    ports:
+      - '127.0.0.1:3000:3000'
+    depends_on:
+      - vantx_server
+
+  # ----------------------------------
+  # BACKEND (NestJS API)
+  # ----------------------------------
+  vantx_server:
+    image: ghcr.io/vantx-app/crm-api:latest
+    container_name: vantx_server
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 750M
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=512
+    ports:
+      - '127.0.0.1:8000:8000'
+    depends_on:
+      vantx_db:
+        condition: service_healthy
+
+  # ----------------------------------
+  # TELEMETRY TCP INGESTOR (Teltonika listener)
+  # ----------------------------------
+  vantx_ingestor:
+    image: ghcr.io/vantx-app/telemetry-ingestor:latest
+    container_name: vantx_ingestor
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 500M
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - INGESTOR_PORT=9000
+      - INGESTOR_HOST=0.0.0.0
+    ports:
+      - '0.0.0.0:9000:9000'
+    depends_on:
+      vantx_db:
+        condition: service_healthy
+
+  # ----------------------------------
+  # BASE DE DATOS (PostgreSQL 17)
+  # ----------------------------------
+  vantx_db:
+    image: postgres:17-alpine
+    container_name: vantx_db
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 400M
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+      - vantx_prod_db_data:/var/lib/postgresql/data
+    ports:
+      - '127.0.0.1:${DB_PORT:-5432}:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${DB_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  vantx_prod_db_data:
+
+networks:
+  vantx-network:
+    driver: bridge
