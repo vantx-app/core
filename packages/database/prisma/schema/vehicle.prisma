@@ -1,0 +1,35 @@
+model Vehicle {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  orgId                 String                 @db.Uuid
+  imei                  String?                @unique
+  alias                 String?
+  plateNumber           String
+  vin                   String?
+  make                  String?
+  model                 String?
+  year                  Int?
+  status                VehicleStatus          @default(ACTIVE)
+  subscriptionTier      SubscriptionTier       @default(NONE)
+  deviceModel           String                 @default("FMC003")
+  trialActivated        Boolean                @default(false)
+  trialExpiresAt        DateTime?
+  scoringProfileId      String?                @db.Uuid
+  category              VehicleCategory        @default(PASSENGER)
+  fuelType              FuelType?
+
+  createdAt             DateTime               @default(now())
+  deviceProfile         String                 @default("TELTONIKA_STANDARD")
+  initialOdometer       Float                  @default(0)
+  assignments           Assignment[]
+  DailyTelemetryRollup  DailyTelemetryRollup[]
+  telemetryLogs         TelemetryLog[]
+  TrackingLink          TrackingLink[]
+  trips                 Trip[]
+  organization          Organization           @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  scoringProfile        ScoringProfile?        @relation(fields: [scoringProfileId], references: [id])
+  VehicleGlobalStats    VehicleGlobalStats?
+  liveState             VehicleLiveState?
+  vehicleScoreSnapshots VehicleScoreSnapshot[]
+  
+  @@unique([orgId, plateNumber])
+}

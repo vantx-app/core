@@ -1,0 +1,33 @@
+model DailyTelemetryRollup {
+  id                       String   @id @default(uuid()) @db.Uuid
+  date                     DateTime @db.Date
+  vehicleId                String   @db.Uuid
+  driverId                 String?  @db.Uuid
+  totalKm                  Float    @default(0)
+  totalEngineHours         Float    @default(0)
+  idlingHours              Float    @default(0)
+  overspeedCount           Int      @default(0)
+  overspeedSeverity        Float    @default(0)
+  brakingCount             Int      @default(0)
+  brakingSeverity          Float    @default(0)
+  corneringCount           Int      @default(0)
+  corneringSeverity        Float    @default(0)
+  accelerationCount        Int      @default(0)
+  accelerationSeverity     Float    @default(0)
+  highRpmCount             Int      @default(0)
+  highRpmSeverity          Float    @default(0)
+  coldEngineStrainCount    Int      @default(0)
+  coastingInNeutralCount   Int      @default(0)
+  engineLuggingCount       Int      @default(0)
+  highLoadStrainCount      Int      @default(0)
+  criticalOverheatingCount Int      @default(0)
+  activeFaultCodesCount    Int      @default(0)
+  deviceUnpluggedCount     Int      @default(0)
+  driver                   Driver?  @relation(fields: [driverId], references: [id])
+  vehicle                  Vehicle  @relation(fields: [vehicleId], references: [id])
+
+  @@unique([date, vehicleId, driverId])
+  @@index([date])
+  @@index([vehicleId])
+  @@index([driverId])
+}

@@ -1,0 +1,62 @@
+enum DriverStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum VehicleStatus {
+  ACTIVE
+  IN_MAINTENANCE
+  DECOMMISSIONED
+}
+
+enum VehicleMovementStatus {
+  STOPPED
+  MOVING
+  IDLING
+  EXCESSIVE_IDLING
+  UNPLUGGED
+}
+
+enum Role {
+  SUPER_ADMIN
+  OWNER
+  DRIVER
+  ADMIN
+}
+
+enum DriverDocumentType {
+  NATIONAL_ID
+  DRIVERS_LICENSE
+  POLICE_RECORD
+}
+
+enum DriverDocumentStatus {
+  PENDING_UPLOAD
+  PENDING_VALIDATION
+  APPROVED
+  PENDING_MANUAL_REVIEW
+  REJECTED
+}
+
+enum SubscriptionTier {
+  NONE
+  ACTIVE
+}
+
+enum VehicleCategory {
+  HEAVY_DUTY
+  LIGHT_COMMERCIAL
+  PASSENGER
+  MACHINERY
+}
+
+enum FuelType {
+  GASOLINE
+  DIESEL
+  ELECTRIC
+  HYBRID
+}
+
+
+
+

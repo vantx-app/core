@@ -1,0 +1,31 @@
+name: Enforce branch naming
+
+on:
+  push:
+    branches-ignore:
+      - main
+      - develop
+      - staging
+  pull_request:
+
+jobs:
+  check-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate branch name
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+
+          echo "Branch name: $BRANCH_NAME"
+
+          # Allowed pattern: type/TICKET-ID
+          if [[ ! "$BRANCH_NAME" =~ ^(feature|hotfix|fix|chore|docs|test|style|refactor)\/[A-Z]+-[0-9]+$ ]]; then
+            echo "❌ Invalid branch name!"
+            echo "Expected format:"
+            echo "  <type>/<TICKET-ID>"
+            echo "Example:"
+            echo "  feature/TCM-16"
+            exit 1
+          fi
+
+          echo "✅ Branch name is valid."

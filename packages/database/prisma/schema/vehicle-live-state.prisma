@@ -1,0 +1,13 @@
+model VehicleLiveState {
+  vehicleId     String                @id @db.Uuid
+  lastLat       Float
+  lastLng       Float
+  lastAngle     Int                   @default(0) @db.SmallInt
+  lastSpeed     Int                   @default(0) @db.SmallInt
+  lastIgnition  Boolean               @default(false)
+  unplugged     Boolean               @default(false)
+  currentStatus VehicleMovementStatus @default(STOPPED)
+  lastOdometer  Float?
+  lastUpdate    DateTime              @default(now())
+  vehicle       Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+}

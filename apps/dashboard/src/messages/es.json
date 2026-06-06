@@ -1,0 +1,112 @@
+{
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "loading": "Cargando...",
+    "error": "Ocurrió un error",
+    "success": "Acción completada con éxito",
+    "back": "Volver",
+    "confirm": "Confirmar"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "map": "Mapa",
+    "marketplace": "Marketplace",
+    "billing": "Facturación",
+    "account": "Cuenta",
+    "admin": "Administración",
+    "reports": "Reportes"
+  },
+  "billing": {
+    "title": "Suscripción y Facturación",
+    "subtitle": "Desbloquee telemetría completa, seguimiento en vivo y contratación de conductores.",
+    "current_status": "Estado Actual",
+    "active": "Activa",
+    "inactive": "Inactiva",
+    "pending": "Activación Pendiente",
+    "expired": "Expirada",
+    "expires_at": "Expira el",
+    "payment_method": "Método de Pago",
+    "pricing_title": "Elija su plan",
+    "pricing_subtitle": "Seleccione una pasarela de pago o transferencia bancaria local.",
+    "plan_name": "Premium Flota y Reclutamiento",
+    "plan_price": "$49.00",
+    "plan_period": "/mes",
+    "pay_stripe": "Pagar con Stripe",
+    "pay_pf": "Pagar con PágueloFácil",
+    "pay_offline": "Transferencia / Yappy",
+    "offline_instructions_title": "Transferencias Locales en Panamá",
+    "offline_instructions_desc": "Envíe su pago a una de nuestras cuentas corporativas y suba el número de referencia de la transacción abajo.",
+    "bank_details": "Banco General - Cuenta de Ahorros - Cuenta #03-84-01-234567-8 - Vantx S.A.",
+    "yappy_details": "Directorio Yappy: @vantxapp",
+    "reference_label": "Número de Referencia de Transacción",
+    "reference_placeholder": "Ej: Ref-102938",
+    "submit_reference": "Enviar Comprobante de Pago",
+    "ref_success": "¡Referencia recibida! Un administrador activará su suscripción en breve."
+  },
+  "marketplace": {
+    "title": "Bolsa de Empleo B2B",
+    "subtitle": "Conecte camiones libres con conductores calificados.",
+    "create_listing": "Publicar Vehículo",
+    "active_listings": "Trabajos Activos",
+    "my_listings": "Mis Publicaciones",
+    "applicants": "Postulantes",
+    "talent_directory": "Directorio de Talentos",
+    "search_placeholder": "Buscar conductores por nombre o licencia...",
+    "search_listings_placeholder": "Buscar vacantes por nombre, descripción o empresa...",
+    "form": {
+      "title": "Publicar Vehículo en el Marketplace",
+      "subtitle": "Solo se pueden publicar vehículos de su flota que no estén asignados actualmente.",
+      "job_title": "Título del Puesto",
+      "job_title_placeholder": "Ej: Conductor de Camión Pesado - Ruta Ciudad de Panamá",
+      "description": "Descripción del Trabajo",
+      "description_placeholder": "Describa las tareas, rutas, horarios...",
+      "compensation": "Compensación / Pago",
+      "compensation_placeholder": "Ej: $600 USD semanales + bonos",
+      "route_type": "Tipo de Ruta",
+      "min_score": "Puntaje Mínimo de Seguridad (Opcional)",
+      "required_license": "Tipo de Licencia Requerida (Opcional)",
+      "required_license_placeholder": "Ej: Comercial Tipo I",
+      "requirements": "Requisitos Adicionales (Uno por línea)",
+      "select_vehicle": "Seleccionar Vehículo",
+      "submit": "Publicar Oferta"
+    },
+    "card": {
+      "route": "Ruta",
+      "pay": "Pago",
+      "min_score": "Puntaje Mín.",
+      "license": "Licencia",
+      "apply_now": "Postularse",
+      "applied": "Postulado",
+      "view_applicants": "Ver Postulantes",
+      "status": "Estado"
+    },
+    "profile": {
+      "privacy_title": "Configuración de Reclutamiento y Privacidad",
+      "privacy_desc": "Configure si otras flotas pueden descubrir su perfil y ver sus puntajes de conducción telemática.",
+      "share_scores": "Compartir mis puntajes de conducción públicamente en el Directorio de Talentos",
+      "license_type": "Mi Tipo de Licencia de Conducir",
+      "license_placeholder": "Ej: Comercial Tipo F",
+      "save_success": "¡Configuración de perfil actualizada con éxito!"
+    },
+    "applications": {
+      "title": "Postulaciones de Empleo",
+      "driver_name": "Conductor",
+      "phone": "Teléfono",
+      "safety_score": "Seguridad",
+      "eco_score": "Eco",
+      "status": "Estado",
+      "actions": "Acciones",
+      "approve": "Aprobar / Contratar",
+      "reject": "Rechazar",
+      "no_applications": "Aún no se han recibido postulaciones para esta oferta.",
+      "approved_success": "¡Conductor contratado! Asignación de vehículo creada en el CRM.",
+      "rejected_success": "Postulación rechazada."
+    }
+  },
+  "gating": {
+    "locked_title": "Función Bloqueada",
+    "locked_desc": "Su organización no tiene una suscripción activa. El acceso a mapas de telemetría en tiempo real, rutas históricas y emparejamiento de conductores está restringido.",
+    "go_to_billing": "Ir a Facturación y Suscripción"
+  }
+}

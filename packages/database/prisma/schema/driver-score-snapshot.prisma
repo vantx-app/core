@@ -1,0 +1,16 @@
+model DriverScoreSnapshot {
+  id           String @id @default(uuid()) @db.Uuid
+  driverId     String @db.Uuid
+  weekNumber   Int
+  year         Int
+  safetyScore  Float
+  ecoScore     Float
+  assetScore   Float  @default(100)
+  overallScore Float  @default(100)
+  totalKm      Float  @default(0)
+  totalHours   Float  @default(0)
+  breakdown    Json?
+  driver       Driver @relation(fields: [driverId], references: [id])
+
+  @@unique([driverId, weekNumber, year])
+}

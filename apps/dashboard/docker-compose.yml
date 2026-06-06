@@ -1,0 +1,11 @@
+services:
+  frontend:
+    image: ghcr.io/vantx-app/dashboard:latest
+    container_name: vantx_frontend
+    network_mode: host
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - INTERNAL_API_URL=http://127.0.0.1:8000
+    restart: always

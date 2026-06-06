@@ -1,0 +1,13 @@
+model Organization {
+  id                    String           @id @default(uuid()) @db.Uuid
+  name                  String
+  createdAt             DateTime         @default(now())
+  stripeCustomerId      String?
+  subscriptionStatus    String           @default("INACTIVE")
+  freeMatchCredits      Int              @default(0)
+  paymentMethod         String?
+  subscriptionExpiresAt DateTime?
+  paymentReceiptKey     String?
+  users                 User[]
+  vehicles              Vehicle[]
+}

@@ -1,0 +1,13 @@
+model DriverGlobalStats {
+  id                 String   @id @default(uuid()) @db.Uuid
+  driverId           String   @unique @db.Uuid
+  totalKm            Float    @default(0)
+  totalHours         Float    @default(0)
+  totalSnapshots     Int      @default(0)
+  globalSafetyScore  Float    @default(100)
+  globalEcoScore     Float    @default(100)
+  globalAssetScore   Float    @default(100)
+  globalOverallScore Float    @default(100)
+  lastUpdated        DateTime @updatedAt
+  driver             Driver   @relation(fields: [driverId], references: [id])
+}

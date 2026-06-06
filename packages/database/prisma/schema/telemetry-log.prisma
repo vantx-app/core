@@ -1,0 +1,39 @@
+model TelemetryLog {
+  id                String                @id @default(uuid()) @db.Uuid
+  vehicleId         String                @db.Uuid
+  timestamp         DateTime
+  latitude          Float
+  longitude         Float
+  angle             Int                   @default(0) @db.SmallInt
+  altitude          Int?                  @db.SmallInt
+  satellites        Int?                  @db.SmallInt
+  speed             Int                   @default(0) @db.SmallInt
+  gpsSpeed          Int                   @default(0) @db.SmallInt
+  rpm               Int?                  @db.SmallInt
+  engineLoad        Int?                  @db.SmallInt
+  coolantTemp       Int?                  @db.SmallInt
+  powerSupply       Float?
+  harshAcceleration Int                   @default(0) @db.SmallInt
+  harshBraking      Int                   @default(0) @db.SmallInt
+  harshCornering    Int                   @default(0) @db.SmallInt
+  harshAccelerationDuration Int?
+  harshBrakingDuration      Int?
+  harshCorneringDuration    Int?
+  harshAccelerationAverage  Int?
+  harshBrakingAverage       Int?
+  harshCorneringAverage     Int?
+  ignition          Boolean               @default(false)
+  movement          Boolean               @default(false)
+  unplugged         Boolean               @default(false)
+  status            VehicleMovementStatus @default(STOPPED)
+  odometer          Float?
+  dtcCount          Int                   @default(0) @db.SmallInt
+  faultCodes        String?
+  vin               String?               @db.VarChar(50)
+  extra             Json?
+  tripId            String?               @db.Uuid
+  trip              Trip?                 @relation(fields: [tripId], references: [id])
+  vehicle           Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId, timestamp(sort: Desc)])
+}
