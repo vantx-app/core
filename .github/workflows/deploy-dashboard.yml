@@ -12,6 +12,7 @@ on:
       - 'package-lock.json'
       - 'turbo.json'
       - '.github/workflows/deploy-dashboard.yml'
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
