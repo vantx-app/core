@@ -21,6 +21,7 @@ import { RulesEngineService } from './rules-engine/rules-engine.service';
 import { ScoringCronService } from './scoring-cron/scoring-cron.service';
 import { ScoringController } from './scoring-cron/scroring-cron.controller';
 import { AssignmentService } from './assignment/assignment.service';
+import { HereClientService } from './scoring-cron/here-client.service';
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from './common/cache.module';
@@ -29,6 +30,7 @@ import { DriverDocumentsModule } from './driver-documents/driver-documents.modul
 import { BillingModule } from './modules/billing/billing.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { HttpModule } from '@nestjs/axios';
 
 @Module({
   controllers: [
@@ -50,6 +52,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     DriversService,
     RulesEngineService,
     ScoringCronService,
+    HereClientService,
     AssignmentService,
   ],
   imports: [
@@ -65,6 +68,7 @@ import { HttpExceptionFilter } from './common/filters/http-exception.filter';
     InvitationsModule,
     DriverDocumentsModule,
     BillingModule,
+    HttpModule,
   ],
 })
 export class AppModule {}

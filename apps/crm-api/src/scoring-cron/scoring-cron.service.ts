@@ -3,7 +3,9 @@ import { Cron } from '@nestjs/schedule';
 import { RuleEngineConfig } from './scoring.interfaces';
 import { PrismaService } from 'src/prisma.service';
 import { RulesEngineService } from 'src/rules-engine/rules-engine.service';
-import { Prisma } from '@prisma/client';
+import { Prisma, TelemetryLog, VehicleCategory } from '@prisma/client';
+import { ConfigService } from '@nestjs/config';
+import { HereClientService } from './here-client.service';
 
 @Injectable()
 export class ScoringCronService {
@@ -48,7 +50,9 @@ export class ScoringCronService {
   constructor(
     private prisma: PrismaService,
     private rulesEngine: RulesEngineService,
-  ) {}
+    private configService: ConfigService,
+    private hereClient: HereClientService,
+  ) { }
 
   // =====================================================================
   // 1. EL ROLLUP DIARIO (Extrae millones de filas y las convierte en 1 fila)
@@ -60,6 +64,7 @@ export class ScoringCronService {
     this.logger.log(
       'Iniciando Rollup Diario de Telemetría Orientado a Perfiles (Modo t3.small)...',
     );
+    this.hereClient.resetSuspension();
 
     let dateStr: string;
 
@@ -138,7 +143,7 @@ export class ScoringCronService {
           take: this.BATCH_SIZE,
           skip: cursor ? 1 : 0,
           cursor: cursor ? { id: cursor } : undefined,
-          select: { id: true },
+          select: { id: true, category: true },
         });
 
         if (vehicles.length === 0) break;
@@ -146,6 +151,9 @@ export class ScoringCronService {
         cursor = vehicles[vehicles.length - 1].id;
 
         const vehicleIds = vehicles.map((v) => v.id);
+        const vehicleCategoryMap = new Map<string, VehicleCategory>(
+          vehicles.map((v) => [v.id, v.category]),
+        );
 
         // --- 4. EJECUCIÓN DEL SQL CRUDO ---
         this.logger.log(`Paso 2: Procesando telemetría para ${dateStr}...`);
@@ -308,6 +316,134 @@ export class ScoringCronService {
             "activeFaultCodesCount" = EXCLUDED."activeFaultCodesCount",
             "deviceUnpluggedCount" = EXCLUDED."deviceUnpluggedCount";
         `;
+
+        const apiKey = this.configService.get<string>('HERE_API_KEY');
+
+        const startOfDayPanama = new Date(`${dateStr}T00:00:00.000-05:00`);
+        const endOfDayPanama = new Date(`${dateStr}T23:59:59.999-05:00`);
+        const rollupDate = new Date(`${dateStr}T00:00:00.000Z`);
+
+        this.logger.log(
+          `Evaluando excesos de velocidad para el lote de ${vehicleIds.length} vehículos...`,
+        );
+
+        // Paso 2.1: Consultas masivas para evitar el problema N+1
+        const allLogs = await this.prisma.telemetryLog.findMany({
+          where: {
+            vehicleId: { in: vehicleIds },
+            timestamp: {
+              gte: startOfDayPanama,
+              lte: endOfDayPanama,
+            },
+          },
+          orderBy: { timestamp: 'asc' },
+        });
+
+        const allAssignments = await this.prisma.assignment.findMany({
+          where: {
+            vehicleId: { in: vehicleIds },
+            from: { lte: endOfDayPanama },
+            OR: [{ to: null }, { to: { gte: startOfDayPanama } }],
+          },
+          orderBy: { from: 'asc' },
+        });
+
+        // Agrupar en memoria por vehicleId
+        const logsByVehicleMap = new Map<string, TelemetryLog[]>();
+        for (const log of allLogs) {
+          if (!logsByVehicleMap.has(log.vehicleId)) {
+            logsByVehicleMap.set(log.vehicleId, []);
+          }
+          logsByVehicleMap.get(log.vehicleId)!.push(log);
+        }
+
+        const assignmentsByVehicleMap = new Map<
+          string,
+          typeof allAssignments
+        >();
+        for (const ass of allAssignments) {
+          if (!assignmentsByVehicleMap.has(ass.vehicleId)) {
+            assignmentsByVehicleMap.set(ass.vehicleId, []);
+          }
+          assignmentsByVehicleMap.get(ass.vehicleId)!.push(ass);
+        }
+
+        for (const vehicleId of vehicleIds) {
+          const logs = logsByVehicleMap.get(vehicleId) || [];
+          if (logs.length === 0) continue;
+
+          const assignments = assignmentsByVehicleMap.get(vehicleId) || [];
+
+          const driverLogsMap = new Map<string | null, TelemetryLog[]>();
+          for (const log of logs) {
+            const logTime = log.timestamp.getTime();
+            const matchedAssignment = assignments.find((a) => {
+              const fromTime = new Date(a.from).getTime();
+              const toTime = a.to ? new Date(a.to).getTime() : Infinity;
+              return fromTime <= logTime && toTime >= logTime;
+            });
+            const driverId = matchedAssignment?.driverId || null;
+
+            if (!driverLogsMap.has(driverId)) {
+              driverLogsMap.set(driverId, []);
+            }
+            driverLogsMap.get(driverId)!.push(log);
+          }
+
+          const category = vehicleCategoryMap.get(vehicleId) || VehicleCategory.PASSENGER;
+
+          for (const [driverId, driverLogs] of driverLogsMap.entries()) {
+            let totalOverspeedCount = 0;
+            let totalOverspeedSeverity = 0;
+
+            const tripLogsMap = new Map<string | null, TelemetryLog[]>();
+            for (const log of driverLogs) {
+              const tripId = log.tripId;
+              if (!tripLogsMap.has(tripId)) {
+                tripLogsMap.set(tripId, []);
+              }
+              tripLogsMap.get(tripId)!.push(log);
+            }
+
+            for (const [tripId, tripLogs] of tripLogsMap.entries()) {
+              // Ahorrar presupuesto: Usar fallback simple si:
+              // - No hay conductor asignado (driverId === null)
+              // - No pertenece a un viaje formal (tripId === null)
+              // - La API de HERE no está configurada (no apiKey)
+              if (driverId === null || tripId === null || !apiKey) {
+                const fallbackResult = this.fallbackOverspeeding(
+                  tripLogs,
+                  th.overspeed,
+                );
+                totalOverspeedCount += fallbackResult.overspeedCount;
+                totalOverspeedSeverity += fallbackResult.overspeedSeverity;
+              } else {
+                const tripResult = await this.evaluateOverspeedingWithHere(
+                  tripLogs,
+                  th.overspeed,
+                  category,
+                );
+                totalOverspeedCount += tripResult.overspeedCount;
+                totalOverspeedSeverity += tripResult.overspeedSeverity;
+              }
+            }
+
+            // Actualizar DailyTelemetryRollup
+            await this.prisma.dailyTelemetryRollup.updateMany({
+              where: {
+                date: rollupDate,
+                vehicleId,
+                driverId: driverId,
+              },
+              data: {
+                overspeedCount: totalOverspeedCount,
+                overspeedSeverity: parseFloat(
+                  totalOverspeedSeverity.toFixed(3),
+                ),
+              },
+            });
+          }
+        }
       }
     }
 
@@ -846,5 +982,194 @@ export class ScoringCronService {
     return Math.ceil(
       ((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
     );
+  }
+
+  private async evaluateOverspeedingWithHere(
+    logs: TelemetryLog[],
+    fallbackOverspeedThreshold: number,
+    category: VehicleCategory,
+  ): Promise<{ overspeedCount: number; overspeedSeverity: number }> {
+    const validLogs = logs.filter(
+      (log) => log.latitude !== 0 && log.longitude !== 0,
+    );
+    if (validLogs.length < 2) {
+      return { overspeedCount: 0, overspeedSeverity: 0 };
+    }
+
+    // Filtro de presupuesto: si no hay puntos con velocidad > 10 km/h, no puede haber exceso de velocidad
+    if (!validLogs.some((log) => log.speed > 10)) {
+      return { overspeedCount: 0, overspeedSeverity: 0 };
+    }
+
+    // Filtro de presupuesto: si la distancia recorrida es extremadamente corta, omitimos HERE API
+    const startLog = validLogs[0];
+    const endLog = validLogs[validLogs.length - 1];
+    const distanceKm = this.getDistance(
+      startLog.latitude,
+      startLog.longitude,
+      endLog.latitude,
+      endLog.longitude,
+    );
+    if (distanceKm < 0.1) {
+      return { overspeedCount: 0, overspeedSeverity: 0 };
+    }
+
+    // Mapear categoría a modo y atributos de HERE API
+    let mode = 'fastest;car';
+    let attributes = 'SPEED_LIMITS_FCn(*)';
+
+    const isTruck =
+      category === VehicleCategory.HEAVY_DUTY ||
+      category === VehicleCategory.MACHINERY;
+
+    if (isTruck) {
+      mode = 'fastest;truck';
+      attributes = 'SPEED_LIMITS_FCn(*),TRUCK_SPEED_LIMITS_FCn(*)';
+    }
+
+    const CHUNK_SIZE = 500;
+    let totalOverspeedCount = 0;
+    let totalOverspeedSeverity = 0;
+
+    for (let start = 0; start < validLogs.length; start += CHUNK_SIZE) {
+      const chunk = validLogs.slice(start, start + CHUNK_SIZE);
+      if (chunk.length < 2) {
+        const log = chunk[0];
+        if (log.speed > fallbackOverspeedThreshold) {
+          totalOverspeedCount++;
+          totalOverspeedSeverity += log.speed - fallbackOverspeedThreshold;
+        }
+        continue;
+      }
+
+      let csvContent = 'LATITUDE,LONGITUDE,TIMESTAMP,SPEED_KMH,HEADING\n';
+      for (const log of chunk) {
+        csvContent += `${log.latitude},${log.longitude},${log.timestamp.toISOString()},${log.speed},${log.angle}\n`;
+      }
+
+      const matched = await this.hereClient.matchRoute(csvContent, mode, attributes);
+      if (!matched) {
+        // En caso de fallo de la API de HERE, usamos fallback simple
+        const fallback = this.fallbackOverspeeding(
+          chunk,
+          fallbackOverspeedThreshold,
+        );
+        totalOverspeedCount += fallback.overspeedCount;
+        totalOverspeedSeverity += fallback.overspeedSeverity;
+        continue;
+      }
+
+      const { tracePoints, RouteLinks } = matched;
+
+      // Usar mapa indexado directamente por linkId (con signo)
+      const linksMap = new Map<number, any>();
+      for (const link of RouteLinks) {
+        linksMap.set(link.linkId, link);
+      }
+
+      for (let i = 0; i < chunk.length; i++) {
+        const log = chunk[i];
+        const tracePoint = tracePoints[i];
+
+        if (!tracePoint || tracePoint.linkIdMatched === undefined) {
+          if (log.speed > fallbackOverspeedThreshold) {
+            totalOverspeedCount++;
+            totalOverspeedSeverity += log.speed - fallbackOverspeedThreshold;
+          }
+          continue;
+        }
+
+        const matchedLink = linksMap.get(tracePoint.linkIdMatched);
+        let speedLimit: number | null = null;
+
+        if (matchedLink && matchedLink.attributes) {
+          let targetAttrKey: string | undefined;
+
+          // Intentar obtener límites de velocidad de camiones si aplica
+          if (isTruck) {
+            targetAttrKey = Object.keys(matchedLink.attributes).find((k) =>
+              k.startsWith('TRUCK_SPEED_LIMITS_FC'),
+            );
+          }
+
+          // Si no es camión o no se encontraron límites de camión, usar límite general
+          if (!targetAttrKey) {
+            targetAttrKey = Object.keys(matchedLink.attributes).find((k) =>
+              k.startsWith('SPEED_LIMITS_FC'),
+            );
+          }
+
+          if (targetAttrKey) {
+            const speedLimitObj = Array.isArray(matchedLink.attributes[targetAttrKey])
+              ? matchedLink.attributes[targetAttrKey][0]
+              : matchedLink.attributes[targetAttrKey];
+
+            if (speedLimitObj) {
+              const limitStr =
+                tracePoint.linkIdMatched >= 0
+                  ? speedLimitObj.FROM_REF_SPEED_LIMIT
+                  : speedLimitObj.TO_REF_SPEED_LIMIT;
+
+              if (limitStr) {
+                const parsedLimit = parseInt(limitStr, 10);
+                if (!isNaN(parsedLimit) && parsedLimit > 0) {
+                  speedLimit = parsedLimit;
+                }
+              }
+            }
+          }
+        }
+
+        const limitToUse = speedLimit || fallbackOverspeedThreshold;
+        const threshold = limitToUse + 10;
+
+        if (log.speed > threshold) {
+          totalOverspeedCount++;
+          totalOverspeedSeverity += log.speed - limitToUse;
+        }
+      }
+    }
+
+    return {
+      overspeedCount: totalOverspeedCount,
+      overspeedSeverity: parseFloat(totalOverspeedSeverity.toFixed(3)),
+    };
+  }
+
+  private fallbackOverspeeding(
+    logs: TelemetryLog[],
+    fallbackThreshold: number,
+  ): { overspeedCount: number; overspeedSeverity: number } {
+    let overspeedCount = 0;
+    let overspeedSeverity = 0;
+    for (const log of logs) {
+      if (log.speed > fallbackThreshold) {
+        overspeedCount++;
+        overspeedSeverity += log.speed - fallbackThreshold;
+      }
+    }
+    return {
+      overspeedCount,
+      overspeedSeverity: parseFloat(overspeedSeverity.toFixed(3)),
+    };
+  }
+
+  private getDistance(
+    lat1: number,
+    lon1: number,
+    lat2: number,
+    lon2: number,
+  ): number {
+    const R = 6371; // Radio de la Tierra en km
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
   }
 }

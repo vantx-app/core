@@ -36,7 +36,11 @@ export class AuthController {
       },
     );
 
-    res.cookie('refresh_token', refreshToken, getCookieSettings(TIME_TO_LIVE_IN_MS));
+    res.cookie(
+      'refresh_token',
+      refreshToken,
+      getCookieSettings(TIME_TO_LIVE_IN_MS),
+    );
     return { accessToken };
   }
 
@@ -68,7 +72,11 @@ export class AuthController {
         await this.authService.refresh(refreshToken, { ip, userAgent });
 
       // 2. Inyección exitosa del nuevo token
-      res.cookie('refresh_token', newRefreshToken, getCookieSettings(TIME_TO_LIVE_IN_MS));
+      res.cookie(
+        'refresh_token',
+        newRefreshToken,
+        getCookieSettings(TIME_TO_LIVE_IN_MS),
+      );
       return { accessToken };
     } catch (error) {
       // 3. CIRCUIT BREAKER: Si la validación falla (revocada/expirada), matamos la cookie
