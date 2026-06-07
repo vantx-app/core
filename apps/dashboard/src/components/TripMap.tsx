@@ -13,6 +13,7 @@ export default function TripMap({ coordinates, isOngoing = false, isFullscreen =
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const startMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const endMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const eventMarkersRef = useRef<mapboxgl.Marker[]>([]);
 
   // 1. Inicialización del mapa (una sola vez)
   useEffect(() => {
@@ -72,6 +73,7 @@ export default function TripMap({ coordinates, isOngoing = false, isFullscreen =
     return () => {
       if (startMarkerRef.current) startMarkerRef.current.remove();
       if (endMarkerRef.current) endMarkerRef.current.remove();
+      eventMarkersRef.current.forEach(m => m.remove());
       map.remove();
       mapRef.current = null;
     };
@@ -117,6 +119,8 @@ export default function TripMap({ coordinates, isOngoing = false, isFullscreen =
       endMarkerRef.current.remove();
       endMarkerRef.current = null;
     }
+    eventMarkersRef.current.forEach(m => m.remove());
+    eventMarkersRef.current = [];
 
     if (!coords || coords.length === 0) {
       const source = map.getSource('route') as mapboxgl.GeoJSONSource;
@@ -177,6 +181,67 @@ export default function TripMap({ coordinates, isOngoing = false, isFullscreen =
         .addTo(map);
       endMarkerRef.current = endMarker;
     }
+
+    // C2. Crear marcadores de eventos (giros, frenados, aceleraciones, excesos de velocidad)
+    coords.forEach((c) => {
+      const isHarshAcc = (c.harshAcceleration ?? 0) > 0;
+      const isHarshBraking = (c.harshBraking ?? 0) > 0;
+      const isHarshCornering = (c.harshCornering ?? 0) > 0;
+      const isOverspeed = c.speed > 90;
+
+      if (isHarshAcc || isHarshBraking || isHarshCornering || isOverspeed) {
+        let label = '';
+        let colorClass = '';
+        let title = '';
+        let details = '';
+
+        if (isHarshBraking) {
+          label = 'F';
+          colorClass = 'bg-amber-500 text-white border-amber-600';
+          title = 'Frenado Brusco';
+          details = 'Se detectó una desaceleración violenta.';
+        } else if (isHarshAcc) {
+          label = 'A';
+          colorClass = 'bg-amber-500 text-white border-amber-600';
+          title = 'Aceleración Brusca';
+          details = 'Se detectó una aceleración violenta.';
+        } else if (isHarshCornering) {
+          label = 'G';
+          colorClass = 'bg-amber-500 text-white border-amber-600';
+          title = 'Giro Brusco';
+          details = 'Se detectó una fuerza lateral excesiva en curva.';
+        } else if (isOverspeed) {
+          label = 'V';
+          colorClass = 'bg-rose-500 text-white border-rose-600';
+          title = 'Exceso de Velocidad';
+          details = `Velocidad registrada: ${c.speed} km/h (límite: 90 km/h)`;
+        }
+
+        const el = document.createElement('div');
+        el.className = `w-5 h-5 rounded-full border-2 flex items-center justify-center font-bold text-[10px] shadow-md cursor-pointer ${colorClass}`;
+        el.innerText = label;
+
+        const timeStr = new Date(c.timestamp).toLocaleTimeString('es-ES', {
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+        });
+        const popup = new mapboxgl.Popup({ offset: 10 }).setHTML(`
+          <div class="p-2 text-xs text-slate-800 bg-white rounded-lg">
+            <p class="font-extrabold text-blue-600 mb-1">${title}</p>
+            <p class="opacity-90">${details}</p>
+            <p class="text-[9px] opacity-60 mt-1 font-mono">${timeStr} | ${c.speed} km/h</p>
+          </div>
+        `);
+
+        const marker = new mapboxgl.Marker({ element: el })
+          .setLngLat([c.longitude, c.latitude])
+          .setPopup(popup)
+          .addTo(map);
+
+        eventMarkersRef.current.push(marker);
+      }
+    });
 
     // D. Encuadrar toda la ruta en pantalla
     const bounds = new mapboxgl.LngLatBounds();

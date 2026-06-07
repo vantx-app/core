@@ -346,6 +346,9 @@ export class VehiclesService {
         speed: true,
         timestamp: true,
         ignition: true,
+        harshAcceleration: true,
+        harshBraking: true,
+        harshCornering: true,
       },
     });
 

@@ -481,7 +481,7 @@ export default function TripsHistoryView({
         <div
           className={`
           ${isFullscreen ? "hidden" : "lg:hidden"} 
-          ${selectedTripId !== null ? "hidden" : "flex flex-col bg-base-100/50 border border-base-200 rounded-2xl overflow-hidden shadow-sm p-4 space-y-3"}
+          flex flex-col bg-base-100/50 border border-base-200 rounded-2xl overflow-hidden shadow-sm p-4 space-y-3
         `}
         >
           <div className="shrink-0 pb-2 border-b border-base-200">
@@ -497,7 +497,7 @@ export default function TripsHistoryView({
           </div>
         </div>
 
-        {/* Panel del Mapa */}
+        {/* Panel del Mapa (Solo visible en desktop o cuando está en pantalla completa) */}
         <div
           key="stable-map-panel"
           className={`
@@ -505,12 +505,7 @@ export default function TripsHistoryView({
             ${
               isFullscreen
                 ? "flex-grow h-full w-full border-none rounded-none"
-                : "border border-base-200 rounded-2xl flex-grow"
-            }
-            ${
-              !isFullscreen
-                ? `${selectedTripId !== null ? "flex h-[65svh] min-h-[350px]" : "hidden"} lg:flex lg:h-full lg:min-h-0 lg:order-2`
-                : ""
+                : "border border-base-200 rounded-2xl flex-grow hidden lg:flex lg:h-full lg:min-h-0 lg:order-2"
             }
           `}
         >
@@ -521,21 +516,6 @@ export default function TripsHistoryView({
               isFullscreen={isFullscreen}
             />
           </div>
-
-          {/* Botón Volver (Móvil, cuando hay viaje seleccionado y no está en pantalla completa) */}
-          {!isFullscreen && selectedTripId && (
-            <button
-              onClick={() => {
-                setSelectedTripId(null);
-                setRouteCoordinates([]);
-                setIsLoadingRoute(false);
-              }}
-              className="absolute top-4 left-4 z-[45] btn btn-sm gap-1.5 bg-base-100/90 backdrop-blur-md border border-base-200 shadow-md hover:bg-base-100 text-base-content lg:hidden"
-            >
-              <ArrowLeft className="size-4" />
-              <span>Volver</span>
-            </button>
-          )}
 
           {/* Cabecera en pantalla completa */}
           {isFullscreen && (
@@ -635,6 +615,166 @@ export default function TripsHistoryView({
             )}
         </div>
       </div>
+
+      {/* Mobile Drawer (Bottom Sheet) */}
+      {selectedTripId && selectedTrip && (
+        <div className="lg:hidden fixed inset-0 z-[100] flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            onClick={() => {
+              setSelectedTripId(null);
+              setRouteCoordinates([]);
+              setIsLoadingRoute(false);
+            }}
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
+          />
+          {/* Bottom Sheet Card */}
+          <div className="relative bg-base-100 rounded-t-3xl border-t border-base-200 shadow-2xl z-10 max-h-[85vh] flex flex-col animate-slide-up">
+            {/* Drag Handle */}
+            <div
+              onClick={() => {
+                setSelectedTripId(null);
+                setRouteCoordinates([]);
+                setIsLoadingRoute(false);
+              }}
+              className="w-12 h-1.5 bg-base-300 rounded-full mx-auto my-3 shrink-0 cursor-pointer"
+            />
+
+            {/* Drawer Header */}
+            <div className="px-4 pb-3 border-b border-base-200 flex items-center justify-between shrink-0">
+              <div className="min-w-0 flex-1">
+                <h3 className="font-extrabold text-sm text-base-content truncate">
+                  {formatTripDate(selectedTrip.startTime)}
+                </h3>
+                <p className="text-[10px] text-base-content/50 font-semibold mt-0.5 truncate">
+                  {selectedTrip.vehicle?.alias || "Vehículo sin alias"} ({selectedTrip.vehicle?.plateNumber})
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedTripId(null);
+                  setRouteCoordinates([]);
+                  setIsLoadingRoute(false);
+                }}
+                className="btn btn-circle btn-xs btn-ghost text-base-content/60 ml-2"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Drawer Content */}
+            <div className="overflow-y-auto p-4 space-y-4 flex-grow">
+              {/* Map container inside Drawer */}
+              <div className="relative h-60 w-full rounded-2xl overflow-hidden border border-base-200 bg-base-200/50">
+                <TripMap
+                  coordinates={routeCoordinates}
+                  isOngoing={!selectedTrip?.endTime}
+                  isFullscreen={false}
+                />
+                {isLoadingRoute && (
+                  <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-xs text-base-content/50">
+                    <Loader2 className="size-6 animate-spin text-primary mb-1.5" />
+                    Cargando telemetría...
+                  </div>
+                )}
+                {selectedTripId && routeCoordinates.length === 0 && !isLoadingRoute && (
+                  <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-center text-[10px] text-base-content/40 p-4">
+                    <Compass className="size-10 opacity-25 mb-2" />
+                    <span>Sin coordenadas GPS</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Trip Stats */}
+              {tripMetrics && (
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-base-200/50 border border-base-200/60 rounded-xl p-2.5 text-center">
+                    <span className="text-[9px] text-base-content/40 uppercase font-bold block">Duración</span>
+                    <span className="text-xs font-black font-mono text-base-content block mt-1">
+                      {formatTripDuration(selectedTrip.startTime, selectedTrip.endTime)}
+                    </span>
+                  </div>
+                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-2.5 text-center">
+                    <span className="text-[9px] text-base-content/40 uppercase font-bold block font-semibold">V. Promedio</span>
+                    <span className="text-xs font-black font-mono text-primary block mt-1">
+                      {tripMetrics.avgSpeed} km/h
+                    </span>
+                  </div>
+                  <div className="bg-rose-500/5 border border-rose-500/10 rounded-xl p-2.5 text-center">
+                    <span className="text-[9px] text-error/60 uppercase font-bold block font-semibold">V. Máxima</span>
+                    <span className="text-xs font-black font-mono text-error block mt-1">
+                      {tripMetrics.maxSpeed} km/h
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Harsh Events Details */}
+              <div className="space-y-2.5">
+                <h4 className="text-[10px] text-base-content/40 font-bold uppercase tracking-wider">
+                  Eventos en el Viaje
+                </h4>
+                {isLoadingRoute ? (
+                  <div className="text-xs text-base-content/40 italic py-2 animate-pulse">
+                    Analizando telemetría del viaje...
+                  </div>
+                ) : routeCoordinates.length === 0 ? (
+                  <div className="text-xs text-base-content/40 italic py-2">
+                    Sin eventos registrados.
+                  </div>
+                ) : (
+                  (() => {
+                    const harshAcc = routeCoordinates.filter(c => (c.harshAcceleration ?? 0) > 0).length;
+                    const harshBraking = routeCoordinates.filter(c => (c.harshBraking ?? 0) > 0).length;
+                    const harshCorner = routeCoordinates.filter(c => (c.harshCornering ?? 0) > 0).length;
+                    const overspeeds = routeCoordinates.filter(c => c.speed > 90).length;
+
+                    const hasAny = harshAcc > 0 || harshBraking > 0 || harshCorner > 0 || overspeeds > 0;
+
+                    if (!hasAny) {
+                      return (
+                        <div className="flex items-center gap-2 text-xs text-success bg-success/5 border border-success/10 p-3 rounded-xl">
+                          <Zap className="size-4 shrink-0 text-success" />
+                          <span>¡Conducción perfecta en este viaje! Sin incidentes graves.</span>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="space-y-2">
+                        {overspeeds > 0 && (
+                          <div className="flex justify-between items-center bg-rose-500/5 border border-rose-500/10 p-2.5 rounded-xl text-xs">
+                            <span className="font-semibold text-base-content/80">Exceso de Velocidad (&gt;90 km/h)</span>
+                            <span className="font-black text-rose-600 font-mono bg-rose-500/10 px-2 py-0.5 rounded-lg">{overspeeds}s</span>
+                          </div>
+                        )}
+                        {harshBraking > 0 && (
+                          <div className="flex justify-between items-center bg-amber-500/5 border border-amber-500/10 p-2.5 rounded-xl text-xs">
+                            <span className="font-semibold text-base-content/80">Frenados Bruscos</span>
+                            <span className="font-black text-amber-600 font-mono bg-amber-500/10 px-2 py-0.5 rounded-lg">{harshBraking}</span>
+                          </div>
+                        )}
+                        {harshAcc > 0 && (
+                          <div className="flex justify-between items-center bg-amber-500/5 border border-amber-500/10 p-2.5 rounded-xl text-xs">
+                            <span className="font-semibold text-base-content/80">Aceleraciones Bruscas</span>
+                            <span className="font-black text-amber-600 font-mono bg-amber-500/10 px-2 py-0.5 rounded-lg">{harshAcc}</span>
+                          </div>
+                        )}
+                        {harshCorner > 0 && (
+                          <div className="flex justify-between items-center bg-amber-500/5 border border-amber-500/10 p-2.5 rounded-xl text-xs">
+                            <span className="font-semibold text-base-content/80">Giros Bruscos</span>
+                            <span className="font-black text-amber-600 font-mono bg-amber-500/10 px-2 py-0.5 rounded-lg">{harshCorner}</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

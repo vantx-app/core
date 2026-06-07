@@ -15,7 +15,7 @@ export const NAV_LINKS: NavLink[] = [
     label: 'Mapa',
     key: 'nav.map',
     icon: Map,
-    allowedRoles: [ROLES.DRIVER, ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN]
+    allowedRoles: [ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN]
   },
   {
     href: '/reports',

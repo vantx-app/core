@@ -880,6 +880,9 @@ export interface Coordinate {
   speed: number;
   timestamp: string;
   ignition: boolean;
+  harshAcceleration?: number;
+  harshBraking?: number;
+  harshCornering?: number;
 }
 
 export interface VehicleTripsVehicle {
