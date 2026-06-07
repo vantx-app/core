@@ -19,7 +19,9 @@ import {
   Gauge,
   Zap,
   ShieldCheck,
-  Power
+  Power,
+  TrendingDown,
+  CornerUpRight
 } from 'lucide-react';
 import { DailyTelemetryRollup, TableColumn, VehicleDetail, VehicleDetailClientProps, VehicleScoreSnapshot } from '@/types';
 import { formatDate, formatDateOnly, getScoreBadgeColor, formatHours } from '@/utils/client';
@@ -125,10 +127,22 @@ export function VehicleDetailClient({ vehicle: initialVehicle }: VehicleDetailCl
                 {day.overspeedCount} Exc. Vel.
               </span>
             )}
-            {totalHarsh > 0 && (
-              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/20 font-bold font-mono text-[10px] gap-1">
+            {day.brakingCount > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold font-mono text-[10px] gap-1">
+                <TrendingDown className="size-3" />
+                {day.brakingCount} Frenados
+              </span>
+            )}
+            {day.corneringCount > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 font-bold font-mono text-[10px] gap-1">
+                <CornerUpRight className="size-3" />
+                {day.corneringCount} Giros
+              </span>
+            )}
+            {day.accelerationCount > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold font-mono text-[10px] gap-1">
                 <Zap className="size-3" />
-                Bruscos: {day.brakingCount}/{day.corneringCount}/{day.accelerationCount}
+                {day.accelerationCount} Acel.
               </span>
             )}
             {!!day.deviceUnpluggedCount && day.deviceUnpluggedCount > 0 && (
