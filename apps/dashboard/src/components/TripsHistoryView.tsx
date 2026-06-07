@@ -25,6 +25,10 @@ import {
   formatTripDuration,
 } from "@/utils/client";
 import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { ROLES } from "@/utils/enums";
 
 const TripMap = dynamic(() => import("./TripMap"), {
   ssr: false,
@@ -54,6 +58,16 @@ export default function TripsHistoryView({
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isMobileMapActive, setIsMobileMapActive] = useState(false);
+
+  const searchParams = useSearchParams();
+  const targetOrgId = searchParams.get("targetOrgId");
+  const { role: userRole } = useAuth();
+
+  const isManagementRole =
+    userRole === ROLES.OWNER ||
+    userRole === ROLES.ADMIN ||
+    userRole === ROLES.SUPER_ADMIN;
 
   const groupedTrips = useMemo(() => {
     const groups: Record<string, VehicleTripsTrip[]> = {};
@@ -159,6 +173,7 @@ export default function TripsHistoryView({
     setIsLoadingRoute(true);
     setRouteCoordinates([]);
     setSelectedTripId(tripId);
+    setIsMobileMapActive(true);
     // Ya no colapsamos la lista automáticamente al seleccionar para mejorar la navegación
   };
 
@@ -235,18 +250,52 @@ export default function TripsHistoryView({
                         {isDriverCentric ? (
                           <div className="flex items-center gap-1 min-w-0">
                             <Truck className="size-3 text-base-content/40 shrink-0" />
-                            <span className="truncate font-semibold">
-                              {trip.vehicle?.alias || "Vehículo sin alias"} (
-                              {trip.vehicle?.plateNumber})
-                            </span>
+                            {isManagementRole && (trip.vehicleId || trip.vehicle?.id) ? (
+                              <Link
+                                href={`/vehicle/${trip.vehicleId || trip.vehicle?.id}/view${
+                                  targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                                }`}
+                                className="truncate font-semibold text-primary hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {trip.vehicle?.alias || "Vehículo sin alias"} (
+                                {trip.vehicle?.plateNumber})
+                              </Link>
+                            ) : (
+                              <span className="truncate font-semibold">
+                                {trip.vehicle?.alias || "Vehículo sin alias"} (
+                                {trip.vehicle?.plateNumber})
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 min-w-0">
                             <User className="size-3 text-base-content/40 shrink-0" />
-                            <DriverInfoLabel
-                              driver={trip.driver}
-                              className="truncate"
-                            />
+                            {isManagementRole && trip.driver?.id ? (
+                              <Link
+                                href={`/reports?driverId=${trip.driver.id}&tab=daily${
+                                  targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
+                                }`}
+                                className="flex flex-col text-left group hover:underline text-primary"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <span className="font-bold">
+                                  {trip.driver.firstName && trip.driver.lastName
+                                    ? `${trip.driver.firstName} ${trip.driver.lastName}`
+                                    : trip.driver.nationalId}
+                                </span>
+                                {trip.driver.firstName && trip.driver.lastName && (
+                                  <span className="text-[10px] text-base-content/40 font-mono">
+                                    {trip.driver.nationalId}
+                                  </span>
+                                )}
+                              </Link>
+                            ) : (
+                              <DriverInfoLabel
+                                driver={trip.driver}
+                                className="truncate"
+                              />
+                            )}
                           </div>
                         )}
                       </div>
@@ -322,19 +371,44 @@ export default function TripsHistoryView({
                 {isDriverCentric ? (
                   <>
                     <Truck className="size-3.5 text-primary shrink-0" />
-                    <span className="truncate">
-                      {selectedTrip.vehicle?.alias || "Sin Alias"} (
-                      {selectedTrip.vehicle?.plateNumber})
-                    </span>
+                    {isManagementRole && (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
+                      <Link
+                        href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${
+                          targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                        }`}
+                        className="truncate text-primary hover:underline font-semibold"
+                      >
+                        {selectedTrip.vehicle?.alias || "Sin Alias"} (
+                        {selectedTrip.vehicle?.plateNumber})
+                      </Link>
+                    ) : (
+                      <span className="truncate">
+                        {selectedTrip.vehicle?.alias || "Sin Alias"} (
+                        {selectedTrip.vehicle?.plateNumber})
+                      </span>
+                    )}
                   </>
                 ) : (
                   <>
                     <User className="size-3.5 text-primary shrink-0" />
-                    <DriverInfoLabel
-                      driver={selectedTrip.driver}
-                      showNationalId={false}
-                      className="inline-block font-bold text-xs truncate"
-                    />
+                    {isManagementRole && selectedTrip.driver?.id ? (
+                      <Link
+                        href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${
+                          targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
+                        }`}
+                        className="truncate text-primary hover:underline font-semibold"
+                      >
+                        {selectedTrip.driver.firstName && selectedTrip.driver.lastName
+                          ? `${selectedTrip.driver.firstName} ${selectedTrip.driver.lastName}`
+                          : selectedTrip.driver.nationalId}
+                      </Link>
+                    ) : (
+                      <DriverInfoLabel
+                        driver={selectedTrip.driver}
+                        showNationalId={false}
+                        className="inline-block font-bold text-xs truncate"
+                      />
+                    )}
                   </>
                 )}
               </div>
@@ -391,18 +465,42 @@ export default function TripsHistoryView({
               {isDriverCentric ? (
                 <>
                   <Truck className="size-3.5 text-primary shrink-0" />
-                  <span className="text-xs font-bold truncate">
-                    {selectedTrip.vehicle?.alias || "Vehículo"}
-                  </span>
+                  {isManagementRole && (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
+                    <Link
+                      href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${
+                        targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                      }`}
+                      className="text-xs font-bold text-primary hover:underline truncate"
+                    >
+                      {selectedTrip.vehicle?.alias || "Vehículo"}
+                    </Link>
+                  ) : (
+                    <span className="text-xs font-bold truncate">
+                      {selectedTrip.vehicle?.alias || "Vehículo"}
+                    </span>
+                  )}
                 </>
               ) : (
                 <>
                   <User className="size-3.5 text-primary shrink-0" />
-                  <DriverInfoLabel
-                    driver={selectedTrip.driver}
-                    showNationalId={false}
-                    className="text-xs font-bold truncate"
-                  />
+                  {isManagementRole && selectedTrip.driver?.id ? (
+                    <Link
+                      href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${
+                        targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
+                      }`}
+                      className="text-xs font-bold text-primary hover:underline truncate"
+                    >
+                      {selectedTrip.driver.firstName && selectedTrip.driver.lastName
+                        ? `${selectedTrip.driver.firstName} ${selectedTrip.driver.lastName}`
+                        : selectedTrip.driver.nationalId}
+                    </Link>
+                  ) : (
+                    <DriverInfoLabel
+                      driver={selectedTrip.driver}
+                      showNationalId={false}
+                      className="text-xs font-bold truncate"
+                    />
+                  )}
                 </>
               )}
             </div>
@@ -480,7 +578,7 @@ export default function TripsHistoryView({
         {/* Lista de Viajes (Móvil) */}
         <div
           className={`
-          ${isFullscreen ? "hidden" : "lg:hidden"} 
+          ${isFullscreen || isMobileMapActive ? "hidden" : "lg:hidden"} 
           flex flex-col bg-base-100/50 border border-base-200 rounded-2xl overflow-hidden shadow-sm p-4 space-y-3
         `}
         >
@@ -497,7 +595,7 @@ export default function TripsHistoryView({
           </div>
         </div>
 
-        {/* Panel del Mapa (Solo visible en desktop o cuando está en pantalla completa) */}
+        {/* Panel del Mapa */}
         <div
           key="stable-map-panel"
           className={`
@@ -505,7 +603,9 @@ export default function TripsHistoryView({
             ${
               isFullscreen
                 ? "flex-grow h-full w-full border-none rounded-none"
-                : "border border-base-200 rounded-2xl flex-grow hidden lg:flex lg:h-full lg:min-h-0 lg:order-2"
+                : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${
+                    isMobileMapActive ? "flex h-[500px] sm:h-[600px] lg:h-full lg:min-h-0" : "hidden"
+                  }`
             }
           `}
         >
@@ -516,6 +616,17 @@ export default function TripsHistoryView({
               isFullscreen={isFullscreen}
             />
           </div>
+
+          {/* Botón Volver (Solo Móvil) */}
+          {!isFullscreen && isMobileMapActive && (
+            <button
+              onClick={() => setIsMobileMapActive(false)}
+              className="absolute top-4 left-4 z-[45] btn btn-circle btn-sm bg-base-100/80 backdrop-blur-md border border-base-200 shadow-md hover:bg-base-100 text-base-content lg:hidden"
+              title="Volver a la lista"
+            >
+              <ArrowLeft className="size-4" />
+            </button>
+          )}
 
           {/* Cabecera en pantalla completa */}
           {isFullscreen && (
@@ -616,165 +727,6 @@ export default function TripsHistoryView({
         </div>
       </div>
 
-      {/* Mobile Drawer (Bottom Sheet) */}
-      {selectedTripId && selectedTrip && (
-        <div className="lg:hidden fixed inset-0 z-[100] flex flex-col justify-end">
-          {/* Backdrop */}
-          <div
-            onClick={() => {
-              setSelectedTripId(null);
-              setRouteCoordinates([]);
-              setIsLoadingRoute(false);
-            }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300"
-          />
-          {/* Bottom Sheet Card */}
-          <div className="relative bg-base-100 rounded-t-3xl border-t border-base-200 shadow-2xl z-10 max-h-[85vh] flex flex-col animate-slide-up">
-            {/* Drag Handle */}
-            <div
-              onClick={() => {
-                setSelectedTripId(null);
-                setRouteCoordinates([]);
-                setIsLoadingRoute(false);
-              }}
-              className="w-12 h-1.5 bg-base-300 rounded-full mx-auto my-3 shrink-0 cursor-pointer"
-            />
-
-            {/* Drawer Header */}
-            <div className="px-4 pb-3 border-b border-base-200 flex items-center justify-between shrink-0">
-              <div className="min-w-0 flex-1">
-                <h3 className="font-extrabold text-sm text-base-content truncate">
-                  {formatTripDate(selectedTrip.startTime)}
-                </h3>
-                <p className="text-[10px] text-base-content/50 font-semibold mt-0.5 truncate">
-                  {selectedTrip.vehicle?.alias || "Vehículo sin alias"} ({selectedTrip.vehicle?.plateNumber})
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setSelectedTripId(null);
-                  setRouteCoordinates([]);
-                  setIsLoadingRoute(false);
-                }}
-                className="btn btn-circle btn-xs btn-ghost text-base-content/60 ml-2"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Drawer Content */}
-            <div className="overflow-y-auto p-4 space-y-4 flex-grow">
-              {/* Map container inside Drawer */}
-              <div className="relative h-60 w-full rounded-2xl overflow-hidden border border-base-200 bg-base-200/50">
-                <TripMap
-                  coordinates={routeCoordinates}
-                  isOngoing={!selectedTrip?.endTime}
-                  isFullscreen={false}
-                />
-                {isLoadingRoute && (
-                  <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-xs text-base-content/50">
-                    <Loader2 className="size-6 animate-spin text-primary mb-1.5" />
-                    Cargando telemetría...
-                  </div>
-                )}
-                {selectedTripId && routeCoordinates.length === 0 && !isLoadingRoute && (
-                  <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm z-10 flex flex-col items-center justify-center text-center text-[10px] text-base-content/40 p-4">
-                    <Compass className="size-10 opacity-25 mb-2" />
-                    <span>Sin coordenadas GPS</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Trip Stats */}
-              {tripMetrics && (
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-base-200/50 border border-base-200/60 rounded-xl p-2.5 text-center">
-                    <span className="text-[9px] text-base-content/40 uppercase font-bold block">Duración</span>
-                    <span className="text-xs font-black font-mono text-base-content block mt-1">
-                      {formatTripDuration(selectedTrip.startTime, selectedTrip.endTime)}
-                    </span>
-                  </div>
-                  <div className="bg-primary/5 border border-primary/10 rounded-xl p-2.5 text-center">
-                    <span className="text-[9px] text-base-content/40 uppercase font-bold block font-semibold">V. Promedio</span>
-                    <span className="text-xs font-black font-mono text-primary block mt-1">
-                      {tripMetrics.avgSpeed} km/h
-                    </span>
-                  </div>
-                  <div className="bg-rose-500/5 border border-rose-500/10 rounded-xl p-2.5 text-center">
-                    <span className="text-[9px] text-error/60 uppercase font-bold block font-semibold">V. Máxima</span>
-                    <span className="text-xs font-black font-mono text-error block mt-1">
-                      {tripMetrics.maxSpeed} km/h
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {/* Harsh Events Details */}
-              <div className="space-y-2.5">
-                <h4 className="text-[10px] text-base-content/40 font-bold uppercase tracking-wider">
-                  Eventos en el Viaje
-                </h4>
-                {isLoadingRoute ? (
-                  <div className="text-xs text-base-content/40 italic py-2 animate-pulse">
-                    Analizando telemetría del viaje...
-                  </div>
-                ) : routeCoordinates.length === 0 ? (
-                  <div className="text-xs text-base-content/40 italic py-2">
-                    Sin eventos registrados.
-                  </div>
-                ) : (
-                  (() => {
-                    const harshAcc = routeCoordinates.filter(c => (c.harshAcceleration ?? 0) > 0).length;
-                    const harshBraking = routeCoordinates.filter(c => (c.harshBraking ?? 0) > 0).length;
-                    const harshCorner = routeCoordinates.filter(c => (c.harshCornering ?? 0) > 0).length;
-                    const overspeeds = routeCoordinates.filter(c => c.speed > 90).length;
-
-                    const hasAny = harshAcc > 0 || harshBraking > 0 || harshCorner > 0 || overspeeds > 0;
-
-                    if (!hasAny) {
-                      return (
-                        <div className="flex items-center gap-2 text-xs text-success bg-success/5 border border-success/10 p-3 rounded-xl">
-                          <Zap className="size-4 shrink-0 text-success" />
-                          <span>¡Conducción perfecta en este viaje! Sin incidentes graves.</span>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="space-y-2">
-                        {overspeeds > 0 && (
-                          <div className="flex justify-between items-center bg-rose-500/5 border border-rose-500/10 p-2.5 rounded-xl text-xs">
-                            <span className="font-semibold text-base-content/80">Exceso de Velocidad (&gt;90 km/h)</span>
-                            <span className="font-black text-rose-600 font-mono bg-rose-500/10 px-2 py-0.5 rounded-lg">{overspeeds}s</span>
-                          </div>
-                        )}
-                        {harshBraking > 0 && (
-                          <div className="flex justify-between items-center bg-amber-500/5 border border-amber-500/10 p-2.5 rounded-xl text-xs">
-                            <span className="font-semibold text-base-content/80">Frenados Bruscos</span>
-                            <span className="font-black text-amber-600 font-mono bg-amber-500/10 px-2 py-0.5 rounded-lg">{harshBraking}</span>
-                          </div>
-                        )}
-                        {harshAcc > 0 && (
-                          <div className="flex justify-between items-center bg-amber-500/5 border border-amber-500/10 p-2.5 rounded-xl text-xs">
-                            <span className="font-semibold text-base-content/80">Aceleraciones Bruscas</span>
-                            <span className="font-black text-amber-600 font-mono bg-amber-500/10 px-2 py-0.5 rounded-lg">{harshAcc}</span>
-                          </div>
-                        )}
-                        {harshCorner > 0 && (
-                          <div className="flex justify-between items-center bg-amber-500/5 border border-amber-500/10 p-2.5 rounded-xl text-xs">
-                            <span className="font-semibold text-base-content/80">Giros Bruscos</span>
-                            <span className="font-black text-amber-600 font-mono bg-amber-500/10 px-2 py-0.5 rounded-lg">{harshCorner}</span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

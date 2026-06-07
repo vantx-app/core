@@ -34,6 +34,8 @@ import { formatHours } from "@/utils/client";
 function ReportsPageContent() {
   const searchParams = useSearchParams();
   const targetOrgId = searchParams.get("targetOrgId");
+  const driverIdParam = searchParams.get("driverId");
+  const tabParam = searchParams.get("tab");
   const { role: userRole } = useAuth();
 
   const isManagementRole =
@@ -43,12 +45,14 @@ function ReportsPageContent() {
 
   // Driver states
   const [drivers, setDrivers] = useState<SimpleDriver[]>([]);
-  const [selectedDriverId, setSelectedDriverId] = useState<string>("me");
+  const [selectedDriverId, setSelectedDriverId] = useState<string>(
+    driverIdParam || "me"
+  );
   const [driverSnapshots, setDriverSnapshots] = useState<ScoreSnapshot[]>([]);
 
   // Page layout states
   const [activeTab, setActiveTab] = useState<"breakdown" | "daily">(
-    "breakdown",
+    tabParam === "daily" ? "daily" : "breakdown"
   );
   const [isLoadingDriver, setIsLoadingDriver] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -73,15 +77,20 @@ function ReportsPageContent() {
         : "/drivers";
       const { data } = await api.get(url);
       setDrivers(data);
-      // Auto-select first driver if any
+      // Auto-select first driver if any, or matching driverIdParam
       if (data.length > 0) {
-        setSelectedDriverId(data[0].id);
+        const matchingDriver = driverIdParam && data.find((d: SimpleDriver) => d.id === driverIdParam);
+        if (matchingDriver) {
+          setSelectedDriverId(matchingDriver.id);
+        } else {
+          setSelectedDriverId(data[0].id);
+        }
       }
     } catch (err) {
       console.error("Error fetching drivers", err);
       setErrorMsg("Error al cargar la lista de conductores.");
     }
-  }, [isManagementRole, targetOrgId]);
+  }, [isManagementRole, targetOrgId, driverIdParam]);
 
   useEffect(() => {
     fetchDrivers();
