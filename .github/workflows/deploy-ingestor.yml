@@ -2,16 +2,16 @@ name: Build and Push Ingestor Docker Image
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
     paths:
-      - 'apps/telemetry-ingestor/**'
-      - 'packages/database/**'
-      - 'packages/telemetry-parser/**'
-      - 'packages/tsconfig/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'turbo.json'
-      - '.github/workflows/deploy-ingestor.yml'
+      - "apps/telemetry-ingestor/**"
+      - "packages/database/**"
+      - "packages/telemetry-parser/**"
+      - "packages/tsconfig/**"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
+      - ".github/workflows/deploy-ingestor.yml"
 
 env:
   REGISTRY: ghcr.io

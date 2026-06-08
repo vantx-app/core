@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import { ROLES } from "@/utils/enums";
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -9,7 +9,7 @@ const AuthContext = createContext<any>(undefined);
 export function AuthProvider({
   children,
   role,
-  initialProfile
+  initialProfile,
 }: {
   children: React.ReactNode;
   role: ROLES;
@@ -18,7 +18,9 @@ export function AuthProvider({
   const [profile, setProfile] = useState<any>(initialProfile);
 
   return (
-    <AuthContext.Provider value={{ role, profile, loadingProfile: false, setProfile }}>
+    <AuthContext.Provider
+      value={{ role, profile, loadingProfile: false, setProfile }}
+    >
       {children}
     </AuthContext.Provider>
   );

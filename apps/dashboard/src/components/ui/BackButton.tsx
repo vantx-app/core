@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { BackButtonProps } from '@/types';
-import React from 'react';
-import { useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { BackButtonProps } from "@/types";
+import React from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 
 export function BackButton({
   fallbackHref,
@@ -18,9 +18,9 @@ export function BackButton({
 
     // Check if there is internal session history (Next.js tracks this in window.history.state)
     const hasHistory =
-      typeof window !== 'undefined' &&
+      typeof window !== "undefined" &&
       window.history.state &&
-      typeof window.history.state === 'object' &&
+      typeof window.history.state === "object" &&
       window.history.state.idx > 0;
 
     if (hasHistory) {
@@ -31,11 +31,7 @@ export function BackButton({
   };
 
   return (
-    <button
-      type="button"
-      onClick={handleBack}
-      className={className}
-    >
+    <button type="button" onClick={handleBack} className={className}>
       {icon}
       {children}
     </button>

@@ -1,14 +1,14 @@
-import Link from 'next/link';
-import { NavigationMenu } from '@/components/NavigationMenu';
-import { MobileBottomNav } from '@/components/MobileBottomNav';
-import { AuthProvider } from '@/context/AuthContext';
-import { FleetProvider } from '@/context/FleetContext';
-import { fetchServer } from '@/utils/server/api-server';
-import { getUserRole } from '@/utils/server';
-import { Suspense } from 'react';
-import { ImpersonationBanner } from '@/components/dashboard/ImpersonationBanner';
-import { Logo } from '@/components/Logo';
-import { SubscriptionGateClient } from '@/components/dashboard/SubscriptionGateClient';
+import Link from "next/link";
+import { NavigationMenu } from "@/components/NavigationMenu";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { AuthProvider } from "@/context/AuthContext";
+import { FleetProvider } from "@/context/FleetContext";
+import { fetchServer } from "@/utils/server/api-server";
+import { getUserRole } from "@/utils/server";
+import { Suspense } from "react";
+import { ImpersonationBanner } from "@/components/dashboard/ImpersonationBanner";
+import { Logo } from "@/components/Logo";
+import { SubscriptionGateClient } from "@/components/dashboard/SubscriptionGateClient";
 
 export default async function DashboardLayout({
   children,
@@ -20,21 +20,27 @@ export default async function DashboardLayout({
   let profile = null;
 
   try {
-    initialVehicles = await fetchServer('/vehicles?liveState=true');
+    initialVehicles = await fetchServer("/vehicles?liveState=true");
   } catch (error) {
-    console.error('Error fetching initial vehicles for layout:', error);
+    console.error("Error fetching initial vehicles for layout:", error);
   }
 
   try {
-    profile = await fetchServer('/users/me');
+    profile = await fetchServer("/users/me");
   } catch (error) {
-    console.error('Error fetching initial profile for layout:', error);
+    console.error("Error fetching initial profile for layout:", error);
   }
 
   return (
     <AuthProvider role={role} initialProfile={profile}>
       <SubscriptionGateClient />
-      <Suspense fallback={<div className="flex h-screen items-center justify-center bg-base-100"><span className="loading loading-spinner loading-lg text-primary"></span></div>}>
+      <Suspense
+        fallback={
+          <div className="flex h-screen items-center justify-center bg-base-100">
+            <span className="loading loading-spinner loading-lg text-primary"></span>
+          </div>
+        }
+      >
         <FleetProvider initialVehicles={initialVehicles}>
           <div className="group flex h-dvh overflow-hidden bg-base-100 flex-col lg:flex-row">
             {/* DESKTOP SIDEBAR */}

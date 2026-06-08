@@ -1,33 +1,40 @@
-'use client';
+"use client";
 
-import { FleetVehicleSummary, TableColumn, VehicleTableDesktopProps } from '@/types';
+import {
+  FleetVehicleSummary,
+  TableColumn,
+  VehicleTableDesktopProps,
+} from "@/types";
 import Link from "next/link";
 import { Pencil, UserCog, Route, Eye } from "lucide-react";
 import { DriverInfoLabel } from "@/components/ui/DriverInfoLabel";
-import { Table } from '@/components/ui/Table';
+import { Table } from "@/components/ui/Table";
 
-export function VehicleTableDesktop({ vehicles, targetOrgId }: VehicleTableDesktopProps) {
-  const getStatusBadgeClass = (status: FleetVehicleSummary['status']) => {
+export function VehicleTableDesktop({
+  vehicles,
+  targetOrgId,
+}: VehicleTableDesktopProps) {
+  const getStatusBadgeClass = (status: FleetVehicleSummary["status"]) => {
     switch (status) {
-      case 'ACTIVE':
-        return 'badge-success text-white';
-      case 'IN_MAINTENANCE':
-        return 'badge-warning text-white';
-      case 'DECOMMISSIONED':
-        return 'badge-neutral text-white';
+      case "ACTIVE":
+        return "badge-success text-white";
+      case "IN_MAINTENANCE":
+        return "badge-warning text-white";
+      case "DECOMMISSIONED":
+        return "badge-neutral text-white";
       default:
-        return 'badge-ghost';
+        return "badge-ghost";
     }
   };
 
-  const getStatusLabel = (status: FleetVehicleSummary['status']) => {
+  const getStatusLabel = (status: FleetVehicleSummary["status"]) => {
     switch (status) {
-      case 'ACTIVE':
-        return 'Activo';
-      case 'IN_MAINTENANCE':
-        return 'Taller';
-      case 'DECOMMISSIONED':
-        return 'Decomisionado';
+      case "ACTIVE":
+        return "Activo";
+      case "IN_MAINTENANCE":
+        return "Taller";
+      case "DECOMMISSIONED":
+        return "Decomisionado";
       default:
         return status;
     }
@@ -35,49 +42,51 @@ export function VehicleTableDesktop({ vehicles, targetOrgId }: VehicleTableDeskt
 
   const columns: TableColumn<FleetVehicleSummary>[] = [
     {
-      key: 'index',
-      header: '#',
+      key: "index",
+      header: "#",
       render: (_, index) => index + 1,
     },
     {
-      key: 'alias',
-      header: 'Alias',
-      className: 'font-medium text-base-content',
+      key: "alias",
+      header: "Alias",
+      className: "font-medium text-base-content",
     },
     {
-      key: 'status',
-      header: 'Estado',
+      key: "status",
+      header: "Estado",
       render: (vehicle) => (
-        <span className={`badge badge-sm font-semibold ${getStatusBadgeClass(vehicle.status)}`}>
+        <span
+          className={`badge badge-sm font-semibold ${getStatusBadgeClass(vehicle.status)}`}
+        >
           {getStatusLabel(vehicle.status)}
         </span>
       ),
     },
     {
-      key: 'make',
-      header: 'Marca',
+      key: "make",
+      header: "Marca",
     },
     {
-      key: 'model',
-      header: 'Modelo',
+      key: "model",
+      header: "Modelo",
     },
     {
-      key: 'year',
-      header: 'Año',
+      key: "year",
+      header: "Año",
     },
     {
-      key: 'driver',
-      header: 'Conductor',
+      key: "driver",
+      header: "Conductor",
       render: (vehicle) => {
         const driver = vehicle.assignments?.[0]?.driver;
         return <DriverInfoLabel driver={driver} />;
       },
     },
     {
-      key: 'actions',
-      header: 'Acciones',
+      key: "actions",
+      header: "Acciones",
       render: (vehicle) => {
-        const orgParam = targetOrgId ? `?targetOrgId=${targetOrgId}` : '';
+        const orgParam = targetOrgId ? `?targetOrgId=${targetOrgId}` : "";
         return (
           <div className="flex gap-1">
             <Link

@@ -2,16 +2,16 @@ name: Build and Push API Docker Image
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
     paths:
-      - 'apps/crm-api/**'
-      - 'packages/database/**'
-      - 'packages/auth/**'
-      - 'packages/tsconfig/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'turbo.json'
-      - '.github/workflows/deploy-api.yml'
+      - "apps/crm-api/**"
+      - "packages/database/**"
+      - "packages/auth/**"
+      - "packages/tsconfig/**"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
+      - ".github/workflows/deploy-api.yml"
 
 env:
   REGISTRY: ghcr.io

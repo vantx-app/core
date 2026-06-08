@@ -1,12 +1,20 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import { io, Socket } from 'socket.io-client';
-import Cookies from 'js-cookie';
+import { useEffect, useRef } from "react";
+import { io, Socket } from "socket.io-client";
+import Cookies from "js-cookie";
 
 export function useMarketplaceSocket(
-  onApplicationReceived: (data: { listingId: string; title: string; driverName: string }) => void,
-  onStatusChanged: (data: { listingId: string; title: string; status: string }) => void
+  onApplicationReceived: (data: {
+    listingId: string;
+    title: string;
+    driverName: string;
+  }) => void,
+  onStatusChanged: (data: {
+    listingId: string;
+    title: string;
+    status: string;
+  }) => void,
 ) {
   const socketRef = useRef<Socket | null>(null);
   const onApplicationReceivedRef = useRef(onApplicationReceived);
@@ -19,15 +27,15 @@ export function useMarketplaceSocket(
   });
 
   useEffect(() => {
-    const token = Cookies.get('access_token');
+    const token = Cookies.get("access_token");
     if (!token) return;
 
-    const isDev = process.env.NODE_ENV === 'development';
-    const SOCKET_URL = isDev ? 'http://localhost:8000' : '/';
+    const isDev = process.env.NODE_ENV === "development";
+    const SOCKET_URL = isDev ? "http://localhost:8000" : "/";
 
     const socket = io(SOCKET_URL, {
-      path: '/api/socket.io',
-      transports: ['websocket'],
+      path: "/api/socket.io",
+      transports: ["websocket"],
       auth: { token },
       reconnection: true,
       reconnectionAttempts: 10,
@@ -35,22 +43,25 @@ export function useMarketplaceSocket(
 
     socketRef.current = socket;
 
-    socket.on('connect', () => {
-      console.log('✅ Marketplace socket connected:', socket.id);
+    socket.on("connect", () => {
+      console.log("✅ Marketplace socket connected:", socket.id);
     });
 
-    socket.on('marketplace:application-received', (data) => {
-      console.log('📬 Socket event: marketplace:application-received', data);
+    socket.on("marketplace:application-received", (data) => {
+      console.log("📬 Socket event: marketplace:application-received", data);
       onApplicationReceivedRef.current(data);
     });
 
-    socket.on('marketplace:application-status-changed', (data) => {
-      console.log('🔔 Socket event: marketplace:application-status-changed', data);
+    socket.on("marketplace:application-status-changed", (data) => {
+      console.log(
+        "🔔 Socket event: marketplace:application-status-changed",
+        data,
+      );
       onStatusChangedRef.current(data);
     });
 
     return () => {
-      console.log('🧹 Disconnecting marketplace socket...');
+      console.log("🧹 Disconnecting marketplace socket...");
       socket.disconnect();
       socketRef.current = null;
     };

@@ -1,10 +1,10 @@
-import * as net from 'net';
+import * as net from "net";
 
 // Configuración Local
-const INGESTOR_HOST = '127.0.0.1';
+const INGESTOR_HOST = "127.0.0.1";
 const INGESTOR_PORT = 9000;
-const IMEI = '865124071453916';
-const VIN = '3N1CN8BB8PL123456'; // Formato estándar Nissan Versa
+const IMEI = "865124071453916";
+const VIN = "3N1CN8BB8PL123456"; // Formato estándar Nissan Versa
 
 // 1. Constructor de Handshake (Protocolo Teltonika)
 function buildHandshake(imei: string): Buffer {
@@ -83,7 +83,7 @@ function buildAvlPacket(lat: number, lng: number): Buffer {
   offset += 2;
   rec.writeUInt16BE(VIN.length, offset);
   offset += 2;
-  rec.write(VIN, offset, VIN.length, 'ascii');
+  rec.write(VIN, offset, VIN.length, "ascii");
   offset += VIN.length;
 
   const recordBuffer = rec.subarray(0, offset);
@@ -134,7 +134,7 @@ function startBinarySimulator() {
     client.write(buildHandshake(IMEI));
   });
 
-  client.on('data', (data) => {
+  client.on("data", (data) => {
     if (!isAuthorized && data.length === 1 && data.readUInt8(0) === 1) {
       console.log(`[Simulator] Handshake Aceptado. Comenzando ruta...`);
       isAuthorized = true;
@@ -158,8 +158,8 @@ function startBinarySimulator() {
     }
   });
 
-  client.on('error', (err) => console.error(`[Simulator] Error:`, err.message));
-  client.on('close', () => console.log(`[Simulator] Conexión cerrada.`));
+  client.on("error", (err) => console.error(`[Simulator] Error:`, err.message));
+  client.on("close", () => console.log(`[Simulator] Conexión cerrada.`));
 }
 
 startBinarySimulator();

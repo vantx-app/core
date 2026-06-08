@@ -1,10 +1,15 @@
-'use client';
+"use client";
 
-import { OrganizationsPageInvitation, OrganizationsPageOrg, TableColumn, TableOrgWithScore } from '@/types';
-import { useState, useEffect, useRef } from 'react';
-import api from '@/utils/client/api-client';
-import { formatDate, getOrgSubscriptionBadgeClass } from '@/utils/client';
-import Link from 'next/link';
+import {
+  OrganizationsPageInvitation,
+  OrganizationsPageOrg,
+  TableColumn,
+  TableOrgWithScore,
+} from "@/types";
+import { useState, useEffect, useRef } from "react";
+import api from "@/utils/client/api-client";
+import { formatDate, getOrgSubscriptionBadgeClass } from "@/utils/client";
+import Link from "next/link";
 import {
   Building2,
   User,
@@ -24,52 +29,63 @@ import {
   Zap,
   FileText,
   Settings,
-  DollarSign
-} from 'lucide-react';
-import { MobileDrawer } from '@/components/MobileDrawer';
-import { Table } from '@/components/ui/Table';
-import { OrganizationsTableDesktop } from '@/components/OrganizationsTableDesktop';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Badge } from '@/components/ui/Badge';
-import { Alert } from '@/components/ui/Alert';
-import { Modal } from '@/components/ui/Modal';
+  DollarSign,
+} from "lucide-react";
+import { MobileDrawer } from "@/components/MobileDrawer";
+import { Table } from "@/components/ui/Table";
+import { OrganizationsTableDesktop } from "@/components/OrganizationsTableDesktop";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Badge } from "@/components/ui/Badge";
+import { Alert } from "@/components/ui/Alert";
+import { Modal } from "@/components/ui/Modal";
 
 export default function OrganizationsPage() {
-  const [organizations, setOrganizations] = useState<OrganizationsPageOrg[]>([]);
+  const [organizations, setOrganizations] = useState<OrganizationsPageOrg[]>(
+    [],
+  );
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingOrg, setEditingOrg] = useState<OrganizationsPageOrg | null>(null);
+  const [editingOrg, setEditingOrg] = useState<OrganizationsPageOrg | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
 
   // Form states (OrganizationsPageOrg)
-  const [name, setName] = useState('');
-  const [ownerName, setOwnerName] = useState('');
-  const [ownerEmail, setOwnerEmail] = useState('');
-  const [ownerPassword, setOwnerPassword] = useState('');
+  const [name, setName] = useState("");
+  const [ownerName, setOwnerName] = useState("");
+  const [ownerEmail, setOwnerEmail] = useState("");
+  const [ownerPassword, setOwnerPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showOwnerPassword, setShowOwnerPassword] = useState(false);
-  const [subStatus, setSubStatus] = useState<string>('INACTIVE');
-  const [expiresAt, setExpiresAt] = useState<string>('');
+  const [subStatus, setSubStatus] = useState<string>("INACTIVE");
+  const [expiresAt, setExpiresAt] = useState<string>("");
 
   // Responsive state
   const [isMobile, setIsMobile] = useState(false);
 
   // User Management State
-  const [activeOrgForUsers, setActiveOrgForUsers] = useState<OrganizationsPageOrg | null>(null);
+  const [activeOrgForUsers, setActiveOrgForUsers] =
+    useState<OrganizationsPageOrg | null>(null);
   const [userFormOpen, setUserFormOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState<OrganizationsPageOrg['users'][number] | null>(null);
-  const [userFormName, setUserFormName] = useState('');
-  const [userFormEmail, setUserFormEmail] = useState('');
-  const [userFormPassword, setUserFormPassword] = useState('');
-  const [userFormRole, setUserFormRole] = useState<'OWNER' | 'ADMIN'>('ADMIN');
+  const [editingUser, setEditingUser] = useState<
+    OrganizationsPageOrg["users"][number] | null
+  >(null);
+  const [userFormName, setUserFormName] = useState("");
+  const [userFormEmail, setUserFormEmail] = useState("");
+  const [userFormPassword, setUserFormPassword] = useState("");
+  const [userFormRole, setUserFormRole] = useState<"OWNER" | "ADMIN">("ADMIN");
   const [showUserFormPassword, setShowUserFormPassword] = useState(false);
   const [userFormError, setUserFormError] = useState<string | null>(null);
   const [userFormSubmitting, setUserFormSubmitting] = useState(false);
 
   // Tab & OrganizationsPageInvitation States
-  const [activeTab, setActiveTab] = useState<'orgs' | 'invitations' | 'settings'>('orgs');
-  const [invitations, setInvitations] = useState<OrganizationsPageInvitation[]>([]);
+  const [activeTab, setActiveTab] = useState<
+    "orgs" | "invitations" | "settings"
+  >("orgs");
+  const [invitations, setInvitations] = useState<OrganizationsPageInvitation[]>(
+    [],
+  );
   const [isLoadingInvitations, setIsLoadingInvitations] = useState(false);
   const [invitationsError, setInvitationsError] = useState<string | null>(null);
   const [isGeneratingInvitation, setIsGeneratingInvitation] = useState(false);
@@ -91,20 +107,20 @@ export default function OrganizationsPage() {
     try {
       setIsLoadingSettings(true);
       setSettingsError(null);
-      const { data } = await api.get('/billing/settings');
+      const { data } = await api.get("/billing/settings");
       setFlatSaaSPrice(data.flatSaaSPrice);
       setGeolocationPrice(data.geolocationPrice);
       setDiagnosticsPrice(data.diagnosticsPrice);
     } catch (err) {
       console.error(err);
-      setSettingsError('Error al cargar la configuración de precios.');
+      setSettingsError("Error al cargar la configuración de precios.");
     } finally {
       setIsLoadingSettings(false);
     }
   };
 
   useEffect(() => {
-    if (activeTab === 'settings' && !lastFetchedSettingsRef.current) {
+    if (activeTab === "settings" && !lastFetchedSettingsRef.current) {
       fetchSettings();
       lastFetchedSettingsRef.current = true;
     }
@@ -117,47 +133,55 @@ export default function OrganizationsPage() {
     setSettingsError(null);
 
     if (flatSaaSPrice < 0 || geolocationPrice < 0 || diagnosticsPrice < 0) {
-      setSettingsError('Los precios no pueden ser negativos.');
+      setSettingsError("Los precios no pueden ser negativos.");
       setIsLoadingSettings(false);
       return;
     }
 
     try {
-      await api.patch('/billing/settings', {
+      await api.patch("/billing/settings", {
         flatSaaSPrice,
         geolocationPrice,
         diagnosticsPrice,
       });
-      setSettingsSuccess('Configuración de precios actualizada con éxito.');
+      setSettingsSuccess("Configuración de precios actualizada con éxito.");
     } catch (err) {
       console.error(err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setSettingsError(message || 'Error al guardar la configuración de precios.');
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setSettingsError(
+        message || "Error al guardar la configuración de precios.",
+      );
     } finally {
       setIsLoadingSettings(false);
     }
   };
 
   const handleDirectActivate = async (org: OrganizationsPageOrg) => {
-    if (!confirm(`¿Estás seguro de que deseas activar la organización "${org.name}" directamente por 1 año?`)) {
+    if (
+      !confirm(
+        `¿Estás seguro de que deseas activar la organización "${org.name}" directamente por 1 año?`,
+      )
+    ) {
       return;
     }
     try {
       setIsLoading(true);
       const targetDate = new Date();
       targetDate.setFullYear(targetDate.getFullYear() + 1); // 1 año desde hoy
-      
-      await api.post('/billing/admin/activate', {
+
+      await api.post("/billing/admin/activate", {
         orgId: org.id,
         expiresAt: targetDate.toISOString(),
       });
-      
+
       // Refrescar lista
       await fetchOrganizations();
     } catch (err) {
       console.error(err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      alert(message || 'Error al activar la organización');
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      alert(message || "Error al activar la organización");
     } finally {
       setIsLoading(false);
     }
@@ -168,19 +192,19 @@ export default function OrganizationsPage() {
       setIsMobile(window.innerWidth < 1024);
     };
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const fetchInvitations = async () => {
     try {
       setIsLoadingInvitations(true);
       setInvitationsError(null);
-      const { data } = await api.get('/invitations');
+      const { data } = await api.get("/invitations");
       setInvitations(data);
     } catch (err) {
       console.error(err);
-      setInvitationsError('Error al cargar enlaces de invitación');
+      setInvitationsError("Error al cargar enlaces de invitación");
     } finally {
       setIsLoadingInvitations(false);
     }
@@ -190,11 +214,11 @@ export default function OrganizationsPage() {
     try {
       setIsGeneratingInvitation(true);
       setInvitationsError(null);
-      await api.post('/invitations');
+      await api.post("/invitations");
       await fetchInvitations();
     } catch (err) {
       console.error(err);
-      setInvitationsError('Error al generar enlace de invitación');
+      setInvitationsError("Error al generar enlace de invitación");
     } finally {
       setIsGeneratingInvitation(false);
     }
@@ -210,7 +234,7 @@ export default function OrganizationsPage() {
   };
 
   useEffect(() => {
-    if (activeTab === 'invitations' && !lastFetchedInvitationsRef.current) {
+    if (activeTab === "invitations" && !lastFetchedInvitationsRef.current) {
       fetchInvitations();
       lastFetchedInvitationsRef.current = true;
     }
@@ -219,12 +243,12 @@ export default function OrganizationsPage() {
   const fetchOrganizations = async () => {
     try {
       setIsLoading(true);
-      const { data } = await api.get('/organizations');
+      const { data } = await api.get("/organizations");
       setOrganizations(data);
       return data;
     } catch (err) {
       console.error(err);
-      setError('Error al cargar organizaciones');
+      setError("Error al cargar organizaciones");
     } finally {
       setIsLoading(false);
     }
@@ -236,12 +260,12 @@ export default function OrganizationsPage() {
 
   const openCreateModal = () => {
     setEditingOrg(null);
-    setName('');
-    setOwnerName('');
-    setOwnerEmail('');
-    setOwnerPassword('');
-    setSubStatus('INACTIVE');
-    setExpiresAt('');
+    setName("");
+    setOwnerName("");
+    setOwnerEmail("");
+    setOwnerPassword("");
+    setSubStatus("INACTIVE");
+    setExpiresAt("");
     setError(null);
     setIsModalOpen(true);
   };
@@ -249,11 +273,13 @@ export default function OrganizationsPage() {
   const openEditModal = (org: OrganizationsPageOrg) => {
     setEditingOrg(org);
     setName(org.name);
-    setSubStatus(org.subscriptionStatus || 'INACTIVE');
+    setSubStatus(org.subscriptionStatus || "INACTIVE");
     if (org.subscriptionExpiresAt) {
-      setExpiresAt(new Date(org.subscriptionExpiresAt).toISOString().split('T')[0]);
+      setExpiresAt(
+        new Date(org.subscriptionExpiresAt).toISOString().split("T")[0],
+      );
     } else {
-      setExpiresAt('');
+      setExpiresAt("");
     }
     setError(null);
     setIsModalOpen(true);
@@ -270,11 +296,14 @@ export default function OrganizationsPage() {
         await api.patch(`/organizations/${editingOrg.id}`, {
           name,
           subscriptionStatus: subStatus,
-          subscriptionExpiresAt: subStatus === 'ACTIVE' && expiresAt ? new Date(expiresAt).toISOString() : null,
+          subscriptionExpiresAt:
+            subStatus === "ACTIVE" && expiresAt
+              ? new Date(expiresAt).toISOString()
+              : null,
         });
       } else {
         // Modo Creación
-        await api.post('/organizations', {
+        await api.post("/organizations", {
           name,
           ownerName,
           ownerEmail,
@@ -284,18 +313,19 @@ export default function OrganizationsPage() {
 
       // Cerrar y resetear
       setIsModalOpen(false);
-      setName('');
-      setOwnerName('');
-      setOwnerEmail('');
-      setOwnerPassword('');
+      setName("");
+      setOwnerName("");
+      setOwnerEmail("");
+      setOwnerPassword("");
       setEditingOrg(null);
 
       // Refresh list
       fetchOrganizations();
     } catch (err) {
       console.error(err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message || 'Error al guardar la organización');
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setError(message || "Error al guardar la organización");
     } finally {
       setIsSubmitting(false);
     }
@@ -306,30 +336,32 @@ export default function OrganizationsPage() {
     try {
       const data = await fetchOrganizations();
       if (data) {
-        const updatedOrg = data.find((o: OrganizationsPageOrg) => o.id === orgId);
+        const updatedOrg = data.find(
+          (o: OrganizationsPageOrg) => o.id === orgId,
+        );
         if (updatedOrg) {
           setActiveOrgForUsers(updatedOrg);
         }
       }
     } catch (err) {
       console.error(err);
-      setError('Error al refrescar los usuarios');
+      setError("Error al refrescar los usuarios");
     }
   };
 
-  const handleOpenUserForm = (user?: OrganizationsPageOrg['users'][number]) => {
+  const handleOpenUserForm = (user?: OrganizationsPageOrg["users"][number]) => {
     if (user) {
       setEditingUser(user);
-      setUserFormName(user.name || '');
+      setUserFormName(user.name || "");
       setUserFormEmail(user.email);
-      setUserFormPassword('');
+      setUserFormPassword("");
       setUserFormRole(user.role);
     } else {
       setEditingUser(null);
-      setUserFormName('');
-      setUserFormEmail('');
-      setUserFormPassword('');
-      setUserFormRole('ADMIN');
+      setUserFormName("");
+      setUserFormEmail("");
+      setUserFormPassword("");
+      setUserFormRole("ADMIN");
     }
     setUserFormError(null);
     setUserFormOpen(true);
@@ -350,7 +382,7 @@ export default function OrganizationsPage() {
           password: userFormPassword || undefined,
         });
       } else {
-        await api.post('/users', {
+        await api.post("/users", {
           name: userFormName,
           email: userFormEmail,
           password: userFormPassword,
@@ -361,15 +393,16 @@ export default function OrganizationsPage() {
 
       setUserFormOpen(false);
       setEditingUser(null);
-      setUserFormName('');
-      setUserFormEmail('');
-      setUserFormPassword('');
-      setUserFormRole('ADMIN');
+      setUserFormName("");
+      setUserFormEmail("");
+      setUserFormPassword("");
+      setUserFormRole("ADMIN");
       await refreshOrgUsers(activeOrgForUsers.id);
     } catch (err) {
       console.error(err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setUserFormError(message || 'Error al guardar el usuario');
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setUserFormError(message || "Error al guardar el usuario");
     } finally {
       setUserFormSubmitting(false);
     }
@@ -377,15 +410,16 @@ export default function OrganizationsPage() {
 
   const handleDeleteUser = async (userId: string) => {
     if (!activeOrgForUsers) return;
-    if (!confirm('¿Estás seguro de que deseas eliminar este usuario?')) return;
+    if (!confirm("¿Estás seguro de que deseas eliminar este usuario?")) return;
 
     try {
       await api.delete(`/users/${userId}`);
       await refreshOrgUsers(activeOrgForUsers.id);
     } catch (err) {
       console.error(err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      alert(message || 'Error al eliminar el usuario');
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      alert(message || "Error al eliminar el usuario");
     }
   };
 
@@ -393,11 +427,17 @@ export default function OrganizationsPage() {
     return (
       <form onSubmit={handleSaveUser} className="space-y-4">
         <h3 className="font-bold text-lg text-base-content flex items-center gap-2">
-          {editingUser ? <Edit3 className="size-5 text-primary" /> : <Plus className="size-5 text-primary" />}
-          {editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
+          {editingUser ? (
+            <Edit3 className="size-5 text-primary" />
+          ) : (
+            <Plus className="size-5 text-primary" />
+          )}
+          {editingUser ? "Editar Usuario" : "Nuevo Usuario"}
         </h3>
         <p className="text-xs text-base-content/60">
-          {editingUser ? 'Modifica los accesos y credenciales del usuario.' : 'Crea un nuevo usuario (Owner o Admin) para esta organización.'}
+          {editingUser
+            ? "Modifica los accesos y credenciales del usuario."
+            : "Crea un nuevo usuario (Owner o Admin) para esta organización."}
         </p>
 
         {userFormError && (
@@ -409,7 +449,9 @@ export default function OrganizationsPage() {
 
         <div className="form-control">
           <label className="label py-1">
-            <span className="label-text font-bold text-xs text-base-content/85">Nombre Completo</span>
+            <span className="label-text font-bold text-xs text-base-content/85">
+              Nombre Completo
+            </span>
           </label>
           <input
             type="text"
@@ -424,7 +466,9 @@ export default function OrganizationsPage() {
 
         <div className="form-control">
           <label className="label py-1">
-            <span className="label-text font-bold text-xs text-base-content/85">Correo Electrónico</span>
+            <span className="label-text font-bold text-xs text-base-content/85">
+              Correo Electrónico
+            </span>
           </label>
           <input
             type="email"
@@ -440,7 +484,10 @@ export default function OrganizationsPage() {
         <div className="form-control">
           <label className="label py-1">
             <span className="label-text font-bold text-xs text-base-content/85">
-              Contraseña {editingUser ? '(Dejar en blanco para no cambiar)' : '(Mínimo 6 caracteres)'}
+              Contraseña{" "}
+              {editingUser
+                ? "(Dejar en blanco para no cambiar)"
+                : "(Mínimo 6 caracteres)"}
             </span>
           </label>
           <div className="relative">
@@ -449,7 +496,9 @@ export default function OrganizationsPage() {
               required={!editingUser}
               value={userFormPassword}
               onChange={(e) => setUserFormPassword(e.target.value)}
-              placeholder={editingUser ? '••••••' : 'Dejar vacío para usar Temporal123!'}
+              placeholder={
+                editingUser ? "••••••" : "Dejar vacío para usar Temporal123!"
+              }
               className="input input-bordered w-full pr-10 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
               disabled={userFormSubmitting}
             />
@@ -457,7 +506,11 @@ export default function OrganizationsPage() {
               type="button"
               onClick={() => setShowUserFormPassword(!showUserFormPassword)}
               className="absolute inset-y-0 right-0 pr-3 flex items-center text-base-content/40 hover:text-base-content/70 cursor-pointer"
-              title={showUserFormPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              title={
+                showUserFormPassword
+                  ? "Ocultar contraseña"
+                  : "Mostrar contraseña"
+              }
             >
               {showUserFormPassword ? <EyeOff size={16} /> : <Eye size={16} />}
             </button>
@@ -466,7 +519,9 @@ export default function OrganizationsPage() {
 
         <div className="form-control">
           <label className="label py-1">
-            <span className="label-text font-bold text-xs text-base-content/85">Rol</span>
+            <span className="label-text font-bold text-xs text-base-content/85">
+              Rol
+            </span>
           </label>
           <div className="flex gap-4 mt-1">
             <label className="flex items-center gap-2 cursor-pointer">
@@ -474,24 +529,28 @@ export default function OrganizationsPage() {
                 type="radio"
                 name="userFormRole"
                 value="ADMIN"
-                checked={userFormRole === 'ADMIN'}
-                onChange={() => setUserFormRole('ADMIN')}
+                checked={userFormRole === "ADMIN"}
+                onChange={() => setUserFormRole("ADMIN")}
                 className="radio radio-primary"
                 disabled={userFormSubmitting}
               />
-              <span className="text-sm text-base-content">Administrador (ADMIN)</span>
+              <span className="text-sm text-base-content">
+                Administrador (ADMIN)
+              </span>
             </label>
             <label className="flex items-center gap-2 cursor-pointer">
               <input
                 type="radio"
                 name="userFormRole"
                 value="OWNER"
-                checked={userFormRole === 'OWNER'}
-                onChange={() => setUserFormRole('OWNER')}
+                checked={userFormRole === "OWNER"}
+                onChange={() => setUserFormRole("OWNER")}
                 className="radio radio-primary"
                 disabled={userFormSubmitting}
               />
-              <span className="text-sm text-base-content">Propietario (OWNER)</span>
+              <span className="text-sm text-base-content">
+                Propietario (OWNER)
+              </span>
             </label>
           </div>
         </div>
@@ -516,7 +575,7 @@ export default function OrganizationsPage() {
                 Guardando...
               </>
             ) : (
-              'Guardar Usuario'
+              "Guardar Usuario"
             )}
           </button>
         </div>
@@ -529,8 +588,12 @@ export default function OrganizationsPage() {
       <div className="space-y-4">
         <div className="flex justify-between items-center pb-2 border-b border-base-200">
           <div>
-            <h3 className="font-bold text-lg text-base-content">Usuarios Activos</h3>
-            <p className="text-xs text-base-content/50">Gestiona los propietarios y administradores de la organización.</p>
+            <h3 className="font-bold text-lg text-base-content">
+              Usuarios Activos
+            </h3>
+            <p className="text-xs text-base-content/50">
+              Gestiona los propietarios y administradores de la organización.
+            </p>
           </div>
           <button
             onClick={() => handleOpenUserForm()}
@@ -544,18 +607,26 @@ export default function OrganizationsPage() {
         {org.users && org.users.length > 0 ? (
           <div className="divide-y divide-base-200 max-h-[40vh] overflow-y-auto pr-1">
             {org.users.map((u) => (
-              <div key={u.id} className="flex justify-between items-center py-3 group/user">
+              <div
+                key={u.id}
+                className="flex justify-between items-center py-3 group/user"
+              >
                 <div className="flex items-center gap-3">
                   <div className="avatar placeholder">
                     <div className="bg-neutral text-neutral-content rounded-full w-10 h-10 flex items-center justify-center font-bold text-sm">
-                      {u.name ? u.name.substring(0, 2).toUpperCase() : 'US'}
+                      {u.name ? u.name.substring(0, 2).toUpperCase() : "US"}
                     </div>
                   </div>
                   <div>
                     <div className="font-semibold text-base-content flex items-center gap-2">
-                      {u.name || 'Sin Nombre'}
-                      <span className={`badge badge-sm text-[10px] text-white font-bold py-1 px-1.5 ${u.role === 'OWNER' ? 'bg-emerald-600 border-emerald-600' : 'bg-slate-500 border-slate-500'
-                        }`}>
+                      {u.name || "Sin Nombre"}
+                      <span
+                        className={`badge badge-sm text-[10px] text-white font-bold py-1 px-1.5 ${
+                          u.role === "OWNER"
+                            ? "bg-emerald-600 border-emerald-600"
+                            : "bg-slate-500 border-slate-500"
+                        }`}
+                      >
                         {u.role}
                       </span>
                     </div>
@@ -589,7 +660,9 @@ export default function OrganizationsPage() {
           <div className="flex flex-col items-center justify-center py-8 text-center bg-base-100/30 rounded-xl border border-dashed border-base-300">
             <Users className="size-10 text-base-content/20 mb-2" />
             <h4 className="text-sm font-semibold">Sin usuarios asignados</h4>
-            <p className="text-xs text-base-content/50 max-w-[200px] mt-0.5">Crea un usuario para dar acceso a esta flota.</p>
+            <p className="text-xs text-base-content/50 max-w-[200px] mt-0.5">
+              Crea un usuario para dar acceso a esta flota.
+            </p>
           </div>
         )}
       </div>
@@ -598,10 +671,11 @@ export default function OrganizationsPage() {
 
   const invitationColumns: TableColumn<OrganizationsPageInvitation>[] = [
     {
-      key: 'token',
-      header: 'Enlace de Invitación',
-      className: 'py-4 px-6 font-medium text-sm text-base-content max-w-xs md:max-w-md',
-      headerClassName: 'py-4 px-6 font-bold text-xs uppercase tracking-wider',
+      key: "token",
+      header: "Enlace de Invitación",
+      className:
+        "py-4 px-6 font-medium text-sm text-base-content max-w-xs md:max-w-md",
+      headerClassName: "py-4 px-6 font-bold text-xs uppercase tracking-wider",
       render: (inv) => {
         const registerUrl = `${window.location.origin}/register/owner?token=${inv.token}`;
         return (
@@ -614,10 +688,10 @@ export default function OrganizationsPage() {
       },
     },
     {
-      key: 'status',
-      header: 'Estado',
-      className: 'py-4 px-6',
-      headerClassName: 'py-4 px-6 font-bold text-xs uppercase tracking-wider',
+      key: "status",
+      header: "Estado",
+      className: "py-4 px-6",
+      headerClassName: "py-4 px-6 font-bold text-xs uppercase tracking-wider",
       render: (inv) => {
         const isUsed = !!inv.usedAt;
         const isExpired = !isUsed && new Date(inv.expiresAt) < new Date();
@@ -643,24 +717,25 @@ export default function OrganizationsPage() {
       },
     },
     {
-      key: 'createdAt',
-      header: 'Creado El',
-      className: 'py-4 px-6 text-xs text-base-content/70 font-medium',
-      headerClassName: 'py-4 px-6 font-bold text-xs uppercase tracking-wider',
+      key: "createdAt",
+      header: "Creado El",
+      className: "py-4 px-6 text-xs text-base-content/70 font-medium",
+      headerClassName: "py-4 px-6 font-bold text-xs uppercase tracking-wider",
       render: (inv) => formatDate(inv.createdAt),
     },
     {
-      key: 'expiresAt',
-      header: 'Vence El',
-      className: 'py-4 px-6 text-xs text-base-content/70 font-medium',
-      headerClassName: 'py-4 px-6 font-bold text-xs uppercase tracking-wider',
+      key: "expiresAt",
+      header: "Vence El",
+      className: "py-4 px-6 text-xs text-base-content/70 font-medium",
+      headerClassName: "py-4 px-6 font-bold text-xs uppercase tracking-wider",
       render: (inv) => formatDate(inv.expiresAt),
     },
     {
-      key: 'actions',
-      header: 'Acciones',
-      className: 'py-4 px-6 text-right',
-      headerClassName: 'py-4 px-6 font-bold text-xs uppercase tracking-wider text-right',
+      key: "actions",
+      header: "Acciones",
+      className: "py-4 px-6 text-right",
+      headerClassName:
+        "py-4 px-6 font-bold text-xs uppercase tracking-wider text-right",
       render: (inv) => {
         const isCopied = copiedToken === inv.token;
         const isUsed = !!inv.usedAt;
@@ -669,10 +744,11 @@ export default function OrganizationsPage() {
           <button
             onClick={() => handleCopyLink(inv.token)}
             disabled={isUsed || isExpired}
-            className={`btn btn-sm ${isCopied
-                ? 'btn-success text-white'
-                : 'btn-outline border-base-300 text-base-content hover:bg-base-200'
-              } font-semibold transition-all duration-200 rounded-xl`}
+            className={`btn btn-sm ${
+              isCopied
+                ? "btn-success text-white"
+                : "btn-outline border-base-300 text-base-content hover:bg-base-200"
+            } font-semibold transition-all duration-200 rounded-xl`}
             title={isCopied ? "¡Copiado!" : "Copiar enlace"}
           >
             {isCopied ? (
@@ -693,7 +769,8 @@ export default function OrganizationsPage() {
   ];
 
   const orgsWithScores: TableOrgWithScore[] = organizations.map((org) => {
-    const ownerUser = org.users?.find((u) => u.role === 'OWNER') || org.users?.[0] || null;
+    const ownerUser =
+      org.users?.find((u) => u.role === "OWNER") || org.users?.[0] || null;
     return {
       ...org,
       avgSafety: null,
@@ -704,7 +781,7 @@ export default function OrganizationsPage() {
   const showGrouping = organizations.length > 5;
   const groupedOrgs: Record<string, OrganizationsPageOrg[]> = {};
   organizations.forEach((org) => {
-    const firstLetter = org.name ? org.name.substring(0, 1).toUpperCase() : '?';
+    const firstLetter = org.name ? org.name.substring(0, 1).toUpperCase() : "?";
     if (!groupedOrgs[firstLetter]) {
       groupedOrgs[firstLetter] = [];
     }
@@ -712,21 +789,27 @@ export default function OrganizationsPage() {
   });
 
   const alphabetKeys = Object.keys(groupedOrgs).sort();
-  const firstAlphabetKey = alphabetKeys[0] || '';
+  const firstAlphabetKey = alphabetKeys[0] || "";
 
   const renderOrgCard = (org: OrganizationsPageOrg) => {
-    const owner = org.users?.find(u => u.role === 'OWNER') || org.users?.[0];
-    const adminsCount = org.users?.filter(u => u.role === 'ADMIN').length || 0;
-    
+    const owner = org.users?.find((u) => u.role === "OWNER") || org.users?.[0];
+    const adminsCount =
+      org.users?.filter((u) => u.role === "ADMIN").length || 0;
+
     const expiresAtDate = org.subscriptionExpiresAt;
-    const isExpired = expiresAtDate ? new Date(expiresAtDate) < new Date() : true;
-    const badgeClass = getOrgSubscriptionBadgeClass(org.subscriptionStatus, isExpired);
-    const isActive = org.subscriptionStatus === 'ACTIVE' && !isExpired;
+    const isExpired = expiresAtDate
+      ? new Date(expiresAtDate) < new Date()
+      : true;
+    const badgeClass = getOrgSubscriptionBadgeClass(
+      org.subscriptionStatus,
+      isExpired,
+    );
+    const isActive = org.subscriptionStatus === "ACTIVE" && !isExpired;
     const statusText = isActive
-      ? 'Activo'
-      : org.subscriptionStatus === 'PENDING_ACTIVATION'
-        ? 'Pendiente'
-        : 'Inactivo';
+      ? "Activo"
+      : org.subscriptionStatus === "PENDING_ACTIVATION"
+        ? "Pendiente"
+        : "Inactivo";
 
     return (
       <div
@@ -740,11 +823,14 @@ export default function OrganizationsPage() {
                 <Building2 className="text-primary size-6" />
               </div>
               <div className="flex gap-2 items-center">
-                <span className={`badge badge-sm font-bold border ${badgeClass}`}>
+                <span
+                  className={`badge badge-sm font-bold border ${badgeClass}`}
+                >
                   {statusText}
                 </span>
                 <span className="badge badge-neutral font-semibold text-xs py-2 px-2.5">
-                  {org._count.vehicles} {org._count.vehicles === 1 ? 'Vehículo' : 'Vehículos'}
+                  {org._count.vehicles}{" "}
+                  {org._count.vehicles === 1 ? "Vehículo" : "Vehículos"}
                 </span>
               </div>
             </div>
@@ -755,7 +841,10 @@ export default function OrganizationsPage() {
               </h2>
               {isActive && org.subscriptionExpiresAt && (
                 <p className="text-[10px] text-base-content/50 font-semibold mt-1">
-                  Expira: {new Date(org.subscriptionExpiresAt).toLocaleDateString('es-ES')}
+                  Expira:{" "}
+                  {new Date(org.subscriptionExpiresAt).toLocaleDateString(
+                    "es-ES",
+                  )}
                 </p>
               )}
               <div className="divider my-2 opacity-40"></div>
@@ -765,17 +854,27 @@ export default function OrganizationsPage() {
               <div className="space-y-2.5 text-sm text-base-content/75">
                 <div className="flex items-center gap-2">
                   <User className="size-4 text-base-content/40" />
-                  <span className="font-semibold text-base-content/90">{owner.name}</span>
-                  <span className="badge badge-success badge-sm text-[10px] text-white font-bold">Owner</span>
+                  <span className="font-semibold text-base-content/90">
+                    {owner.name}
+                  </span>
+                  <span className="badge badge-success badge-sm text-[10px] text-white font-bold">
+                    Owner
+                  </span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="size-4 text-base-content/40" />
-                  <span className="truncate text-base-content/60">{owner.email}</span>
+                  <span className="truncate text-base-content/60">
+                    {owner.email}
+                  </span>
                 </div>
                 {adminsCount > 0 && (
                   <div className="flex items-center gap-2 text-xs text-base-content/50 font-medium">
                     <Users className="size-4 text-slate-500" />
-                    <span>{adminsCount} {adminsCount === 1 ? 'Administrador' : 'Administradores'} adicional(es)</span>
+                    <span>
+                      {adminsCount}{" "}
+                      {adminsCount === 1 ? "Administrador" : "Administradores"}{" "}
+                      adicional(es)
+                    </span>
                   </div>
                 )}
               </div>
@@ -850,13 +949,16 @@ export default function OrganizationsPage() {
             Control de Organizaciones
           </h1>
           <p className="text-base-content/65 text-sm mt-1">
-            {activeTab === 'orgs' && 'Administra las flotas asociadas a la plataforma y asigna sus respectivos propietarios.'}
-            {activeTab === 'invitations' && 'Genera y administra enlaces únicos para que nuevos propietarios completen su onboarding.'}
-            {activeTab === 'settings' && 'Modifica los precios y tarifas de los distintos planes y servicios del CRM.'}
+            {activeTab === "orgs" &&
+              "Administra las flotas asociadas a la plataforma y asigna sus respectivos propietarios."}
+            {activeTab === "invitations" &&
+              "Genera y administra enlaces únicos para que nuevos propietarios completen su onboarding."}
+            {activeTab === "settings" &&
+              "Modifica los precios y tarifas de los distintos planes y servicios del CRM."}
           </p>
         </div>
 
-        {activeTab === 'orgs' && (
+        {activeTab === "orgs" && (
           <button
             onClick={openCreateModal}
             className="btn btn-primary bg-gradient-to-r from-blue-600 to-indigo-600 border-none text-white hover:brightness-110 shadow-lg shadow-blue-500/20 active:scale-95 transition-all duration-200"
@@ -866,7 +968,7 @@ export default function OrganizationsPage() {
           </button>
         )}
 
-        {activeTab === 'invitations' && (
+        {activeTab === "invitations" && (
           <button
             onClick={handleGenerateInvitation}
             disabled={isGeneratingInvitation}
@@ -890,38 +992,41 @@ export default function OrganizationsPage() {
       {/* Tabs Switcher */}
       <div className="flex bg-base-100/40 border border-base-200/60 backdrop-blur-md p-1 rounded-2xl max-w-md shadow-inner gap-1">
         <button
-          onClick={() => setActiveTab('orgs')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${activeTab === 'orgs'
-            ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
-            : 'text-base-content/60 hover:text-base-content hover:bg-base-200/50'
-            }`}
+          onClick={() => setActiveTab("orgs")}
+          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${
+            activeTab === "orgs"
+              ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]"
+              : "text-base-content/60 hover:text-base-content hover:bg-base-200/50"
+          }`}
         >
           <Building2 className="size-4" />
           Organizaciones
         </button>
         <button
-          onClick={() => setActiveTab('invitations')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${activeTab === 'invitations'
-            ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
-            : 'text-base-content/60 hover:text-base-content hover:bg-base-200/50'
-            }`}
+          onClick={() => setActiveTab("invitations")}
+          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${
+            activeTab === "invitations"
+              ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]"
+              : "text-base-content/60 hover:text-base-content hover:bg-base-200/50"
+          }`}
         >
           <Link2 className="size-4" />
           Invitaciones
         </button>
         <button
-          onClick={() => setActiveTab('settings')}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${activeTab === 'settings'
-            ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]'
-            : 'text-base-content/60 hover:text-base-content hover:bg-base-200/50'
-            }`}
+          onClick={() => setActiveTab("settings")}
+          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${
+            activeTab === "settings"
+              ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]"
+              : "text-base-content/60 hover:text-base-content hover:bg-base-200/50"
+          }`}
         >
           <Settings className="size-4" />
           Precios
         </button>
       </div>
 
-      {activeTab === 'orgs' && (
+      {activeTab === "orgs" && (
         <>
           {error && !isModalOpen && (
             <div className="alert alert-error shadow-lg">
@@ -934,14 +1039,19 @@ export default function OrganizationsPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="size-10 animate-spin text-primary" />
-              <p className="text-base-content/60 text-sm">Cargando organizaciones...</p>
+              <p className="text-base-content/60 text-sm">
+                Cargando organizaciones...
+              </p>
             </div>
           ) : organizations.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center bg-base-100/30 rounded-2xl border border-dashed border-base-300 py-20">
               <Building2 className="size-16 text-base-content/20 mb-4" />
-              <h3 className="text-lg font-bold">No hay organizaciones creadas</h3>
+              <h3 className="text-lg font-bold">
+                No hay organizaciones creadas
+              </h3>
               <p className="text-base-content/50 text-sm max-w-sm mt-1">
-                Comienza registrando la primera organización de flota y asignando su administrador principal.
+                Comienza registrando la primera organización de flota y
+                asignando su administrador principal.
               </p>
               <button
                 onClick={openCreateModal}
@@ -1006,7 +1116,7 @@ export default function OrganizationsPage() {
         </>
       )}
 
-      {activeTab === 'invitations' && (
+      {activeTab === "invitations" && (
         <>
           {invitationsError && (
             <div className="alert alert-error shadow-lg">
@@ -1018,14 +1128,19 @@ export default function OrganizationsPage() {
           {isLoadingInvitations ? (
             <div className="flex flex-col items-center justify-center py-20 gap-4">
               <Loader2 className="size-10 animate-spin text-primary" />
-              <p className="text-base-content/60 text-sm">Cargando enlaces de invitación...</p>
+              <p className="text-base-content/60 text-sm">
+                Cargando enlaces de invitación...
+              </p>
             </div>
           ) : invitations.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-12 text-center bg-base-100/30 rounded-2xl border border-dashed border-base-300 py-20">
               <Link2 className="size-16 text-base-content/20 mb-4" />
-              <h3 className="text-lg font-bold">No hay enlaces de invitación</h3>
+              <h3 className="text-lg font-bold">
+                No hay enlaces de invitación
+              </h3>
               <p className="text-base-content/50 text-sm max-w-sm mt-1">
-                Genera el primer enlace de invitación para permitir que un nuevo propietario de flota se registre de manera autónoma.
+                Genera el primer enlace de invitación para permitir que un nuevo
+                propietario de flota se registre de manera autónoma.
               </p>
               <button
                 onClick={handleGenerateInvitation}
@@ -1061,22 +1176,29 @@ export default function OrganizationsPage() {
         </>
       )}
 
-      {activeTab === 'settings' && (
+      {activeTab === "settings" && (
         <div className="bg-base-100/60 backdrop-blur-md rounded-2xl border border-base-200 overflow-hidden shadow-xl p-8 max-w-2xl mx-auto space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-base-200">
             <div className="p-3 bg-primary/10 rounded-xl">
               <DollarSign className="text-primary size-6" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-base-content">Configuración de Precios de Suscripción</h2>
-              <p className="text-xs text-base-content/60">Define los precios estándar en USD. Se aplicarán dinámicamente a todas las organizaciones al momento de pagar.</p>
+              <h2 className="text-xl font-bold text-base-content">
+                Configuración de Precios de Suscripción
+              </h2>
+              <p className="text-xs text-base-content/60">
+                Define los precios estándar en USD. Se aplicarán dinámicamente a
+                todas las organizaciones al momento de pagar.
+              </p>
             </div>
           </div>
 
           {isLoadingSettings && (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
               <Loader2 className="size-10 animate-spin text-primary" />
-              <p className="text-base-content/60 text-sm">Cargando tarifas...</p>
+              <p className="text-base-content/60 text-sm">
+                Cargando tarifas...
+              </p>
             </div>
           )}
 
@@ -1085,14 +1207,18 @@ export default function OrganizationsPage() {
               {settingsSuccess && (
                 <div className="alert alert-success shadow-sm text-xs p-3">
                   <Check className="size-4 text-white shrink-0" />
-                  <span className="text-white font-semibold">{settingsSuccess}</span>
+                  <span className="text-white font-semibold">
+                    {settingsSuccess}
+                  </span>
                 </div>
               )}
 
               {settingsError && (
                 <div className="alert alert-error shadow-sm text-xs p-3">
                   <ShieldAlert className="size-4 text-white shrink-0" />
-                  <span className="text-white font-semibold">{settingsError}</span>
+                  <span className="text-white font-semibold">
+                    {settingsError}
+                  </span>
                 </div>
               )}
 
@@ -1100,19 +1226,28 @@ export default function OrganizationsPage() {
               <div className="form-control gap-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <label className="label-text font-bold text-sm text-base-content">SaaS Base Mensual (Tier 1)</label>
-                    <p className="text-xs text-base-content/50">Cobro mensual fijo si la organización NO tiene vehículos con servicios de pago activos.</p>
+                    <label className="label-text font-bold text-sm text-base-content">
+                      SaaS Base Mensual (Tier 1)
+                    </label>
+                    <p className="text-xs text-base-content/50">
+                      Cobro mensual fijo si la organización NO tiene vehículos
+                      con servicios de pago activos.
+                    </p>
                   </div>
                 </div>
                 <div className="relative max-w-xs">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">$</span>
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">
+                    $
+                  </span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     required
                     value={flatSaaSPrice}
-                    onChange={(e) => setFlatSaaSPrice(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setFlatSaaSPrice(parseFloat(e.target.value) || 0)
+                    }
                     className="input input-bordered w-full pl-8 font-semibold focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -1122,19 +1257,28 @@ export default function OrganizationsPage() {
               <div className="form-control gap-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <label className="label-text font-bold text-sm text-base-content">Geolocalización por Vehículo (Tier 2)</label>
-                    <p className="text-xs text-base-content/50">Precio mensual adicional por cada vehículo configurado con rastreo básico.</p>
+                    <label className="label-text font-bold text-sm text-base-content">
+                      Geolocalización por Vehículo (Tier 2)
+                    </label>
+                    <p className="text-xs text-base-content/50">
+                      Precio mensual adicional por cada vehículo configurado con
+                      rastreo básico.
+                    </p>
                   </div>
                 </div>
                 <div className="relative max-w-xs">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">$</span>
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">
+                    $
+                  </span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     required
                     value={geolocationPrice}
-                    onChange={(e) => setGeolocationPrice(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setGeolocationPrice(parseFloat(e.target.value) || 0)
+                    }
                     className="input input-bordered w-full pl-8 font-semibold focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -1144,19 +1288,28 @@ export default function OrganizationsPage() {
               <div className="form-control gap-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <label className="label-text font-bold text-sm text-base-content">Diagnóstico y Telemetría por Vehículo (Tier 3)</label>
-                    <p className="text-xs text-base-content/50">Precio mensual adicional por cada vehículo configurado con telemetría avanzada y diagnósticos OBD-II.</p>
+                    <label className="label-text font-bold text-sm text-base-content">
+                      Diagnóstico y Telemetría por Vehículo (Tier 3)
+                    </label>
+                    <p className="text-xs text-base-content/50">
+                      Precio mensual adicional por cada vehículo configurado con
+                      telemetría avanzada y diagnósticos OBD-II.
+                    </p>
                   </div>
                 </div>
                 <div className="relative max-w-xs">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">$</span>
+                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">
+                    $
+                  </span>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     required
                     value={diagnosticsPrice}
-                    onChange={(e) => setDiagnosticsPrice(parseFloat(e.target.value) || 0)}
+                    onChange={(e) =>
+                      setDiagnosticsPrice(parseFloat(e.target.value) || 0)
+                    }
                     className="input input-bordered w-full pl-8 font-semibold focus:ring-2 focus:ring-primary/20"
                   />
                 </div>
@@ -1183,18 +1336,16 @@ export default function OrganizationsPage() {
         title={
           <span className="flex items-center gap-2">
             <Building2 className="text-primary size-6" />
-            {editingOrg ? 'Editar Organización' : 'Nueva Organización'}
+            {editingOrg ? "Editar Organización" : "Nueva Organización"}
           </span>
         }
         subtitle={
           editingOrg
-            ? 'Modifica los datos generales de esta flota.'
-            : 'Ingresa los datos de la flota y el administrador inicial (Owner).'
+            ? "Modifica los datos generales de esta flota."
+            : "Ingresa los datos de la flota y el administrador inicial (Owner)."
         }
       >
-        {error && (
-          <Alert variant="error" message={error} className="mb-4" />
-        )}
+        {error && <Alert variant="error" message={error} className="mb-4" />}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -1211,7 +1362,9 @@ export default function OrganizationsPage() {
             <>
               <div className="form-control">
                 <label className="label py-1">
-                  <span className="label-text font-bold text-xs text-base-content/85">Estado de Suscripción</span>
+                  <span className="label-text font-bold text-xs text-base-content/85">
+                    Estado de Suscripción
+                  </span>
                 </label>
                 <select
                   value={subStatus}
@@ -1221,11 +1374,13 @@ export default function OrganizationsPage() {
                 >
                   <option value="ACTIVE">Activo</option>
                   <option value="INACTIVE">Inactivo</option>
-                  <option value="PENDING_ACTIVATION">Pendiente de Activación</option>
+                  <option value="PENDING_ACTIVATION">
+                    Pendiente de Activación
+                  </option>
                 </select>
               </div>
 
-              {subStatus === 'ACTIVE' && (
+              {subStatus === "ACTIVE" && (
                 <Input
                   type="date"
                   required
@@ -1277,9 +1432,17 @@ export default function OrganizationsPage() {
                     type="button"
                     onClick={() => setShowOwnerPassword(!showOwnerPassword)}
                     className="flex items-center text-base-content/40 hover:text-base-content/70 cursor-pointer"
-                    title={showOwnerPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    title={
+                      showOwnerPassword
+                        ? "Ocultar contraseña"
+                        : "Mostrar contraseña"
+                    }
                   >
-                    {showOwnerPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    {showOwnerPassword ? (
+                      <EyeOff size={16} />
+                    ) : (
+                      <Eye size={16} />
+                    )}
                   </button>
                 }
               />
@@ -1294,11 +1457,8 @@ export default function OrganizationsPage() {
             >
               Cancelar
             </Button>
-            <Button
-              type="submit"
-              isLoading={isSubmitting}
-            >
-              {editingOrg ? 'Actualizar' : 'Crear'}
+            <Button type="submit" isLoading={isSubmitting}>
+              {editingOrg ? "Actualizar" : "Crear"}
             </Button>
           </div>
         </form>
@@ -1326,7 +1486,9 @@ export default function OrganizationsPage() {
                 </button>
               </div>
 
-              {userFormOpen ? renderUserForm() : renderUserList(activeOrgForUsers)}
+              {userFormOpen
+                ? renderUserForm()
+                : renderUserList(activeOrgForUsers)}
             </div>
           </div>
         </div>
@@ -1341,7 +1503,7 @@ export default function OrganizationsPage() {
             setUserFormOpen(false);
           }
         }}
-        title={activeOrgForUsers?.name || ''}
+        title={activeOrgForUsers?.name || ""}
         subtitle="Gestión de Accesos"
         onBack={userFormOpen ? () => setUserFormOpen(false) : undefined}
         onClose={() => {
@@ -1351,7 +1513,9 @@ export default function OrganizationsPage() {
       >
         {activeOrgForUsers && (
           <div className="p-5">
-            {userFormOpen ? renderUserForm() : renderUserList(activeOrgForUsers)}
+            {userFormOpen
+              ? renderUserForm()
+              : renderUserList(activeOrgForUsers)}
           </div>
         )}
       </MobileDrawer>

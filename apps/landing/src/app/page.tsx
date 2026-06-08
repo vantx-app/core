@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 export default function LandingPage() {
   return (
@@ -18,9 +18,21 @@ export default function LandingPage() {
           </span>
         </div>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-400">
-          <a href="#features" className="hover:text-slate-100 transition-colors">Características</a>
-          <a href="#solutions" className="hover:text-slate-100 transition-colors">Soluciones</a>
-          <a href="#about" className="hover:text-slate-100 transition-colors">Nosotros</a>
+          <a
+            href="#features"
+            className="hover:text-slate-100 transition-colors"
+          >
+            Características
+          </a>
+          <a
+            href="#solutions"
+            className="hover:text-slate-100 transition-colors"
+          >
+            Soluciones
+          </a>
+          <a href="#about" className="hover:text-slate-100 transition-colors">
+            Nosotros
+          </a>
         </nav>
         <div>
           <a
@@ -39,13 +51,15 @@ export default function LandingPage() {
           Monorepo & Telemetría IoT Activa
         </div>
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-white mb-8">
-          Conectando el transporte del{' '}
+          Conectando el transporte del{" "}
           <span className="bg-gradient-to-r from-blue-400 via-indigo-400 to-emerald-400 bg-clip-text text-transparent">
             futuro en tiempo real
           </span>
         </h1>
         <p className="max-w-2xl mx-auto text-lg md:text-xl text-slate-400 font-normal leading-relaxed mb-12">
-          VantX unifica el rastreo inteligente de flotas con telemetría OBDII/CAN-bus y un ecosistema de emparejamiento instantáneo para conductores profesionales.
+          VantX unifica el rastreo inteligente de flotas con telemetría
+          OBDII/CAN-bus y un ecosistema de emparejamiento instantáneo para
+          conductores profesionales.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <a
@@ -64,7 +78,10 @@ export default function LandingPage() {
       </section>
 
       {/* Features Grid */}
-      <section id="features" className="relative max-w-7xl mx-auto px-6 py-20 z-10">
+      <section
+        id="features"
+        className="relative max-w-7xl mx-auto px-6 py-20 z-10"
+      >
         <h2 className="text-3xl md:text-4xl font-bold text-center text-white mb-16">
           Diseñado para Operaciones de Alta Exigencia
         </h2>
@@ -73,18 +90,24 @@ export default function LandingPage() {
             <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 font-bold mb-6">
               📊
             </div>
-            <h3 className="text-xl font-bold text-white mb-3">Telemetría en Vivo</h3>
+            <h3 className="text-xl font-bold text-white mb-3">
+              Telemetría en Vivo
+            </h3>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Monitoreo activo de combustible, kilometraje, códigos OBDII y bus de datos CAN mediante hardware Teltonika FMC003/FMC150.
+              Monitoreo activo de combustible, kilometraje, códigos OBDII y bus
+              de datos CAN mediante hardware Teltonika FMC003/FMC150.
             </p>
           </div>
           <div className="p-8 rounded-2xl border border-slate-800/80 bg-slate-900/30 backdrop-blur-sm hover:border-indigo-500/30 transition-all duration-300">
             <div className="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold mb-6">
               🤝
             </div>
-            <h3 className="text-xl font-bold text-white mb-3">Driver Marketplace</h3>
+            <h3 className="text-xl font-bold text-white mb-3">
+              Driver Marketplace
+            </h3>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Emparejamiento bidireccional instantáneo entre transportistas y vehículos, garantizando contratos rápidos y fluidos.
+              Emparejamiento bidireccional instantáneo entre transportistas y
+              vehículos, garantizando contratos rápidos y fluidos.
             </p>
           </div>
           <div className="p-8 rounded-2xl border border-slate-800/80 bg-slate-900/30 backdrop-blur-sm hover:border-emerald-500/30 transition-all duration-300">
@@ -93,7 +116,8 @@ export default function LandingPage() {
             </div>
             <h3 className="text-xl font-bold text-white mb-3">Seguridad SSO</h3>
             <p className="text-slate-400 text-sm leading-relaxed">
-              Autenticación unificada mediante cookies seguras HttpOnly cruzando todos los subdominios de la aplicación.
+              Autenticación unificada mediante cookies seguras HttpOnly cruzando
+              todos los subdominios de la aplicación.
             </p>
           </div>
         </div>
@@ -101,7 +125,10 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-900 py-8 text-center text-sm text-slate-600">
-        <p>&copy; {new Date().getFullYear()} VantX App. Todos los derechos reservados.</p>
+        <p>
+          &copy; {new Date().getFullYear()} VantX App. Todos los derechos
+          reservados.
+        </p>
       </footer>
     </main>
   );

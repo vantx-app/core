@@ -1,15 +1,15 @@
-import { cookies } from 'next/headers';
+import { cookies } from "next/headers";
 
 export async function fetchServer(endpoint: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
-  const token = cookieStore.get('access_token')?.value;
+  const token = cookieStore.get("access_token")?.value;
   const url = `${process.env.INTERNAL_API_URL}/api${endpoint}`;
 
   console.log(`🚀 Intentando fetch a: ${url}`);
 
   // Preparamos cabeceras limpias
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
 
@@ -21,7 +21,7 @@ export async function fetchServer(endpoint: string, options: RequestInit = {}) {
   try {
     const response = await fetch(url, {
       ...options,
-      cache: 'no-store', // Evitamos que Next.js cachee telemetría o datos dinámicos
+      cache: "no-store", // Evitamos que Next.js cachee telemetría o datos dinámicos
       headers,
     });
 

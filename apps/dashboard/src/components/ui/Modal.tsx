@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import React, { useEffect, useRef } from 'react';
-import { ModalProps } from '@/types';
-import { X } from 'lucide-react';
+import React, { useEffect, useRef } from "react";
+import { ModalProps } from "@/types";
+import { X } from "lucide-react";
 
 export function Modal({
   isOpen,
@@ -10,7 +10,7 @@ export function Modal({
   title,
   subtitle,
   children,
-  className = 'max-w-md',
+  className = "max-w-md",
   closeOnBackdrop = true,
 }: ModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
@@ -20,17 +20,19 @@ export function Modal({
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
       }
 
       // Foco cíclico (Focus Trap)
-      if (e.key === 'Tab' && modalRef.current) {
+      if (e.key === "Tab" && modalRef.current) {
         const focusableElements = modalRef.current.querySelectorAll(
-          'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]'
+          'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [tabindex="0"], [contenteditable]',
         );
         const firstElement = focusableElements[0] as HTMLElement;
-        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+        const lastElement = focusableElements[
+          focusableElements.length - 1
+        ] as HTMLElement;
 
         if (focusableElements.length === 0) return;
 
@@ -49,14 +51,16 @@ export function Modal({
     };
 
     // Poner el foco en el primer campo del modal al abrir
-    const firstInput = modalRef.current?.querySelector('input, button:not([aria-label="Cerrar modal"])') as HTMLElement;
+    const firstInput = modalRef.current?.querySelector(
+      'input, button:not([aria-label="Cerrar modal"])',
+    ) as HTMLElement;
     if (firstInput) {
       setTimeout(() => firstInput.focus(), 50);
     }
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen, onClose]);
 
@@ -85,9 +89,7 @@ export function Modal({
                 </h2>
               )}
               {subtitle && (
-                <p className="text-xs text-base-content/65 mt-1">
-                  {subtitle}
-                </p>
+                <p className="text-xs text-base-content/65 mt-1">{subtitle}</p>
               )}
             </div>
             <button
@@ -112,9 +114,7 @@ export function Modal({
         )}
 
         {/* Contenido */}
-        <div className="flex-1 w-full">
-          {children}
-        </div>
+        <div className="flex-1 w-full">{children}</div>
       </div>
     </div>
   );

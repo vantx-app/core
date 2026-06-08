@@ -1,23 +1,23 @@
-'use client';
+"use client";
 
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Car } from 'lucide-react';
-import { BackButton } from '@/components/ui/BackButton';
-import VehicleForm from '@/components/VehicleForm';
+import { useRouter, useSearchParams } from "next/navigation";
+import { Car } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
+import VehicleForm from "@/components/VehicleForm";
 
 export default function NewVehiclePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const targetOrgId = searchParams.get('targetOrgId');
-  const fallbackHref = targetOrgId ? `/vehicle?targetOrgId=${targetOrgId}` : '/vehicle';
+  const targetOrgId = searchParams.get("targetOrgId");
+  const fallbackHref = targetOrgId
+    ? `/vehicle?targetOrgId=${targetOrgId}`
+    : "/vehicle";
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       {/* Back button */}
       <div>
-        <BackButton fallbackHref={fallbackHref}>
-          Volver a vehículos
-        </BackButton>
+        <BackButton fallbackHref={fallbackHref}>Volver a vehículos</BackButton>
       </div>
 
       {/* Header */}
@@ -30,7 +30,8 @@ export default function NewVehiclePage() {
             Registrar Vehículo
           </h1>
           <p className="text-xs text-base-content/60 mt-1">
-            Configura un nuevo vehículo en el sistema con su correspondiente identificador de telemetría (IMEI).
+            Configura un nuevo vehículo en el sistema con su correspondiente
+            identificador de telemetría (IMEI).
           </p>
         </div>
       </div>

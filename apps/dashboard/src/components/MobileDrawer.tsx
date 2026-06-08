@@ -1,7 +1,7 @@
-import { MobileDrawerProps } from '@/types';
-import React from 'react';
-import { Drawer } from 'vaul';
-import { ArrowLeft, X } from 'lucide-react';
+import { MobileDrawerProps } from "@/types";
+import React from "react";
+import { Drawer } from "vaul";
+import { ArrowLeft, X } from "lucide-react";
 
 export const MobileDrawer = ({
   open,
@@ -18,26 +18,28 @@ export const MobileDrawer = ({
   setActiveSnapPoint,
   dismissible = true,
   modal = true,
-  height = '100dvh',
+  height = "100dvh",
   paddingBottom,
 }: MobileDrawerProps) => {
-  const finalPaddingBottom = paddingBottom ?? (modal 
-    ? 'calc(1.5rem + env(safe-area-inset-bottom))' 
-    : 'calc(80px + env(safe-area-inset-bottom))');
+  const finalPaddingBottom =
+    paddingBottom ??
+    (modal
+      ? "calc(1.5rem + env(safe-area-inset-bottom))"
+      : "calc(80px + env(safe-area-inset-bottom))");
   // Lock body scroll and handle pointer-events when drawer is open
   React.useEffect(() => {
     if (!open) return;
 
     if (modal) {
-      document.body.style.overflow = 'hidden';
+      document.body.style.overflow = "hidden";
     }
 
     // Workaround for Vaul / Radix UI Dialog modal={false} bug where pointer-events: none is applied to body.
     // If modal is false, we want the body to stay interactive.
     if (!modal) {
       const handleBodyPointerEvents = () => {
-        if (document.body.style.pointerEvents === 'none') {
-          document.body.style.pointerEvents = 'auto';
+        if (document.body.style.pointerEvents === "none") {
+          document.body.style.pointerEvents = "auto";
         }
       };
 
@@ -46,26 +48,29 @@ export const MobileDrawer = ({
 
       const observer = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
-          if (mutation.attributeName === 'style') {
-            if (document.body.style.pointerEvents === 'none') {
-              document.body.style.pointerEvents = 'auto';
+          if (mutation.attributeName === "style") {
+            if (document.body.style.pointerEvents === "none") {
+              document.body.style.pointerEvents = "auto";
             }
           }
         });
       });
 
-      observer.observe(document.body, { attributes: true, attributeFilter: ['style'] });
+      observer.observe(document.body, {
+        attributes: true,
+        attributeFilter: ["style"],
+      });
 
       return () => {
         clearTimeout(timeoutId);
         observer.disconnect();
-        document.body.style.overflow = '';
-        document.body.style.pointerEvents = '';
+        document.body.style.overflow = "";
+        document.body.style.pointerEvents = "";
       };
     }
 
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [open, modal]);
 
@@ -84,12 +89,12 @@ export const MobileDrawer = ({
     if (!dismissible) return;
 
     const stateKey = `drawer-${Math.random().toString(36).substring(2, 9)}`;
-    
+
     // Push a new state so the next 'back' pops this state
     try {
-      window.history.pushState({ drawerKey: stateKey }, '');
+      window.history.pushState({ drawerKey: stateKey }, "");
     } catch (e) {
-      console.warn('Failed to push state to history:', e);
+      console.warn("Failed to push state to history:", e);
     }
 
     let isClosedByPopState = false;
@@ -103,20 +108,23 @@ export const MobileDrawer = ({
       }
     };
 
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
 
     return () => {
-      window.removeEventListener('popstate', handlePopState);
-      
+      window.removeEventListener("popstate", handlePopState);
+
       // If the drawer was closed by some other means (e.g., clicking backdrop, X button, or submit),
       // we need to pop the state we pushed to keep the history clean.
       if (!isClosedByPopState) {
         try {
-          if (window.history.state && window.history.state.drawerKey === stateKey) {
+          if (
+            window.history.state &&
+            window.history.state.drawerKey === stateKey
+          ) {
             window.history.back();
           }
         } catch (e) {
-          console.warn('Failed to pop state from history:', e);
+          console.warn("Failed to pop state from history:", e);
         }
       }
     };
@@ -136,13 +144,13 @@ export const MobileDrawer = ({
         {modal && (
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[80] cursor-pointer pointer-events-auto"
-            style={{ pointerEvents: 'auto' }}
+            style={{ pointerEvents: "auto" }}
             onClick={() => onOpenChange(false)}
           />
         )}
         <Drawer.Content
           className={`bg-base-100 flex flex-col rounded-t-[20px] fixed bottom-0 left-0 right-0 shadow-[0_-8px_30px_rgb(0,0,0,0.12)] focus:outline-none border-t border-base-300 ${
-            modal ? 'z-[90]' : 'z-50'
+            modal ? "z-[90]" : "z-50"
           }`}
           style={{ height }}
           onPointerDownOutside={(e) => {
@@ -158,7 +166,6 @@ export const MobileDrawer = ({
         >
           {/* Drawer Inner Wrapper */}
           <div className="flex flex-col h-full overflow-hidden bg-base-100 rounded-t-[20px]">
-            
             {/* Drag Handle & Header */}
             <div className="p-4 shrink-0 border-b border-base-200 bg-base-100/80 backdrop-blur-md sticky top-0 z-10 cursor-grab active:cursor-grabbing">
               <div className="mx-auto w-12 h-1.5 rounded-full bg-base-300 mb-4" />
@@ -173,7 +180,11 @@ export const MobileDrawer = ({
                       <ArrowLeft className="size-5" />
                     </button>
                   )}
-                  {icon && <div className="p-2 bg-primary/10 rounded-lg text-primary shrink-0">{icon}</div>}
+                  {icon && (
+                    <div className="p-2 bg-primary/10 rounded-lg text-primary shrink-0">
+                      {icon}
+                    </div>
+                  )}
                   <div className="flex flex-col overflow-hidden">
                     <span className="truncate leading-tight font-extrabold text-base-content">
                       {title}

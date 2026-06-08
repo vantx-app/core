@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { DriverDocumentsStats, DriverProfileStats, UserProfile } from '@/types';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import Cookies from 'js-cookie';
-import api from '@/utils/client/api-client';
+import { DriverDocumentsStats, DriverProfileStats, UserProfile } from "@/types";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Cookies from "js-cookie";
+import api from "@/utils/client/api-client";
 import {
   Mail,
   Shield,
@@ -14,21 +14,23 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-} from 'lucide-react';
-import { DriverProfileCard } from '@/components/account/DriverProfileCard';
-import { DriverDocumentsCard } from '@/components/account/DriverDocumentsCard';
+} from "lucide-react";
+import { DriverProfileCard } from "@/components/account/DriverProfileCard";
+import { DriverDocumentsCard } from "@/components/account/DriverDocumentsCard";
 
 export default function AccountPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [driverStats, setDriverStats] = useState<(DriverProfileStats & DriverDocumentsStats) | null>(null);
+  const [driverStats, setDriverStats] = useState<
+    (DriverProfileStats & DriverDocumentsStats) | null
+  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Password change states
-  const [oldPass, setOldPass] = useState('');
-  const [newPass, setNewPass] = useState('');
-  const [confirmPass, setConfirmPass] = useState('');
+  const [oldPass, setOldPass] = useState("");
+  const [newPass, setNewPass] = useState("");
+  const [confirmPass, setConfirmPass] = useState("");
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -36,21 +38,21 @@ export default function AccountPage() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get('/users/me');
+      const { data } = await api.get("/users/me");
       setProfile(data);
 
       // Fetch driver stats if user has DRIVER role or has a linked driver profile
-      if (data.role === 'DRIVER' || data.driver) {
+      if (data.role === "DRIVER" || data.driver) {
         try {
-          const statsRes = await api.get('/drivers/me/stats');
+          const statsRes = await api.get("/drivers/me/stats");
           setDriverStats(statsRes.data);
         } catch (err) {
-          console.error('Error fetching driver stats on account page:', err);
+          console.error("Error fetching driver stats on account page:", err);
         }
       }
     } catch (err) {
-      console.error('Error al cargar perfil:', err);
-      setError('No se pudo cargar el perfil del usuario.');
+      console.error("Error al cargar perfil:", err);
+      setError("No se pudo cargar el perfil del usuario.");
     } finally {
       setLoading(false);
     }
@@ -62,22 +64,22 @@ export default function AccountPage() {
 
   const handleLogout = async () => {
     try {
-      const response = await fetch('/api/auth/logout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
       });
 
       if (response.ok) {
-        Cookies.remove('access_token');
-        Cookies.remove('refresh_token');
-        router.push('/login');
+        Cookies.remove("access_token");
+        Cookies.remove("refresh_token");
+        router.push("/login");
         router.refresh();
       } else {
-        alert('Error al cerrar sesión');
+        alert("Error al cerrar sesión");
       }
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error("Logout error:", err);
     }
   };
 
@@ -87,30 +89,34 @@ export default function AccountPage() {
     setPasswordSuccess(false);
 
     if (newPass !== confirmPass) {
-      setPasswordError('Las contraseñas nuevas no coinciden.');
+      setPasswordError("Las contraseñas nuevas no coinciden.");
       return;
     }
 
     if (newPass.length < 6) {
-      setPasswordError('La contraseña debe tener al menos 6 caracteres.');
+      setPasswordError("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
     setChangingPassword(true);
 
     try {
-      await api.post('/users/change-password', {
+      await api.post("/users/change-password", {
         oldPass,
         newPass,
       });
       setPasswordSuccess(true);
-      setOldPass('');
-      setNewPass('');
-      setConfirmPass('');
+      setOldPass("");
+      setNewPass("");
+      setConfirmPass("");
     } catch (err) {
-      console.error('Error changing password:', err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setPasswordError(message || 'Error al cambiar la contraseña. Verifica tu contraseña actual.');
+      console.error("Error changing password:", err);
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setPasswordError(
+        message ||
+          "Error al cambiar la contraseña. Verifica tu contraseña actual.",
+      );
     } finally {
       setChangingPassword(false);
     }
@@ -120,18 +126,22 @@ export default function AccountPage() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <Loader2 className="size-10 animate-spin text-primary" />
-        <p className="text-sm text-base-content/60">Cargando perfil de cuenta...</p>
+        <p className="text-sm text-base-content/60">
+          Cargando perfil de cuenta...
+        </p>
       </div>
     );
   }
 
   const getInitials = (name: string) => {
-    return name
-      ?.split(' ')
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join('')
-      .toUpperCase() || 'U';
+    return (
+      name
+        ?.split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase() || "U"
+    );
   };
 
   return (
@@ -141,7 +151,7 @@ export default function AccountPage() {
         <div className="flex items-center gap-4">
           <div className="avatar placeholder">
             <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-2xl w-16 h-16 font-extrabold text-xl shadow-md shadow-blue-500/20">
-              <span>{profile ? getInitials(profile.name) : 'U'}</span>
+              <span>{profile ? getInitials(profile.name) : "U"}</span>
             </div>
           </div>
           <div>
@@ -173,11 +183,15 @@ export default function AccountPage() {
         {/* Profile details */}
         <div className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md rounded-2xl md:col-span-1">
           <div className="card-body p-6 space-y-4">
-            <h3 className="font-bold text-sm text-base-content/40 uppercase tracking-wider">Detalles de la cuenta</h3>
+            <h3 className="font-bold text-sm text-base-content/40 uppercase tracking-wider">
+              Detalles de la cuenta
+            </h3>
 
             <div className="space-y-3.5">
               <div>
-                <span className="text-[10px] text-base-content/50 uppercase block font-semibold">Rol del Sistema</span>
+                <span className="text-[10px] text-base-content/50 uppercase block font-semibold">
+                  Rol del Sistema
+                </span>
                 <div className="flex items-center gap-1.5 mt-1">
                   <Shield className="size-4 text-primary shrink-0" />
                   <span className="badge badge-primary font-bold text-xs uppercase tracking-wide py-2">
@@ -188,7 +202,9 @@ export default function AccountPage() {
 
               {profile?.organization && (
                 <div>
-                  <span className="text-[10px] text-base-content/50 uppercase block font-semibold">Organización / Empresa</span>
+                  <span className="text-[10px] text-base-content/50 uppercase block font-semibold">
+                    Organización / Empresa
+                  </span>
                   <div className="flex items-center gap-1.5 mt-1">
                     <Building2 className="size-4 text-base-content/60 shrink-0" />
                     <span className="font-medium text-sm text-base-content/95">
@@ -212,7 +228,9 @@ export default function AccountPage() {
             {passwordSuccess && (
               <div className="alert alert-success shadow p-3 text-xs flex items-center gap-2 mb-4">
                 <CheckCircle2 className="size-4 shrink-0 text-white" />
-                <span className="text-white">¡Contraseña actualizada con éxito!</span>
+                <span className="text-white">
+                  ¡Contraseña actualizada con éxito!
+                </span>
               </div>
             )}
 
@@ -226,7 +244,9 @@ export default function AccountPage() {
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div className="form-control">
                 <label className="label py-1">
-                  <span className="label-text font-bold text-xs text-base-content/85">Contraseña Actual</span>
+                  <span className="label-text font-bold text-xs text-base-content/85">
+                    Contraseña Actual
+                  </span>
                 </label>
                 <input
                   type="password"
@@ -242,7 +262,9 @@ export default function AccountPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="form-control">
                   <label className="label py-1">
-                    <span className="label-text font-bold text-xs text-base-content/85">Nueva Contraseña</span>
+                    <span className="label-text font-bold text-xs text-base-content/85">
+                      Nueva Contraseña
+                    </span>
                   </label>
                   <input
                     type="password"
@@ -257,7 +279,9 @@ export default function AccountPage() {
 
                 <div className="form-control">
                   <label className="label py-1">
-                    <span className="label-text font-bold text-xs text-base-content/85">Confirmar Nueva Contraseña</span>
+                    <span className="label-text font-bold text-xs text-base-content/85">
+                      Confirmar Nueva Contraseña
+                    </span>
                   </label>
                   <input
                     type="password"
@@ -283,7 +307,7 @@ export default function AccountPage() {
                       Actualizando...
                     </>
                   ) : (
-                    'Actualizar Contraseña'
+                    "Actualizar Contraseña"
                   )}
                 </button>
               </div>
@@ -296,7 +320,10 @@ export default function AccountPage() {
       {driverStats && (
         <>
           <DriverProfileCard stats={driverStats} />
-          <DriverDocumentsCard driverStats={driverStats} onSync={fetchProfile} />
+          <DriverDocumentsCard
+            driverStats={driverStats}
+            onSync={fetchProfile}
+          />
         </>
       )}
     </div>

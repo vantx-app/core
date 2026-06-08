@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React, { forwardRef } from 'react';
-import { InputProps } from '@/types';
+import React, { forwardRef } from "react";
+import { InputProps } from "@/types";
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   (
@@ -11,15 +11,15 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       helperText,
       leftIcon,
       rightIcon,
-      className = '',
-      wrapperClassName = '',
-      type = 'text',
+      className = "",
+      wrapperClassName = "",
+      type = "text",
       disabled,
       required,
       id,
       ...props
     },
-    ref
+    ref,
   ) => {
     // Generar un ID único si no se proporciona para accesibilidad
     const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
@@ -50,11 +50,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             id={inputId}
             disabled={disabled}
             className={`input input-bordered w-full focus:ring-2 transition-all duration-200 text-sm h-11 rounded-2xl
-              ${leftIcon ? 'pl-11' : 'pl-4'}
-              ${rightIcon ? 'pr-11' : 'pr-4'}
-              ${error
-                ? 'input-error border-red-500 focus:ring-red-500/20 focus:border-red-500'
-                : 'focus:ring-primary/20 focus:border-primary'
+              ${leftIcon ? "pl-11" : "pl-4"}
+              ${rightIcon ? "pr-11" : "pr-4"}
+              ${
+                error
+                  ? "input-error border-red-500 focus:ring-red-500/20 focus:border-red-500"
+                  : "focus:ring-primary/20 focus:border-primary"
               }
               ${className}
             `}
@@ -80,7 +81,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         ) : null}
       </div>
     );
-  }
+  },
 );
 
-Input.displayName = 'Input';
+Input.displayName = "Input";

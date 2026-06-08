@@ -1,20 +1,32 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { ROLES } from '@/utils/enums';
-import api from '@/utils/client/api-client';
-import { VehicleFormProps, NewVehiclePageOrg, VehicleFormValues } from '@/types';
-import { Loader2, Save, Camera, Building2 } from 'lucide-react';
-import { useForm } from 'react-hook-form';
-import dynamic from 'next/dynamic';
-import { Input } from '@/components/ui/Input';
-import { Button } from '@/components/ui/Button';
-import { Alert } from '@/components/ui/Alert';
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { ROLES } from "@/utils/enums";
+import api from "@/utils/client/api-client";
+import {
+  VehicleFormProps,
+  NewVehiclePageOrg,
+  VehicleFormValues,
+} from "@/types";
+import { Loader2, Save, Camera, Building2 } from "lucide-react";
+import { useForm } from "react-hook-form";
+import dynamic from "next/dynamic";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
 
-const ImeiScannerModal = dynamic(() => import('@/components/ImeiScannerModal'), { ssr: false });
+const ImeiScannerModal = dynamic(
+  () => import("@/components/ImeiScannerModal"),
+  { ssr: false },
+);
 
-export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCancel }: VehicleFormProps) {
+export default function VehicleForm({
+  vehicleId,
+  targetOrgId,
+  onSuccess,
+  onCancel,
+}: VehicleFormProps) {
   const { role } = useAuth();
   const isSuperAdmin = role === ROLES.SUPER_ADMIN;
 
@@ -22,29 +34,36 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
   const [error, setError] = useState<string | null>(null);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
 
-  const [originalOdometer, setOriginalOdometer] = useState<string>('');
+  const [originalOdometer, setOriginalOdometer] = useState<string>("");
   const [fetchedLastOdometer, setFetchedLastOdometer] = useState<number>(0);
-  const [orgName, setOrgName] = useState('');
-  const [selectedOrgName, setSelectedOrgName] = useState('');
+  const [orgName, setOrgName] = useState("");
+  const [selectedOrgName, setSelectedOrgName] = useState("");
 
   const [organizations, setOrganizations] = useState<NewVehiclePageOrg[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
 
-  const { register, handleSubmit, reset, setValue, watch, formState: { isSubmitting } } = useForm<VehicleFormValues>({
+  const {
+    register,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { isSubmitting },
+  } = useForm<VehicleFormValues>({
     defaultValues: {
-      orgId: '',
-      imei: '',
-      alias: '',
-      plateNumber: '',
-      make: '',
-      model: '',
-      year: '',
-      currentOdometer: '',
-      fuelType: '',
-    }
+      orgId: "",
+      imei: "",
+      alias: "",
+      plateNumber: "",
+      make: "",
+      model: "",
+      year: "",
+      currentOdometer: "",
+      fuelType: "",
+    },
   });
 
-  const watchedImei = watch('imei');
+  const watchedImei = watch("imei");
 
   // Load organizations if super admin (and creating a new vehicle)
   useEffect(() => {
@@ -52,16 +71,18 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
       const fetchOrgs = async () => {
         try {
           setIsLoadingOrgs(true);
-          const { data } = await api.get('/organizations');
+          const { data } = await api.get("/organizations");
           setOrganizations(data);
-          const resolvedOrg = data.find((org: NewVehiclePageOrg) => org.id === targetOrgId) ?? data[0];
+          const resolvedOrg =
+            data.find((org: NewVehiclePageOrg) => org.id === targetOrgId) ??
+            data[0];
           if (resolvedOrg) {
-            setValue('orgId', resolvedOrg.id);
+            setValue("orgId", resolvedOrg.id);
             setSelectedOrgName(resolvedOrg.name);
           }
         } catch (err) {
-          console.error('Error fetching organizations:', err);
-          setError('No se pudieron cargar las organizaciones.');
+          console.error("Error fetching organizations:", err);
+          setError("No se pudieron cargar las organizaciones.");
         } finally {
           setIsLoadingOrgs(false);
         }
@@ -80,7 +101,7 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
         setError(null);
         const { data } = await api.get(`/vehicles/${vehicleId}`);
         if (data) {
-          setOrgName(data.organization?.name || '');
+          setOrgName(data.organization?.name || "");
 
           const lastOdo = data.liveState?.lastOdometer ?? 0;
           const initialOdo = data.initialOdometer ?? 0;
@@ -89,19 +110,19 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
           setOriginalOdometer(displayOdo);
 
           reset({
-            alias: data.alias || '',
-            imei: data.imei || '',
-            plateNumber: data.plateNumber || '',
-            make: data.make || '',
-            model: data.model || '',
-            year: data.year ? Number(data.year) : '',
+            alias: data.alias || "",
+            imei: data.imei || "",
+            plateNumber: data.plateNumber || "",
+            make: data.make || "",
+            model: data.model || "",
+            year: data.year ? Number(data.year) : "",
             currentOdometer: displayOdo,
-            fuelType: data.fuelType || '',
+            fuelType: data.fuelType || "",
           });
         }
       } catch (err) {
-        console.error('Error loading vehicle details:', err);
-        setError('No se pudieron cargar los detalles del vehículo.');
+        console.error("Error loading vehicle details:", err);
+        setError("No se pudieron cargar los detalles del vehículo.");
       } finally {
         setLoading(false);
       }
@@ -126,23 +147,27 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
       if (!vehicleId) {
         // Create Mode
         payload.imei = data.imei || undefined;
-        payload.initialOdometer = data.currentOdometer ? Number(data.currentOdometer) : 0;
+        payload.initialOdometer = data.currentOdometer
+          ? Number(data.currentOdometer)
+          : 0;
 
         if (isSuperAdmin) {
           if (!data.orgId) {
-            setError('Debes seleccionar una organización.');
+            setError("Debes seleccionar una organización.");
             return;
           }
           payload.orgId = data.orgId;
         } else {
-          payload.orgId = '00000000-0000-0000-0000-000000000000';
+          payload.orgId = "00000000-0000-0000-0000-000000000000";
         }
 
-        await api.post('/vehicles', payload);
+        await api.post("/vehicles", payload);
       } else {
         // Edit Mode
         if (data.currentOdometer !== originalOdometer) {
-          payload.initialOdometer = data.currentOdometer ? Number(data.currentOdometer) - fetchedLastOdometer : 0;
+          payload.initialOdometer = data.currentOdometer
+            ? Number(data.currentOdometer) - fetchedLastOdometer
+            : 0;
         }
         await api.patch(`/vehicles/${vehicleId}`, payload);
       }
@@ -150,8 +175,9 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
       onSuccess();
     } catch (err) {
       console.error(err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setError(message || 'Error al guardar el vehículo.');
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setError(message || "Error al guardar el vehículo.");
     }
   };
 
@@ -159,16 +185,16 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
     return (
       <div className="flex flex-col items-center justify-center py-10 gap-3">
         <Loader2 className="size-8 animate-spin text-primary" />
-        <p className="text-xs text-base-content/60">Cargando información del vehículo...</p>
+        <p className="text-xs text-base-content/60">
+          Cargando información del vehículo...
+        </p>
       </div>
     );
   }
 
   return (
     <div className="space-y-4">
-      {error && (
-        <Alert variant="error" message={error} />
-      )}
+      {error && <Alert variant="error" message={error} />}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Super Admin: Organization selection (only in Create mode) */}
@@ -190,7 +216,9 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
                     Cargando...
                   </span>
                 ) : (
-                  <span className="font-semibold">{selectedOrgName || targetOrgId}</span>
+                  <span className="font-semibold">
+                    {selectedOrgName || targetOrgId}
+                  </span>
                 )}
               </div>
             ) : isLoadingOrgs ? (
@@ -203,7 +231,7 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
                 className="select select-bordered w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
                 required
                 disabled={isSubmitting}
-                {...register('orgId')}
+                {...register("orgId")}
               >
                 {organizations.map((org) => (
                   <option key={org.id} value={org.id}>
@@ -227,7 +255,9 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
             <div className="flex items-center gap-2 px-3 py-2.5 bg-base-200/60 border border-base-300 rounded-xl text-sm text-base-content/70 cursor-default select-none">
               <Building2 className="size-4 text-base-content/40 shrink-0" />
               <span className="font-medium">{orgName}</span>
-              <span className="ml-auto text-[10px] text-base-content/40 italic">No editable</span>
+              <span className="ml-auto text-[10px] text-base-content/40 italic">
+                No editable
+              </span>
             </div>
           </div>
         )}
@@ -253,8 +283,8 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
               ) : undefined
             }
             helperText="Código único del dispositivo GPS."
-            {...register('imei')}
-            wrapperClassName={!vehicleId && !watchedImei ? 'mb-2' : ''}
+            {...register("imei")}
+            wrapperClassName={!vehicleId && !watchedImei ? "mb-2" : ""}
           />
           {!vehicleId && !watchedImei && (
             <div className="col-span-1 md:col-span-2">
@@ -273,9 +303,10 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
             placeholder="Ej. AB1234"
             className="uppercase"
             disabled={isSubmitting}
-            {...register('plateNumber', {
+            {...register("plateNumber", {
               required: true,
-              onChange: (e) => setValue('plateNumber', e.target.value.toUpperCase())
+              onChange: (e) =>
+                setValue("plateNumber", e.target.value.toUpperCase()),
             })}
           />
 
@@ -284,7 +315,7 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
             label="Alias del Vehículo"
             placeholder="Ej. Camión Cisterna #3"
             disabled={isSubmitting}
-            {...register('alias')}
+            {...register("alias")}
           />
 
           <Input
@@ -292,7 +323,7 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
             label="Marca"
             placeholder="Ej. Toyota"
             disabled={isSubmitting}
-            {...register('make')}
+            {...register("make")}
           />
 
           <Input
@@ -300,7 +331,7 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
             label="Modelo"
             placeholder="Ej. Hilux"
             disabled={isSubmitting}
-            {...register('model')}
+            {...register("model")}
           />
 
           <Input
@@ -308,30 +339,36 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
             label="Año"
             placeholder="Ej. 2023"
             disabled={isSubmitting}
-            {...register('year')}
+            {...register("year")}
           />
 
           <Input
             type="number"
-            label={!vehicleId ? 'Kilometraje inicial (km)' : 'Kilometraje actual (km)'}
+            label={
+              !vehicleId
+                ? "Kilometraje inicial (km)"
+                : "Kilometraje actual (km)"
+            }
             placeholder="Ej. 120000"
             disabled={isSubmitting}
             helperText={
               !vehicleId
-                ? 'Kilometraje base del vehículo al momento de registrarlo.'
-                : 'Kilometraje real actual del camión.'
+                ? "Kilometraje base del vehículo al momento de registrarlo."
+                : "Kilometraje real actual del camión."
             }
-            {...register('currentOdometer')}
+            {...register("currentOdometer")}
           />
 
           <div className="form-control">
             <label className="label py-1">
-              <span className="label-text font-bold text-xs text-base-content/85">Tipo de Combustible (Opcional)</span>
+              <span className="label-text font-bold text-xs text-base-content/85">
+                Tipo de Combustible (Opcional)
+              </span>
             </label>
             <select
               className="select select-bordered w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
               disabled={isSubmitting}
-              {...register('fuelType')}
+              {...register("fuelType")}
             >
               <option value="">No Especificado</option>
               <option value="GASOLINE">Gasolina</option>
@@ -360,7 +397,7 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
             leftIcon={<Save className="size-4" />}
             className="flex-1 sm:flex-initial min-w-[120px]"
           >
-            {!vehicleId ? 'Registrar' : 'Guardar'}
+            {!vehicleId ? "Registrar" : "Guardar"}
           </Button>
         </div>
       </form>
@@ -369,7 +406,7 @@ export default function VehicleForm({ vehicleId, targetOrgId, onSuccess, onCance
         <ImeiScannerModal
           isOpen={isScannerOpen}
           onClose={() => setIsScannerOpen(false)}
-          onScanSuccess={(scannedImei) => setValue('imei', scannedImei)}
+          onScanSuccess={(scannedImei) => setValue("imei", scannedImei)}
         />
       )}
     </div>

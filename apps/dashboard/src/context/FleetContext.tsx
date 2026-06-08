@@ -1,50 +1,68 @@
 // context/FleetContext.tsx
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { useFleetSocket } from '@/hooks/useFleetSocket';
-import api from '@/utils/client/api-client';
-import { FleetContextType, FleetProviderProps, FleetVehicle } from '@/types';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
+import { useSearchParams } from "next/navigation";
+import { useFleetSocket } from "@/hooks/useFleetSocket";
+import api from "@/utils/client/api-client";
+import { FleetContextType, FleetProviderProps, FleetVehicle } from "@/types";
 
 const FleetContext = createContext<FleetContextType | undefined>(undefined);
 
-export function FleetProvider({ children, initialVehicles = [] }: FleetProviderProps) {
+export function FleetProvider({
+  children,
+  initialVehicles = [],
+}: FleetProviderProps) {
   const searchParams = useSearchParams();
-  const targetOrgId = searchParams.get('targetOrgId');
+  const targetOrgId = searchParams.get("targetOrgId");
 
   const formattedInitialData = useMemo(() => {
-    return (initialVehicles || []).reduce<Record<string, FleetVehicle>>((acc, v) => {
-      if (!v.liveState) return acc;
+    return (initialVehicles || []).reduce<Record<string, FleetVehicle>>(
+      (acc, v) => {
+        if (!v.liveState) return acc;
 
-      acc[v.id] = {
-        ...v,
-        latitude: v.liveState.lastLat ?? 0,
-        longitude: v.liveState.lastLng ?? 0,
-        speed: v.liveState.lastSpeed ?? 0,
-        status: v.liveState.currentStatus ?? 'STOPPED',
-        angle: v.liveState.lastAngle ?? 0,
-        updatedAt: v.liveState.lastUpdate ?? 'N/A',
-        ignition: v.liveState.lastIgnition ?? false,
-        odometer: v.liveState.lastOdometer ?? 0,
-      };
-      return acc;
-    }, {});
+        acc[v.id] = {
+          ...v,
+          latitude: v.liveState.lastLat ?? 0,
+          longitude: v.liveState.lastLng ?? 0,
+          speed: v.liveState.lastSpeed ?? 0,
+          status: v.liveState.currentStatus ?? "STOPPED",
+          angle: v.liveState.lastAngle ?? 0,
+          updatedAt: v.liveState.lastUpdate ?? "N/A",
+          ignition: v.liveState.lastIgnition ?? false,
+          odometer: v.liveState.lastOdometer ?? 0,
+        };
+        return acc;
+      },
+      {},
+    );
   }, [initialVehicles]);
 
-  const [fleet, setFleet] = useState<Record<string, FleetVehicle>>(formattedInitialData);
+  const [fleet, setFleet] =
+    useState<Record<string, FleetVehicle>>(formattedInitialData);
   const { isConnected } = useFleetSocket(setFleet);
 
-  const value = useMemo(() => ({
-    fleet,
-    isConnected,
-  }), [fleet, isConnected]);
+  const value = useMemo(
+    () => ({
+      fleet,
+      isConnected,
+    }),
+    [fleet, isConnected],
+  );
 
   const fetchAndMergeFleet = useCallback(async () => {
     try {
       const url = targetOrgId
         ? `/vehicles?liveState=true&targetOrgId=${targetOrgId}`
-        : '/vehicles?liveState=true';
+        : "/vehicles?liveState=true";
       const res = await api(url);
       if (res.status === 200) {
         const vehicles = res.data as FleetVehicle[];
@@ -56,10 +74,13 @@ export function FleetProvider({ children, initialVehicles = [] }: FleetProviderP
             if (!v.liveState) return;
             const prev = prevFleet[v.id];
 
-            const dbUpdateTime = v.liveState.lastUpdate ? new Date(v.liveState.lastUpdate).getTime() : 0;
+            const dbUpdateTime = v.liveState.lastUpdate
+              ? new Date(v.liveState.lastUpdate).getTime()
+              : 0;
             const socketUpdateTime = prev?.lastSocketUpdate || 0;
             // Se considera obsoleto o inexistente si no hay conexión de socket o la DB tiene datos más recientes
-            const isSocketStale = !isConnected || dbUpdateTime > socketUpdateTime;
+            const isSocketStale =
+              !isConnected || dbUpdateTime > socketUpdateTime;
 
             if (prev?.isFromSocket && !isSocketStale) {
               // Mantener las coordenadas y métricas recibidas de WebSocket en tiempo real
@@ -83,9 +104,9 @@ export function FleetProvider({ children, initialVehicles = [] }: FleetProviderP
                 latitude: v.liveState.lastLat ?? 0,
                 longitude: v.liveState.lastLng ?? 0,
                 speed: v.liveState.lastSpeed ?? 0,
-                status: v.liveState.currentStatus ?? 'STOPPED',
+                status: v.liveState.currentStatus ?? "STOPPED",
                 angle: v.liveState.lastAngle ?? 0,
-                updatedAt: v.liveState.lastUpdate ?? 'N/A',
+                updatedAt: v.liveState.lastUpdate ?? "N/A",
                 ignition: v.liveState.lastIgnition ?? false,
                 odometer: v.liveState.lastOdometer ?? 0,
                 isFromSocket: false,
@@ -113,7 +134,11 @@ export function FleetProvider({ children, initialVehicles = [] }: FleetProviderP
     if (!isMounted.current) {
       isMounted.current = true;
       // Evitar el fetch inicial si ya tenemos vehículos precargados en el servidor y no hay targetOrgId
-      if (initialVehiclesRef.current && initialVehiclesRef.current.length > 0 && !targetOrgId) {
+      if (
+        initialVehiclesRef.current &&
+        initialVehiclesRef.current.length > 0 &&
+        !targetOrgId
+      ) {
         return;
       }
     }
@@ -123,26 +148,25 @@ export function FleetProvider({ children, initialVehicles = [] }: FleetProviderP
   // Sync on tab visibility change to pick up any offline updates, while preserving active socket locations
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
+      if (document.visibilityState === "visible") {
         fetchAndMergeFleet();
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
   }, [fetchAndMergeFleet]);
 
   return (
-    <FleetContext.Provider value={value}>
-      {children}
-    </FleetContext.Provider>
+    <FleetContext.Provider value={value}>{children}</FleetContext.Provider>
   );
 }
 
 export const useFleet = () => {
   const context = useContext(FleetContext);
   if (context === undefined) {
-    throw new Error('useFleet must be used within a FleetProvider');
+    throw new Error("useFleet must be used within a FleetProvider");
   }
   return context;
 };

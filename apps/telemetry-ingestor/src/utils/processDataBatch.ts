@@ -1,11 +1,16 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { Prisma, PrismaClient } from '@vantx/database';
-import { v7 as uuidv7 } from 'uuid';
-import { notifyApi } from './notifyApi';
-import { DEVICE_PROFILES, Logger, parseEcoAxesValue, mapObdFuelType } from '@vantx/telemetry-parser';
+import { Prisma, PrismaClient } from "@vantx/database";
+import { v7 as uuidv7 } from "uuid";
+import { notifyApi } from "./notifyApi";
+import {
+  DEVICE_PROFILES,
+  Logger,
+  parseEcoAxesValue,
+  mapObdFuelType,
+} from "@vantx/telemetry-parser";
 
 const prisma = new PrismaClient();
-const logger = new Logger('Ingestor');
+const logger = new Logger("Ingestor");
 
 // Caché enriquecido: almacena id + startTime para evitar lecturas extra a la DB
 const activeTripsCache = new Map<string, { id: string; startTime: Date }>();
@@ -46,7 +51,7 @@ export async function processDataBatch(records: any[], imei: string) {
         vehicleId: vehicle.id,
         endTime: null, // Buscamos si quedó un viaje a la mitad
       },
-      orderBy: { startTime: 'desc' },
+      orderBy: { startTime: "desc" },
       select: { id: true, startTime: true },
     });
 
@@ -68,10 +73,10 @@ export async function processDataBatch(records: any[], imei: string) {
   const tripsToDelete = new Set<string>();
   let newVinDetected: string | null = null;
   let newFuelTypeDetected:
-    | 'GASOLINE'
-    | 'DIESEL'
-    | 'ELECTRIC'
-    | 'HYBRID'
+    | "GASOLINE"
+    | "DIESEL"
+    | "ELECTRIC"
+    | "HYBRID"
     | null = null;
 
   records.sort(
@@ -134,8 +139,8 @@ export async function processDataBatch(records: any[], imei: string) {
     if (
       !vehicle.vin &&
       vin &&
-      typeof vin === 'string' &&
-      vin.trim() !== '' &&
+      typeof vin === "string" &&
+      vin.trim() !== "" &&
       !newVinDetected
     ) {
       newVinDetected = vin.trim();
@@ -200,16 +205,16 @@ export async function processDataBatch(records: any[], imei: string) {
       isHardwareExcessiveIdling;
 
     // Movement Status
-    let status = 'STOPPED';
+    let status = "STOPPED";
     if (isUnplugged) {
-      status = 'UNPLUGGED';
+      status = "UNPLUGGED";
     } else if (trueIgnition) {
       if (movement || speedToUse > 2) {
-        status = 'MOVING';
+        status = "MOVING";
       } else if (isHardwareExcessiveIdling) {
-        status = 'EXCESSIVE_IDLING';
+        status = "EXCESSIVE_IDLING";
       } else {
-        status = 'IDLING';
+        status = "IDLING";
       }
     }
 

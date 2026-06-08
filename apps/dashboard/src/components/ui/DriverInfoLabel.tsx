@@ -1,20 +1,25 @@
-'use client';
+"use client";
 
-import { DriverInfoLabelDriverInfo, DriverInfoLabelProps } from '@/types';
-import React from 'react';
+import { DriverInfoLabelDriverInfo, DriverInfoLabelProps } from "@/types";
+import React from "react";
 
 export function DriverInfoLabel({
   driver,
   showNationalId = true,
-  className = '',
+  className = "",
 }: DriverInfoLabelProps) {
   if (!driver || !driver.nationalId) {
-    return <span className={`text-base-content/40 italic ${className}`}>Sin conductor</span>;
+    return (
+      <span className={`text-base-content/40 italic ${className}`}>
+        Sin conductor
+      </span>
+    );
   }
 
-  const name = driver.firstName && driver.lastName
-    ? `${driver.firstName} ${driver.lastName}`
-    : null;
+  const name =
+    driver.firstName && driver.lastName
+      ? `${driver.firstName} ${driver.lastName}`
+      : null;
 
   return (
     <div className={`flex flex-col ${className}`}>

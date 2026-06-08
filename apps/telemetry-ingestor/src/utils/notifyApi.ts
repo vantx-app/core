@@ -19,10 +19,10 @@ export async function notifyApi(vehicle: any, latestRecord: any) {
   };
 
   await fetch(API_WEBHOOK_URL, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'Content-Type': 'application/json',
-      'x-internal-secret': INGESTOR_SECRET || 'local-dev',
+      "Content-Type": "application/json",
+      "x-internal-secret": INGESTOR_SECRET || "local-dev",
     },
     body: JSON.stringify(payload),
   });

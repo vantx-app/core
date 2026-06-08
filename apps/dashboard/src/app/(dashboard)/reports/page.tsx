@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  ScoreSnapshot,
-  SimpleDriver,
-  VehicleTripsTrip,
-} from "@/types";
+import { ScoreSnapshot, SimpleDriver, VehicleTripsTrip } from "@/types";
 import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import api from "@/utils/client/api-client";
 import TripsHistoryView from "@/components/TripsHistoryView";
@@ -46,13 +42,13 @@ function ReportsPageContent() {
   // Driver states
   const [drivers, setDrivers] = useState<SimpleDriver[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState<string>(
-    driverIdParam || "me"
+    driverIdParam || "me",
   );
   const [driverSnapshots, setDriverSnapshots] = useState<ScoreSnapshot[]>([]);
 
   // Page layout states
   const [activeTab, setActiveTab] = useState<"breakdown" | "daily">(
-    tabParam === "daily" ? "daily" : "breakdown"
+    tabParam === "daily" ? "daily" : "breakdown",
   );
   const [isLoadingDriver, setIsLoadingDriver] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -69,7 +65,10 @@ function ReportsPageContent() {
   const [isLoadingTrips, setIsLoadingTrips] = useState(false);
 
   // Refs de control para evitar llamadas API duplicadas al cambiar de pestaña
-  const lastFetchedBreakdownRef = useRef<{ weekKey: string; driverId: string } | null>(null);
+  const lastFetchedBreakdownRef = useRef<{
+    weekKey: string;
+    driverId: string;
+  } | null>(null);
   const lastFetchedTripsDriverIdRef = useRef<string | null>(null);
 
   // Obtener la lista de conductores para selección
@@ -94,7 +93,9 @@ function ReportsPageContent() {
   // Sincronizar el conductor seleccionado basado en la lista de conductores y el parámetro de la URL
   useEffect(() => {
     if (drivers.length > 0) {
-      const matchingDriver = driverIdParam && drivers.find((d: SimpleDriver) => d.id === driverIdParam);
+      const matchingDriver =
+        driverIdParam &&
+        drivers.find((d: SimpleDriver) => d.id === driverIdParam);
       if (matchingDriver) {
         setSelectedDriverId(matchingDriver.id);
       } else {
@@ -116,7 +117,7 @@ function ReportsPageContent() {
     setDriverSnapshots([]);
     setBreakdownData(null);
     setSelectedWeekKey("");
-    
+
     // Limpiar caché de llamadas previas
     lastFetchedBreakdownRef.current = null;
     lastFetchedTripsDriverIdRef.current = null;
@@ -176,7 +177,10 @@ function ReportsPageContent() {
 
       const { data } = await api.get(endpoint);
       setBreakdownData(data);
-      lastFetchedBreakdownRef.current = { weekKey: selectedWeekKey, driverId: selectedDriverId };
+      lastFetchedBreakdownRef.current = {
+        weekKey: selectedWeekKey,
+        driverId: selectedDriverId,
+      };
     } catch (err) {
       console.error(err);
     } finally {
@@ -283,10 +287,11 @@ function ReportsPageContent() {
 
   return (
     <div
-      className={`p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${activeTab === "daily"
-        ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:space-y-4"
-        : ""
-        }`}
+      className={`p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${
+        activeTab === "daily"
+          ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:space-y-4"
+          : ""
+      }`}
     >
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-base-100/50 backdrop-blur-md p-6 rounded-2xl border border-base-200">

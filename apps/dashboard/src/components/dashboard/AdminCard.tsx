@@ -1,5 +1,5 @@
-import { AdminCardProps } from '@/types';
-import Link from 'next/link';
+import { AdminCardProps } from "@/types";
+import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
 export function AdminCard({
@@ -25,13 +25,13 @@ export function AdminCard({
               <Icon className="size-6" />
             </div>
             {disabledBadge && (
-              <span className="badge badge-sm badge-ghost text-xs font-bold">{disabledBadge}</span>
+              <span className="badge badge-sm badge-ghost text-xs font-bold">
+                {disabledBadge}
+              </span>
             )}
           </div>
           <div>
-            <h2 className="text-lg font-bold text-base-content/50">
-              {title}
-            </h2>
+            <h2 className="text-lg font-bold text-base-content/50">{title}</h2>
             <p className="text-xs text-base-content/40 mt-1">
               {disabledDescription || description}
             </p>
@@ -48,18 +48,16 @@ export function AdminCard({
     >
       <div className="card-body p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <div className={`p-3 rounded-2xl transition-all duration-300 ${iconColorClass}`}>
+          <div
+            className={`p-3 rounded-2xl transition-all duration-300 ${iconColorClass}`}
+          >
             <Icon className="size-6" />
           </div>
           <ChevronRight className="size-5 text-base-content/30 group-hover:text-primary group-hover:translate-x-1 transition-all" />
         </div>
         <div>
-          <h2 className="text-lg font-bold text-base-content">
-            {title}
-          </h2>
-          <p className="text-xs text-base-content/50 mt-1">
-            {description}
-          </p>
+          <h2 className="text-lg font-bold text-base-content">{title}</h2>
+          <p className="text-xs text-base-content/50 mt-1">{description}</p>
         </div>
       </div>
     </Link>

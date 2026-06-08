@@ -154,7 +154,8 @@ describe('ScoringCronService', () => {
         year,
       );
     });
-  });  describe('overspeeding calculations', () => {
+  });
+  describe('overspeeding calculations', () => {
     it('fallbackOverspeeding debe calcular el exceso de velocidad fallback correctamente', () => {
       const logs = [
         { speed: 80 } as any,
@@ -215,8 +216,20 @@ describe('ScoringCronService', () => {
       hereClientMock.matchRoute.mockResolvedValue(null);
 
       const logs = [
-        { latitude: 9.991, longitude: -79.991, speed: 120, timestamp: new Date(), angle: 90 } as any,
-        { latitude: 9.998, longitude: -79.998, speed: 115, timestamp: new Date(), angle: 90 } as any,
+        {
+          latitude: 9.991,
+          longitude: -79.991,
+          speed: 120,
+          timestamp: new Date(),
+          angle: 90,
+        } as any,
+        {
+          latitude: 9.998,
+          longitude: -79.998,
+          speed: 115,
+          timestamp: new Date(),
+          angle: 90,
+        } as any,
       ];
       const result = await (service as any).evaluateOverspeedingWithHere(
         logs,
@@ -261,8 +274,20 @@ describe('ScoringCronService', () => {
       });
 
       const logs = [
-        { latitude: 9.991, longitude: -79.991, speed: 95, timestamp: new Date(), angle: 90 } as any,
-        { latitude: 9.998, longitude: -79.998, speed: 58, timestamp: new Date(), angle: 90 } as any,
+        {
+          latitude: 9.991,
+          longitude: -79.991,
+          speed: 95,
+          timestamp: new Date(),
+          angle: 90,
+        } as any,
+        {
+          latitude: 9.998,
+          longitude: -79.998,
+          speed: 58,
+          timestamp: new Date(),
+          angle: 90,
+        } as any,
       ];
 
       const result = await (service as any).evaluateOverspeedingWithHere(
@@ -281,9 +306,7 @@ describe('ScoringCronService', () => {
 
     it('evaluateOverspeedingWithHere debe enviar parametros de camion para HEAVY_DUTY y machinery', async () => {
       hereClientMock.matchRoute.mockResolvedValue({
-        tracePoints: [
-          { linkIdMatched: 123 },
-        ],
+        tracePoints: [{ linkIdMatched: 123 }],
         RouteLinks: [
           {
             linkId: 123,
@@ -300,8 +323,20 @@ describe('ScoringCronService', () => {
       });
 
       const logs = [
-        { latitude: 9.991, longitude: -79.991, speed: 75, timestamp: new Date(), angle: 90 } as any,
-        { latitude: 9.998, longitude: -79.998, speed: 58, timestamp: new Date(), angle: 90 } as any,
+        {
+          latitude: 9.991,
+          longitude: -79.991,
+          speed: 75,
+          timestamp: new Date(),
+          angle: 90,
+        } as any,
+        {
+          latitude: 9.998,
+          longitude: -79.998,
+          speed: 58,
+          timestamp: new Date(),
+          angle: 90,
+        } as any,
       ];
 
       const result = await (service as any).evaluateOverspeedingWithHere(
@@ -321,9 +356,7 @@ describe('ScoringCronService', () => {
 
     it('evaluateOverspeedingWithHere debe caer al limite general para camiones si no hay limite de camion especifico', async () => {
       hereClientMock.matchRoute.mockResolvedValue({
-        tracePoints: [
-          { linkIdMatched: 123 },
-        ],
+        tracePoints: [{ linkIdMatched: 123 }],
         RouteLinks: [
           {
             linkId: 123,
@@ -340,8 +373,20 @@ describe('ScoringCronService', () => {
       });
 
       const logs = [
-        { latitude: 9.991, longitude: -79.991, speed: 95, timestamp: new Date(), angle: 90 } as any,
-        { latitude: 9.998, longitude: -79.998, speed: 58, timestamp: new Date(), angle: 90 } as any,
+        {
+          latitude: 9.991,
+          longitude: -79.991,
+          speed: 95,
+          timestamp: new Date(),
+          angle: 90,
+        } as any,
+        {
+          latitude: 9.998,
+          longitude: -79.998,
+          speed: 58,
+          timestamp: new Date(),
+          angle: 90,
+        } as any,
       ];
 
       const result = await (service as any).evaluateOverspeedingWithHere(

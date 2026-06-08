@@ -1,5 +1,5 @@
-import { ROLES } from '@/utils/enums';
-import { ElementType } from 'react';
+import { ROLES } from "@/utils/enums";
+import { ElementType } from "react";
 
 export interface DashboardPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -237,7 +237,7 @@ export interface VehicleDetail {
 
 export interface RuleDeductionDetail {
   code: string;
-  pillar: 'SAFETY' | 'EFFICIENCY' | 'ASSET_CARE';
+  pillar: "SAFETY" | "EFFICIENCY" | "ASSET_CARE";
   label: string;
   occurrences: number;
   severity: number;
@@ -341,8 +341,8 @@ export interface MarketplaceListing {
   title: string;
   description: string;
   compensation: string;
-  routeType: 'LOCAL' | 'NATIONAL' | 'INTERNATIONAL';
-  status: 'ACTIVE' | 'FILLED' | 'PAUSED' | 'INACTIVE';
+  routeType: "LOCAL" | "NATIONAL" | "INTERNATIONAL";
+  status: "ACTIVE" | "FILLED" | "PAUSED" | "INACTIVE";
   minSafetyScore: number | null;
   requiredLicense: string | null;
   requirements: string[];
@@ -383,7 +383,7 @@ export interface ApplicationListing {
 
 export interface MarketplaceApplication {
   id: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'WITHDRAWN';
+  status: "PENDING" | "APPROVED" | "REJECTED" | "WITHDRAWN";
   createdAt: string;
   driverId: string;
   driver: {
@@ -425,7 +425,7 @@ export interface OrganizationsPageOrg {
     id: string;
     name: string;
     email: string;
-    role: 'OWNER' | 'ADMIN';
+    role: "OWNER" | "ADMIN";
   }>;
   _count: {
     vehicles: number;
@@ -447,7 +447,7 @@ export interface DriversPageDriver {
   lastName?: string | null;
   nationalId: string;
   phone: string | null;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
   globalStats: {
     globalSafetyScore: number;
     globalEcoScore: number;
@@ -555,7 +555,7 @@ export interface VehicleMobileViewOrg {
 export interface MobileViewVehicleSummary {
   id: string;
   alias: string;
-  status: 'ACTIVE' | 'IN_MAINTENANCE' | 'DECOMMISSIONED';
+  status: "ACTIVE" | "IN_MAINTENANCE" | "DECOMMISSIONED";
   make: string;
   model: string;
   year: number;
@@ -686,7 +686,7 @@ export interface DriverSummary {
   lastName?: string | null;
   nationalId: string;
   phone: string | null;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: "ACTIVE" | "INACTIVE";
   globalStats: {
     globalSafetyScore: number;
     globalEcoScore: number;
@@ -755,7 +755,7 @@ export interface RadialScoreGaugeProps {
   subtitle?: string;
   footerText?: string;
   footer?: React.ReactNode;
-  size?: 'md' | 'lg' | 'xl';
+  size?: "md" | "lg" | "xl";
   className?: string;
   noCard?: boolean;
 }
@@ -772,7 +772,7 @@ export interface DriverAvatarProps {
   firstName?: string | null;
   lastName?: string | null;
   nationalId?: string | null;
-  size?: 'sm' | 'md';
+  size?: "sm" | "md";
   className?: string;
 }
 
@@ -855,7 +855,7 @@ export interface OrgUserSummary {
   id: string;
   name: string;
   email: string;
-  role: 'OWNER' | 'ADMIN';
+  role: "OWNER" | "ADMIN";
 }
 
 export interface MapWrapperTrackingDetails {
@@ -978,7 +978,7 @@ export interface ShareLocationModalProps {
   vehicleId: string;
   vehicleName: string;
   onLinkGenerated: (newLink: TrackingLink) => void;
-  showToast: (msg: string, type?: 'success' | 'error') => void;
+  showToast: (msg: string, type?: "success" | "error") => void;
 }
 
 export interface TrackingLink {
@@ -1047,7 +1047,7 @@ export interface VehicleTableDesktopProps {
 export interface FleetVehicleSummary {
   id: string;
   alias: string;
-  status: 'ACTIVE' | 'IN_MAINTENANCE' | 'DECOMMISSIONED';
+  status: "ACTIVE" | "IN_MAINTENANCE" | "DECOMMISSIONED";
   make: string;
   model: string;
   year: number;
@@ -1085,8 +1085,8 @@ export interface MobileDrawerProps {
 export interface LogoProps {
   className?: string;
   showText?: boolean;
-  size?: 'sm' | 'md' | 'lg' | number;
-  variant?: 'light' | 'dark' | 'auto';
+  size?: "sm" | "md" | "lg" | number;
+  variant?: "light" | "dark" | "auto";
 }
 
 export interface VehicleDetailClientProps {
@@ -1112,11 +1112,13 @@ export interface DriverDocument {
     expirationDate?: string | null;
     diditDecision?: {
       status?: string | null;
-      id_verifications?: {
-        extra_fields?: {
-          dl_categories?: string | null;
-        } | null;
-      }[] | null;
+      id_verifications?:
+        | {
+            extra_fields?: {
+              dl_categories?: string | null;
+            } | null;
+          }[]
+        | null;
     } | null;
     diditUrl?: string | null;
   } | null;
@@ -1167,14 +1169,21 @@ export interface VehicleFormValues {
   plateNumber: string;
   make?: string;
   model?: string;
-  year?: number | '';
+  year?: number | "";
   currentOdometer?: string;
   fuelType?: string;
 }
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'error' | 'success' | 'warning';
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  variant?:
+    | "primary"
+    | "secondary"
+    | "outline"
+    | "ghost"
+    | "error"
+    | "success"
+    | "warning";
+  size?: "xs" | "sm" | "md" | "lg";
   isLoading?: boolean;
   leftIcon?: React.ReactNode;
   rightIcon?: React.ReactNode;
@@ -1190,14 +1199,23 @@ export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> 
 }
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLSpanElement> {
-  variant?: 'primary' | 'secondary' | 'accent' | 'neutral' | 'success' | 'warning' | 'error' | 'ghost' | 'info';
-  size?: 'xs' | 'sm' | 'md' | 'lg';
+  variant?:
+    | "primary"
+    | "secondary"
+    | "accent"
+    | "neutral"
+    | "success"
+    | "warning"
+    | "error"
+    | "ghost"
+    | "info";
+  size?: "xs" | "sm" | "md" | "lg";
   outline?: boolean;
   children: React.ReactNode;
 }
 
 export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: 'success' | 'warning' | 'error' | 'info';
+  variant?: "success" | "warning" | "error" | "info";
   title?: string;
   message?: React.ReactNode;
   icon?: React.ReactNode;
@@ -1208,7 +1226,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   glass?: boolean;
   hoverable?: boolean;
   border?: boolean;
-  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'xl' | '2xl';
+  shadow?: "none" | "sm" | "md" | "lg" | "xl" | "2xl";
   children: React.ReactNode;
 }
 

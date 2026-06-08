@@ -1,16 +1,37 @@
-'use client';
+"use client";
 
-import { useMemo } from 'react';
-import { Building2, Car, Activity, Users, Compass, Radio, Wrench, Clock, ShieldCheck } from 'lucide-react';
-import { DashboardDriver, DashboardOrganization, DashboardVehicle, SuperAdminDashboardProps, SuperAdminOrgWithScore, TableColumn } from '@/types';
-import { getScoreBadgeColor } from '@/utils/client';
-import { WelcomeBanner } from '@/components/ui/WelcomeBanner';
-import { RadialScoreGauge } from '@/components/ui/RadialScoreGauge';
-import { DashboardStatCard } from '@/components/ui/DashboardStatCard';
-import { Table } from '@/components/ui/Table';
-import { useFleet } from '@/context/FleetContext';
+import { useMemo } from "react";
+import {
+  Building2,
+  Car,
+  Activity,
+  Users,
+  Compass,
+  Radio,
+  Wrench,
+  Clock,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  DashboardDriver,
+  DashboardOrganization,
+  DashboardVehicle,
+  SuperAdminDashboardProps,
+  SuperAdminOrgWithScore,
+  TableColumn,
+} from "@/types";
+import { getScoreBadgeColor } from "@/utils/client";
+import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
+import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
+import { DashboardStatCard } from "@/components/ui/DashboardStatCard";
+import { Table } from "@/components/ui/Table";
+import { useFleet } from "@/context/FleetContext";
 
-export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers = [] }: SuperAdminDashboardProps) {
+export function SuperAdminDashboard({
+  organizations = [],
+  vehicles = [],
+  drivers = [],
+}: SuperAdminDashboardProps) {
   const { fleet } = useFleet();
 
   const liveVehicles = useMemo(() => {
@@ -34,7 +55,7 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
 
   // Calculamos vehículos activos/en línea (monitoreo activo)
   // Se considera activo si tiene liveState y se ha actualizado en los últimos 15 minutos.
-  const activeVehicles = liveVehicles.filter(v => {
+  const activeVehicles = liveVehicles.filter((v) => {
     if (!v.liveState) return false;
     const lastUpdate = new Date(v.liveState.lastUpdate);
     const diffMs = Date.now() - lastUpdate.getTime();
@@ -47,27 +68,32 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
   let sumAsset = 0;
   let countWithStats = 0;
 
-  drivers.forEach(d => {
+  drivers.forEach((d) => {
     if (d.globalStats) {
-      sumSafety += d.globalStats.globalSafetyScore ?? d.globalStats.safetyScore ?? 100;
+      sumSafety +=
+        d.globalStats.globalSafetyScore ?? d.globalStats.safetyScore ?? 100;
       sumEco += d.globalStats.globalEcoScore ?? d.globalStats.ecoScore ?? 100;
-      sumAsset += d.globalStats.globalAssetScore ?? d.globalStats.assetScore ?? 100;
+      sumAsset +=
+        d.globalStats.globalAssetScore ?? d.globalStats.assetScore ?? 100;
       countWithStats++;
     }
   });
 
-  const avgSafety = countWithStats > 0 ? Math.round(sumSafety / countWithStats) : 100;
+  const avgSafety =
+    countWithStats > 0 ? Math.round(sumSafety / countWithStats) : 100;
   const avgEco = countWithStats > 0 ? Math.round(sumEco / countWithStats) : 100;
-  const avgAsset = countWithStats > 0 ? Math.round(sumAsset / countWithStats) : 100;
+  const avgAsset =
+    countWithStats > 0 ? Math.round(sumAsset / countWithStats) : 100;
 
   // Pre-calcular promedios de seguridad vial por organización (basado en asignación activa de conductores)
   const orgSafetyScores: Record<string, { sum: number; count: number }> = {};
-  drivers.forEach(d => {
+  drivers.forEach((d) => {
     if (d.globalStats) {
       const activeAssignment = d.assignments?.[0];
       const orgId = activeAssignment?.vehicle?.orgId;
       if (orgId) {
-        const score = d.globalStats.globalSafetyScore ?? d.globalStats.safetyScore ?? 100;
+        const score =
+          d.globalStats.globalSafetyScore ?? d.globalStats.safetyScore ?? 100;
         if (!orgSafetyScores[orgId]) {
           orgSafetyScores[orgId] = { sum: 0, count: 0 };
         }
@@ -78,16 +104,27 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
   });
 
   // Métricas adicionales de valor
-  const totalKm = drivers.reduce((acc, d) => acc + (d.globalStats?.totalKm ?? 0), 0);
-  const activeStatusCount = liveVehicles.filter(v => v.status === 'ACTIVE').length;
-  const maintenanceStatusCount = liveVehicles.filter(v => v.status === 'IN_MAINTENANCE').length;
-  const inactiveStatusCount = liveVehicles.filter(v => v.status !== 'ACTIVE' && v.status !== 'IN_MAINTENANCE').length;
+  const totalKm = drivers.reduce(
+    (acc, d) => acc + (d.globalStats?.totalKm ?? 0),
+    0,
+  );
+  const activeStatusCount = liveVehicles.filter(
+    (v) => v.status === "ACTIVE",
+  ).length;
+  const maintenanceStatusCount = liveVehicles.filter(
+    (v) => v.status === "IN_MAINTENANCE",
+  ).length;
+  const inactiveStatusCount = liveVehicles.filter(
+    (v) => v.status !== "ACTIVE" && v.status !== "IN_MAINTENANCE",
+  ).length;
 
   const orgsWithScores = organizations
-    .map(org => {
+    .map((org) => {
       const scoreData = orgSafetyScores[org.id];
-      const avgSafety = scoreData ? Math.round(scoreData.sum / scoreData.count) : null;
-      const owner = org.users?.[0]?.name || 'Sin Owner';
+      const avgSafety = scoreData
+        ? Math.round(scoreData.sum / scoreData.count)
+        : null;
+      const owner = org.users?.[0]?.name || "Sin Owner";
       return {
         ...org,
         avgSafety,
@@ -105,30 +142,32 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
 
   const columns: TableColumn<SuperAdminOrgWithScore>[] = [
     {
-      key: 'name',
-      header: 'Organización',
-      className: 'font-bold text-base-content',
+      key: "name",
+      header: "Organización",
+      className: "font-bold text-base-content",
     },
     {
-      key: 'owner',
-      header: 'Propietario',
-      className: 'text-base-content/70',
+      key: "owner",
+      header: "Propietario",
+      className: "text-base-content/70",
     },
     {
-      key: 'vehicles',
-      header: 'Vehículos',
-      headerClassName: 'text-center',
-      className: 'text-center font-semibold',
+      key: "vehicles",
+      header: "Vehículos",
+      headerClassName: "text-center",
+      className: "text-center font-semibold",
       render: (org) => org._count?.vehicles || 0,
     },
     {
-      key: 'avgSafety',
-      header: 'Puntaje Promedio',
-      headerClassName: 'text-center',
-      className: 'text-center',
+      key: "avgSafety",
+      header: "Puntaje Promedio",
+      headerClassName: "text-center",
+      className: "text-center",
       render: (org) => {
         return org.avgSafety !== null ? (
-          <span className={`badge text-[10px] font-extrabold px-2.5 py-1 ${getScoreBadgeColor(org.avgSafety)}`}>
+          <span
+            className={`badge text-[10px] font-extrabold px-2.5 py-1 ${getScoreBadgeColor(org.avgSafety)}`}
+          >
             {org.avgSafety} pts
           </span>
         ) : (
@@ -233,7 +272,10 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
               <Building2 className="text-primary size-5" />
               Rendimiento de Seguridad por Organización
             </h2>
-            <p className="text-xs text-base-content/50">Organizaciones ordenadas por el promedio de puntaje de seguridad de sus conductores.</p>
+            <p className="text-xs text-base-content/50">
+              Organizaciones ordenadas por el promedio de puntaje de seguridad
+              de sus conductores.
+            </p>
           </div>
           <Table
             columns={columns}
@@ -256,7 +298,10 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
               <Activity className="text-primary size-5" />
               Estado y Uso de la Flota Global
             </h2>
-            <p className="text-xs text-base-content/50">Análisis detallado de la conectividad y estados operativos a nivel del sistema.</p>
+            <p className="text-xs text-base-content/50">
+              Análisis detallado de la conectividad y estados operativos a nivel
+              del sistema.
+            </p>
           </div>
 
           <div className="space-y-4">
@@ -267,12 +312,16 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
                   <Radio className="size-4 text-emerald-500 animate-pulse" />
                   Monitoreo Activo (En línea)
                 </span>
-                <span className="font-semibold text-base-content">{activeVehicles} de {liveVehicles.length} unidades</span>
+                <span className="font-semibold text-base-content">
+                  {activeVehicles} de {liveVehicles.length} unidades
+                </span>
               </div>
               <div className="w-full bg-base-200 rounded-full h-2.5 overflow-hidden">
                 <div
                   className="bg-emerald-500 h-2.5 rounded-full transition-all duration-500"
-                  style={{ width: `${liveVehicles.length > 0 ? (activeVehicles / liveVehicles.length) * 100 : 0}%` }}
+                  style={{
+                    width: `${liveVehicles.length > 0 ? (activeVehicles / liveVehicles.length) * 100 : 0}%`,
+                  }}
                 ></div>
               </div>
               <div className="flex justify-between text-[10px] text-base-content/50">
@@ -285,18 +334,24 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
 
             {/* Distribución de Estados de Vehículos */}
             <div className="space-y-3">
-              <h3 className="text-xs font-bold text-base-content/80 uppercase tracking-wider mb-2">Distribución Operativa</h3>
+              <h3 className="text-xs font-bold text-base-content/80 uppercase tracking-wider mb-2">
+                Distribución Operativa
+              </h3>
 
               {/* Activos */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-base-content/75">
-                  <span className="flex items-center gap-1"><ShieldCheck className="size-3.5 text-success" /> Activos</span>
+                  <span className="flex items-center gap-1">
+                    <ShieldCheck className="size-3.5 text-success" /> Activos
+                  </span>
                   <span className="font-bold">{activeStatusCount}</span>
                 </div>
                 <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden">
                   <div
                     className="bg-success h-1.5 rounded-full"
-                    style={{ width: `${liveVehicles.length > 0 ? (activeStatusCount / liveVehicles.length) * 100 : 0}%` }}
+                    style={{
+                      width: `${liveVehicles.length > 0 ? (activeStatusCount / liveVehicles.length) * 100 : 0}%`,
+                    }}
                   ></div>
                 </div>
               </div>
@@ -304,13 +359,18 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
               {/* Taller / Mantenimiento */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-base-content/75">
-                  <span className="flex items-center gap-1"><Wrench className="size-3.5 text-warning" /> En Mantenimiento</span>
+                  <span className="flex items-center gap-1">
+                    <Wrench className="size-3.5 text-warning" /> En
+                    Mantenimiento
+                  </span>
                   <span className="font-bold">{maintenanceStatusCount}</span>
                 </div>
                 <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden">
                   <div
                     className="bg-warning h-1.5 rounded-full"
-                    style={{ width: `${liveVehicles.length > 0 ? (maintenanceStatusCount / liveVehicles.length) * 100 : 0}%` }}
+                    style={{
+                      width: `${liveVehicles.length > 0 ? (maintenanceStatusCount / liveVehicles.length) * 100 : 0}%`,
+                    }}
                   ></div>
                 </div>
               </div>
@@ -318,13 +378,17 @@ export function SuperAdminDashboard({ organizations = [], vehicles = [], drivers
               {/* Inactivos u otros */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-base-content/75">
-                  <span className="flex items-center gap-1"><Clock className="size-3.5 text-neutral" /> Inactivos</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="size-3.5 text-neutral" /> Inactivos
+                  </span>
                   <span className="font-bold">{inactiveStatusCount}</span>
                 </div>
                 <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden">
                   <div
                     className="bg-neutral/40 h-1.5 rounded-full"
-                    style={{ width: `${liveVehicles.length > 0 ? (inactiveStatusCount / liveVehicles.length) * 100 : 0}%` }}
+                    style={{
+                      width: `${liveVehicles.length > 0 ? (inactiveStatusCount / liveVehicles.length) * 100 : 0}%`,
+                    }}
                   ></div>
                 </div>
               </div>

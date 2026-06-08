@@ -52,7 +52,7 @@ export class ScoringCronService {
     private rulesEngine: RulesEngineService,
     private configService: ConfigService,
     private hereClient: HereClientService,
-  ) { }
+  ) {}
 
   // =====================================================================
   // 1. EL ROLLUP DIARIO (Extrae millones de filas y las convierte en 1 fila)
@@ -390,7 +390,8 @@ export class ScoringCronService {
             driverLogsMap.get(driverId)!.push(log);
           }
 
-          const category = vehicleCategoryMap.get(vehicleId) || VehicleCategory.PASSENGER;
+          const category =
+            vehicleCategoryMap.get(vehicleId) || VehicleCategory.PASSENGER;
 
           for (const [driverId, driverLogs] of driverLogsMap.entries()) {
             let totalOverspeedCount = 0;
@@ -1047,7 +1048,11 @@ export class ScoringCronService {
         csvContent += `${log.latitude},${log.longitude},${log.timestamp.toISOString()},${log.speed},${log.angle}\n`;
       }
 
-      const matched = await this.hereClient.matchRoute(csvContent, mode, attributes);
+      const matched = await this.hereClient.matchRoute(
+        csvContent,
+        mode,
+        attributes,
+      );
       if (!matched) {
         // En caso de fallo de la API de HERE, usamos fallback simple
         const fallback = this.fallbackOverspeeding(
@@ -1100,7 +1105,9 @@ export class ScoringCronService {
           }
 
           if (targetAttrKey) {
-            const speedLimitObj = Array.isArray(matchedLink.attributes[targetAttrKey])
+            const speedLimitObj = Array.isArray(
+              matchedLink.attributes[targetAttrKey],
+            )
               ? matchedLink.attributes[targetAttrKey][0]
               : matchedLink.attributes[targetAttrKey];
 
@@ -1166,9 +1173,9 @@ export class ScoringCronService {
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
       Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }

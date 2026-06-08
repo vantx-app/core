@@ -1,9 +1,10 @@
-import './globals.css';
-import type { Metadata } from 'next';
+import "./globals.css";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'VantX | Conectando Flotas y Conductores',
-  description: 'La plataforma líder en optimización de transporte, telemetría IoT y asignación inteligente.',
+  title: "VantX | Conectando Flotas y Conductores",
+  description:
+    "La plataforma líder en optimización de transporte, telemetría IoT y asignación inteligente.",
 };
 
 export default function RootLayout({
@@ -13,9 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body>
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

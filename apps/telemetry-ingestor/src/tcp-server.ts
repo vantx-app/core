@@ -1,27 +1,27 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import * as net from 'net';
-import { processTelemetry } from './utils/processTelemetry';
-import { Logger } from '@vantx/telemetry-parser';
+import * as net from "net";
+import { processTelemetry } from "./utils/processTelemetry";
+import { Logger } from "@vantx/telemetry-parser";
 
-const logger = new Logger('TCP');
+const logger = new Logger("TCP");
 const { INGESTOR_HOST, INGESTOR_PORT } = process.env;
 
 const server = net.createServer((socket) => {
   let isHandshakeComplete = false;
-  let deviceImei = '';
+  let deviceImei = "";
   let dataBuffer = Buffer.alloc(0);
 
   // 1. Prevenir Ghost Connections
   socket.setTimeout(180000);
-  socket.on('timeout', () => {
+  socket.on("timeout", () => {
     logger.log(
-      `Timeout: Cerrando conexión inactiva para IMEI: ${deviceImei || 'Desconocido'}`,
+      `Timeout: Cerrando conexión inactiva para IMEI: ${deviceImei || "Desconocido"}`,
     );
     socket.destroy();
   });
 
-  socket.on('data', (chunk: Buffer) => {
+  socket.on("data", (chunk: Buffer) => {
     dataBuffer = Buffer.concat([dataBuffer, chunk]);
 
     // FASE 1: HANDSHAKE (IMEI)
@@ -31,8 +31,8 @@ const server = net.createServer((socket) => {
       if (dataBuffer.length < 2 + imeiLength) return;
 
       deviceImei = dataBuffer
-        .toString('utf8', 2, 2 + imeiLength)
-        .replace(/[^a-zA-Z0-9]/g, '');
+        .toString("utf8", 2, 2 + imeiLength)
+        .replace(/[^a-zA-Z0-9]/g, "");
       logger.log(`Handshake accepted for IMEI: ${deviceImei}`);
 
       const acceptBuffer = Buffer.alloc(1);
@@ -63,10 +63,10 @@ const server = net.createServer((socket) => {
     }
   });
 
-  socket.on('error', (err) =>
+  socket.on("error", (err) =>
     logger.error(`Error en socket (${deviceImei}):`, err.message),
   );
-  socket.on('close', (hadError) =>
+  socket.on("close", (hadError) =>
     logger.log(`Connection closed for ${deviceImei}`, hadError),
   );
 });

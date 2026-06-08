@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { ScoreProgressBarProps } from '@/types';
-import React from 'react';
+import { ScoreProgressBarProps } from "@/types";
+import React from "react";
 
 const getScoreTextColor = (score: number): string => {
-  if (score >= 85) return 'text-success';
-  if (score >= 70) return 'text-warning';
-  return 'text-error';
+  if (score >= 85) return "text-success";
+  if (score >= 70) return "text-warning";
+  return "text-error";
 };
 
 export function ScoreProgressBar({ score, label }: ScoreProgressBarProps) {
@@ -24,10 +24,10 @@ export function ScoreProgressBar({ score, label }: ScoreProgressBarProps) {
         <div
           className={`h-full rounded-full transition-all duration-500 ${
             roundedScore >= 85
-              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+              ? "bg-gradient-to-r from-emerald-500 to-emerald-600 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
               : roundedScore >= 70
-              ? 'bg-gradient-to-r from-amber-500 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.3)]'
-              : 'bg-gradient-to-r from-rose-500 to-rose-600 shadow-[0_0_8px_rgba(239,68,68,0.3)]'
+                ? "bg-gradient-to-r from-amber-500 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.3)]"
+                : "bg-gradient-to-r from-rose-500 to-rose-600 shadow-[0_0_8px_rgba(239,68,68,0.3)]"
           }`}
           style={{ width: `${roundedScore}%` }}
         />

@@ -1,25 +1,25 @@
-'use client';
+"use client";
 
-import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { Car } from 'lucide-react';
-import { BackButton } from '@/components/ui/BackButton';
-import VehicleForm from '@/components/VehicleForm';
+import { useRouter, useParams, useSearchParams } from "next/navigation";
+import { Car } from "lucide-react";
+import { BackButton } from "@/components/ui/BackButton";
+import VehicleForm from "@/components/VehicleForm";
 
 export default function VehicleEditPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
-  const targetOrgId = searchParams?.get('targetOrgId');
+  const targetOrgId = searchParams?.get("targetOrgId");
   const vehicleId = params?.id as string;
-  const fallbackHref = targetOrgId ? `/vehicle?targetOrgId=${targetOrgId}` : '/vehicle';
+  const fallbackHref = targetOrgId
+    ? `/vehicle?targetOrgId=${targetOrgId}`
+    : "/vehicle";
 
   return (
     <div className="p-6 max-w-2xl mx-auto space-y-6">
       {/* Back button */}
       <div>
-        <BackButton fallbackHref={fallbackHref}>
-          Volver a vehículos
-        </BackButton>
+        <BackButton fallbackHref={fallbackHref}>Volver a vehículos</BackButton>
       </div>
 
       {/* Header */}
@@ -32,7 +32,8 @@ export default function VehicleEditPage() {
             Editar Vehículo
           </h1>
           <p className="text-xs text-base-content/60 mt-1">
-            Modifica la información técnica o el alias de identificación de la unidad.
+            Modifica la información técnica o el alias de identificación de la
+            unidad.
           </p>
         </div>
       </div>

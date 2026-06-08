@@ -7,14 +7,14 @@ const FUEL_TYPES: Record<string, number[]> = {
 
 export function mapObdFuelType(
   val: any,
-): 'GASOLINE' | 'DIESEL' | 'ELECTRIC' | 'HYBRID' | null {
+): "GASOLINE" | "DIESEL" | "ELECTRIC" | "HYBRID" | null {
   if (val === undefined || val === null) return null;
   const numVal = Number(val);
   if (isNaN(numVal)) return null;
 
   for (const fuelType in FUEL_TYPES) {
     if (FUEL_TYPES[fuelType].includes(numVal)) {
-      return fuelType as 'GASOLINE' | 'DIESEL' | 'ELECTRIC' | 'HYBRID';
+      return fuelType as "GASOLINE" | "DIESEL" | "ELECTRIC" | "HYBRID";
     }
   }
 

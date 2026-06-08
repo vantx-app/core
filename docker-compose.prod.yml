@@ -18,7 +18,7 @@ services:
       - HOSTNAME=0.0.0.0
       - INTERNAL_API_URL=http://vantx_server:8000
     ports:
-      - '127.0.0.1:3000:3000'
+      - "127.0.0.1:3000:3000"
     depends_on:
       - vantx_server
 
@@ -35,10 +35,10 @@ services:
         limits:
           memory: 750M
     logging:
-      driver: 'json-file'
+      driver: "json-file"
       options:
-        max-size: '10m'
-        max-file: '3'
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     env_file:
       - .env
@@ -46,7 +46,7 @@ services:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=512
     ports:
-      - '127.0.0.1:8000:8000'
+      - "127.0.0.1:8000:8000"
     depends_on:
       vantx_db:
         condition: service_healthy
@@ -64,10 +64,10 @@ services:
         limits:
           memory: 500M
     logging:
-      driver: 'json-file'
+      driver: "json-file"
       options:
-        max-size: '10m'
-        max-file: '3'
+        max-size: "10m"
+        max-file: "3"
     restart: unless-stopped
     env_file:
       - .env
@@ -76,7 +76,7 @@ services:
       - INGESTOR_PORT=9000
       - INGESTOR_HOST=0.0.0.0
     ports:
-      - '0.0.0.0:9000:9000'
+      - "0.0.0.0:9000:9000"
     depends_on:
       vantx_db:
         condition: service_healthy
@@ -103,9 +103,9 @@ services:
     volumes:
       - vantx_prod_db_data:/var/lib/postgresql/data
     ports:
-      - '127.0.0.1:${DB_PORT:-5432}:5432'
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U $${DB_USER} -d $${POSTGRES_DB}']
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 5

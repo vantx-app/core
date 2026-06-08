@@ -1,11 +1,11 @@
-import { PrismaClient } from '@prisma/client';
-import * as fs from 'fs';
-import * as path from 'path';
+import { PrismaClient } from "@prisma/client";
+import * as fs from "fs";
+import * as path from "path";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Iniciando el proceso de Seeding...');
+  console.log("🌱 Iniciando el proceso de Seeding...");
 
   const existingDataCount = await prisma.user.count();
 
@@ -16,16 +16,16 @@ async function main() {
     return; // Abortamos la ejecución limpiamente
   }
 
-  const sqlFilePath = path.join(__dirname, 'seed_data.sql');
+  const sqlFilePath = path.join(__dirname, "seed_data.sql");
 
   if (!fs.existsSync(sqlFilePath)) {
     console.warn(
-      '⚠️ No se encontró seed_data.sql. Saltando el seeding de backup.',
+      "⚠️ No se encontró seed_data.sql. Saltando el seeding de backup.",
     );
     return;
   }
 
-  const rawSql = fs.readFileSync(sqlFilePath, { encoding: 'utf-8' });
+  const rawSql = fs.readFileSync(sqlFilePath, { encoding: "utf-8" });
 
   // ✨ EL FIX: Dividimos el archivo gigante en sentencias individuales.
   // Cortamos por el punto y coma (;) seguido de un salto de línea
@@ -46,9 +46,9 @@ async function main() {
         await prisma.$executeRawUnsafe(cleanStatement);
       }
     }
-    console.log('✅ ¡Backup inyectado con éxito!');
+    console.log("✅ ¡Backup inyectado con éxito!");
   } catch (error) {
-    console.error('❌ Error al inyectar una sentencia del backup:', error);
+    console.error("❌ Error al inyectar una sentencia del backup:", error);
     process.exit(1);
   }
 }

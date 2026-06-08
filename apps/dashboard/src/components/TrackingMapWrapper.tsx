@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { MapWrapperTrackingDetails } from '@/types';
-import dynamic from 'next/dynamic';
+import { MapWrapperTrackingDetails } from "@/types";
+import dynamic from "next/dynamic";
 
-const TrackingMapComponent = dynamic(() => import('./TrackingMap'), {
+const TrackingMapComponent = dynamic(() => import("./TrackingMap"), {
   ssr: false,
   loading: () => (
     <div className="flex h-screen w-screen items-center justify-center bg-base-100">

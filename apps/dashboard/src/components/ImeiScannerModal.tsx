@@ -1,13 +1,17 @@
-import { ImeiScannerModalProps } from '@/types';
+import { ImeiScannerModalProps } from "@/types";
 /* eslint-disable @typescript-eslint/no-explicit-any */
-'use client';
+("use client");
 
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { Html5Qrcode, CameraDevice } from 'html5-qrcode';
-import { RotateCw, X, Zap, ZapOff, Loader2, AlertCircle } from 'lucide-react';
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Html5Qrcode, CameraDevice } from "html5-qrcode";
+import { RotateCw, X, Zap, ZapOff, Loader2, AlertCircle } from "lucide-react";
 
-export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: ImeiScannerModalProps) {
+export default function ImeiScannerModal({
+  isOpen,
+  onClose,
+  onScanSuccess,
+}: ImeiScannerModalProps) {
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [devices, setDevices] = useState<CameraDevice[]>([]);
   const [activeCameraId, setActiveCameraId] = useState<string | null>(null);
@@ -21,12 +25,15 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
 
   // Limpiar caracteres no numéricos y buscar una secuencia de exactamente 15 dígitos (formato IMEI de Teltonika)
   const cleanImei = (text: string): string | null => {
-    const numbersOnly = text.replace(/[^0-9]/g, '');
+    const numbersOnly = text.replace(/[^0-9]/g, "");
     const match = numbersOnly.match(/\d{15}/);
     return match ? match[0] : null;
   };
 
-  const startScanning = async (cameraId: string, scannerInstance: Html5Qrcode) => {
+  const startScanning = async (
+    cameraId: string,
+    scannerInstance: Html5Qrcode,
+  ) => {
     if (!scannerInstance) return;
     setIsInitializing(true);
     setErrorMsg(null);
@@ -44,7 +51,7 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
         (decodedText) => {
           const cleanVal = cleanImei(decodedText);
           if (cleanVal) {
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            if (typeof navigator !== "undefined" && navigator.vibrate) {
               navigator.vibrate(100);
             }
             onScanSuccess(cleanVal);
@@ -53,7 +60,7 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
         },
         () => {
           // Errores continuos de escaneo por fotograma no descodificado se ignoran
-        }
+        },
       );
 
       if (isUnmountedRef.current) {
@@ -70,8 +77,10 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
       }
       setIsTorchOn(false);
     } catch (err) {
-      console.error('Error al iniciar el escaneo de cámara:', err);
-      setErrorMsg('Error al conectar con la cámara elegida o dispositivo bloqueado.');
+      console.error("Error al iniciar el escaneo de cámara:", err);
+      setErrorMsg(
+        "Error al conectar con la cámara elegida o dispositivo bloqueado.",
+      );
     } finally {
       if (!isUnmountedRef.current) {
         setIsInitializing(false);
@@ -91,7 +100,7 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
 
       setIsTorchOn(nextState);
     } catch (err) {
-      console.error('Error al encender/apagar la linterna:', err);
+      console.error("Error al encender/apagar la linterna:", err);
     }
   };
 
@@ -114,7 +123,7 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
     setIsTorchOn(false);
     isUnmountedRef.current = false;
 
-    const html5QrCode = new Html5Qrcode('imei-scanner-reader', {
+    const html5QrCode = new Html5Qrcode("imei-scanner-reader", {
       verbose: false,
       experimentalFeatures: {
         useBarCodeDetectorIfSupported: true,
@@ -135,13 +144,17 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
           setActiveCameraId(defaultCamera.id);
           await startScanning(defaultCamera.id, html5QrCode);
         } else {
-          setErrorMsg('No se encontraron cámaras de video en este dispositivo.');
+          setErrorMsg(
+            "No se encontraron cámaras de video en este dispositivo.",
+          );
         }
       } catch (err) {
-        console.error('Error solicitando permisos de cámara o cargando:', err);
+        console.error("Error solicitando permisos de cámara o cargando:", err);
         if (!isUnmountedRef.current) {
           setHasPermission(false);
-          setErrorMsg('Permiso de acceso a la cámara denegado o dispositivo bloqueado.');
+          setErrorMsg(
+            "Permiso de acceso a la cámara denegado o dispositivo bloqueado.",
+          );
         }
       } finally {
         if (!isUnmountedRef.current) {
@@ -160,19 +173,24 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
 
       // Gracefully clear scanner instance
       if (html5QrCode.isScanning) {
-        html5QrCode.stop()
+        html5QrCode
+          .stop()
           .then(() => {
-            try { html5QrCode.clear(); } catch (e) { }
+            try {
+              html5QrCode.clear();
+            } catch (e) {}
           })
-          .catch((err) => console.error('Error deteniendo cámara:', err));
+          .catch((err) => console.error("Error deteniendo cámara:", err));
       } else {
-        try { html5QrCode.clear(); } catch (e) { }
+        try {
+          html5QrCode.clear();
+        } catch (e) {}
       }
     };
   }, [isOpen]);
 
   if (!isOpen) return null;
-  if (typeof window === 'undefined') return null;
+  if (typeof window === "undefined") return null;
 
   return createPortal(
     <div className="fixed inset-0 bg-black/90 backdrop-blur-md z-[9999] flex flex-col justify-between overflow-hidden animate-in fade-in duration-200">
@@ -195,8 +213,12 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
       {/* Header */}
       <div className="pt-[calc(1rem+env(safe-area-inset-top))] pb-4 px-4 flex items-center justify-between border-b border-white/10 shrink-0 bg-slate-900/60 backdrop-blur-md text-white">
         <div>
-          <h3 className="font-extrabold text-base tracking-tight text-white">Escáner de IMEI</h3>
-          <p className="text-[10px] text-white/60 font-medium">Compatible con Teltonika FMC003/FMC150</p>
+          <h3 className="font-extrabold text-base tracking-tight text-white">
+            Escáner de IMEI
+          </h3>
+          <p className="text-[10px] text-white/60 font-medium">
+            Compatible con Teltonika FMC003/FMC150
+          </p>
         </div>
         <button
           onClick={onClose}
@@ -208,7 +230,10 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
 
       {/* Contenedor del video y visor */}
       <div className="flex-1 relative flex items-center justify-center bg-black overflow-hidden">
-        <div id="imei-scanner-reader" className="absolute inset-0 w-full h-full" />
+        <div
+          id="imei-scanner-reader"
+          className="absolute inset-0 w-full h-full"
+        />
 
         {hasPermission && !isInitializing && !errorMsg && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-10">
@@ -232,7 +257,9 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
         {isInitializing && (
           <div className="absolute inset-0 bg-black/95 flex flex-col items-center justify-center gap-3 z-20 text-white">
             <Loader2 className="size-8 animate-spin text-emerald-500" />
-            <p className="text-xs font-semibold text-white/75">Iniciando cámara...</p>
+            <p className="text-xs font-semibold text-white/75">
+              Iniciando cámara...
+            </p>
           </div>
         )}
 
@@ -244,7 +271,8 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
             <div>
               <p className="text-sm font-bold text-white">{errorMsg}</p>
               <p className="text-xs text-white/50 mt-1.5 max-w-xs mx-auto">
-                Asegúrate de conceder permisos de cámara en tu navegador y de cargar el sitio en un entorno seguro (HTTPS).
+                Asegúrate de conceder permisos de cámara en tu navegador y de
+                cargar el sitio en un entorno seguro (HTTPS).
               </p>
             </div>
             <button
@@ -262,13 +290,18 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
         {hasTorch && (
           <button
             onClick={toggleTorch}
-            className={`btn btn-circle btn-md transition-all duration-200 border-none ${isTorchOn
-              ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/35 hover:brightness-110'
-              : 'bg-white/10 text-white hover:bg-white/20'
-              }`}
+            className={`btn btn-circle btn-md transition-all duration-200 border-none ${
+              isTorchOn
+                ? "bg-amber-500 text-black shadow-lg shadow-amber-500/35 hover:brightness-110"
+                : "bg-white/10 text-white hover:bg-white/20"
+            }`}
             title="Linterna"
           >
-            {isTorchOn ? <ZapOff className="size-5" /> : <Zap className="size-5" />}
+            {isTorchOn ? (
+              <ZapOff className="size-5" />
+            ) : (
+              <Zap className="size-5" />
+            )}
           </button>
         )}
 
@@ -283,6 +316,6 @@ export default function ImeiScannerModal({ isOpen, onClose, onScanSuccess }: Ime
         )}
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

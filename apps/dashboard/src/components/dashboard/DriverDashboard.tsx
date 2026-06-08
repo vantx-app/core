@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Loader2,
   Calendar,
@@ -12,14 +12,19 @@ import {
   Award,
   ChevronDown,
   ChevronUp,
-  Truck
-} from 'lucide-react';
-import { DriverDashboardProps, DriverScoreSnapshot, DriverStats, TableColumn } from '@/types';
-import { formatHours, getScoreBadgeColor } from '@/utils/client';
-import { WelcomeBanner } from '@/components/ui/WelcomeBanner';
-import { RadialScoreGauge } from '@/components/ui/RadialScoreGauge';
-import { Table } from '@/components/ui/Table';
-import { ScoreProgressBar } from '@/components/ui/ScoreProgressBar';
+  Truck,
+} from "lucide-react";
+import {
+  DriverDashboardProps,
+  DriverScoreSnapshot,
+  DriverStats,
+  TableColumn,
+} from "@/types";
+import { formatHours, getScoreBadgeColor } from "@/utils/client";
+import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
+import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
+import { Table } from "@/components/ui/Table";
+import { ScoreProgressBar } from "@/components/ui/ScoreProgressBar";
 
 export function DriverDashboard({ stats }: DriverDashboardProps) {
   // Estado para controlar qué semana se encuentra expandida en la vista móvil
@@ -35,72 +40,81 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
     );
   }
 
-  const driverName = stats.firstName ? `${stats.firstName} ${stats.lastName}` : 'Conductor Desconocido';
+  const driverName = stats.firstName
+    ? `${stats.firstName} ${stats.lastName}`
+    : "Conductor Desconocido";
   const globalStats = stats.globalStats;
   const activeAssignment = stats.assignments?.[0];
   const snapshots = stats.scoreSnapshots || [];
 
-  const safetyScore = globalStats?.globalSafetyScore ?? globalStats?.safetyScore ?? 100;
+  const safetyScore =
+    globalStats?.globalSafetyScore ?? globalStats?.safetyScore ?? 100;
   const ecoScore = globalStats?.globalEcoScore ?? globalStats?.ecoScore ?? 100;
-  const assetScore = globalStats?.globalAssetScore ?? globalStats?.assetScore ?? 100;
+  const assetScore =
+    globalStats?.globalAssetScore ?? globalStats?.assetScore ?? 100;
 
   // Calcular puntaje general (overall score)
-  const overallScore = globalStats?.globalOverallScore ?? Math.round((safetyScore + ecoScore + assetScore) / 3);
+  const overallScore =
+    globalStats?.globalOverallScore ??
+    Math.round((safetyScore + ecoScore + assetScore) / 3);
 
   // Determinar nivel y colores basados en el rendimiento general
-  let rankLabel = 'Precaución';
-  let rankColor = 'bg-rose-500 text-white shadow-rose-500/20';
-  let cardBorderColor = 'border-rose-500/20';
+  let rankLabel = "Precaución";
+  let rankColor = "bg-rose-500 text-white shadow-rose-500/20";
+  let cardBorderColor = "border-rose-500/20";
   if (overallScore >= 85) {
-    rankLabel = 'Excelente';
-    rankColor = 'bg-emerald-500 text-white shadow-emerald-500/20';
-    cardBorderColor = 'border-emerald-500/20';
+    rankLabel = "Excelente";
+    rankColor = "bg-emerald-500 text-white shadow-emerald-500/20";
+    cardBorderColor = "border-emerald-500/20";
   } else if (overallScore >= 70) {
-    rankLabel = 'Bueno';
-    rankColor = 'bg-amber-500 text-white shadow-amber-500/20';
-    cardBorderColor = 'border-amber-500/20';
+    rankLabel = "Bueno";
+    rankColor = "bg-amber-500 text-white shadow-amber-500/20";
+    cardBorderColor = "border-amber-500/20";
   }
 
   const columns: TableColumn<DriverScoreSnapshot>[] = [
     {
-      key: 'week',
-      header: 'Año/Semana',
-      className: 'font-bold text-base-content',
+      key: "week",
+      header: "Año/Semana",
+      className: "font-bold text-base-content",
       render: (snap) => `Año ${snap.year} - Sem. ${snap.weekNumber}`,
     },
     {
-      key: 'overallScore',
-      header: 'Puntaje Promedio',
-      className: 'font-semibold',
+      key: "overallScore",
+      header: "Puntaje Promedio",
+      className: "font-semibold",
       render: (snap) => (
-        <span className={`badge badge-sm font-bold ${getScoreBadgeColor(snap.overallScore)}`}>
+        <span
+          className={`badge badge-sm font-bold ${getScoreBadgeColor(snap.overallScore)}`}
+        >
           {Math.round(snap.overallScore)}
         </span>
       ),
     },
     {
-      key: 'safetyScore',
-      header: 'Seguridad',
+      key: "safetyScore",
+      header: "Seguridad",
       render: (snap) => Math.round(snap.safetyScore),
     },
     {
-      key: 'ecoScore',
-      header: 'Eco-Conducción',
+      key: "ecoScore",
+      header: "Eco-Conducción",
       render: (snap) => Math.round(snap.ecoScore),
     },
     {
-      key: 'assetScore',
-      header: 'Cuidado Motor',
+      key: "assetScore",
+      header: "Cuidado Motor",
       render: (snap) => Math.round(snap.assetScore),
     },
     {
-      key: 'distance',
-      header: 'Distancia',
-      render: (snap) => `${(snap.totalKm ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`,
+      key: "distance",
+      header: "Distancia",
+      render: (snap) =>
+        `${(snap.totalKm ?? 0).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`,
     },
     {
-      key: 'hours',
-      header: 'Horas',
+      key: "hours",
+      header: "Horas",
       render: (snap) => formatHours(snap.totalHours),
     },
   ];
@@ -118,7 +132,9 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
       {/* Resumen Principal de Rendimiento */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tarjeta de Puntaje General */}
-        <div className={`card bg-base-100/50 backdrop-blur-md border ${cardBorderColor} shadow-xl p-6 lg:col-span-1 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}>
+        <div
+          className={`card bg-base-100/50 backdrop-blur-md border ${cardBorderColor} shadow-xl p-6 lg:col-span-1 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
+        >
           <div className="absolute top-0 right-0 p-3 opacity-[0.03] translate-x-4 translate-y-4 pointer-events-none">
             <Award className="size-36 text-base-content" />
           </div>
@@ -126,19 +142,17 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
             Puntaje General
           </span>
 
-          <RadialScoreGauge
-            score={overallScore}
-            title=""
-            noCard
-            size="xl"
-          />
+          <RadialScoreGauge score={overallScore} title="" noCard size="xl" />
 
           <div className="space-y-1 mt-2">
-            <span className={`badge ${rankColor} font-bold text-xs px-3 py-1.5 shadow-lg border-none`}>
+            <span
+              className={`badge ${rankColor} font-bold text-xs px-3 py-1.5 shadow-lg border-none`}
+            >
               Rendimiento: {rankLabel}
             </span>
             <p className="text-[11px] text-base-content/40 mt-1.5 max-w-[200px]">
-              Promedio de conducción basado en seguridad, ecología y cuidado motor
+              Promedio de conducción basado en seguridad, ecología y cuidado
+              motor
             </p>
           </div>
         </div>
@@ -155,7 +169,11 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 Distancia Recorrida
               </span>
               <span className="text-2xl md:text-3xl font-black text-base-content block mt-1">
-                {(globalStats?.totalKm ?? 0).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} km
+                {(globalStats?.totalKm ?? 0).toLocaleString(undefined, {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })}{" "}
+                km
               </span>
               <span className="text-[10px] text-base-content/40 block mt-1">
                 Kilómetros acumulados en la plataforma
@@ -196,12 +214,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 Seguridad Vial
               </span>
             </div>
-            <RadialScoreGauge
-              score={safetyScore}
-              title=""
-              noCard
-              size="lg"
-            />
+            <RadialScoreGauge score={safetyScore} title="" noCard size="lg" />
             <span className="text-[10px] font-medium text-base-content/40 mt-3 max-w-xs leading-normal">
               Excesos de velocidad y eventos de frenados bruscos
             </span>
@@ -214,12 +227,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 Eficiencia Ecológica
               </span>
             </div>
-            <RadialScoreGauge
-              score={ecoScore}
-              title=""
-              noCard
-              size="lg"
-            />
+            <RadialScoreGauge score={ecoScore} title="" noCard size="lg" />
             <span className="text-[10px] font-medium text-base-content/40 mt-3 max-w-xs leading-normal">
               Consumo óptimo, ralentí y revoluciones (RPM)
             </span>
@@ -232,12 +240,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 Cuidado del Vehículo
               </span>
             </div>
-            <RadialScoreGauge
-              score={assetScore}
-              title=""
-              noCard
-              size="lg"
-            />
+            <RadialScoreGauge score={assetScore} title="" noCard size="lg" />
             <span className="text-[10px] font-medium text-base-content/40 mt-3 max-w-xs leading-normal">
               Temperatura de motor y salud mecánica (DTC)
             </span>
@@ -271,7 +274,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                   Alias de Unidad
                 </span>
                 <span className="text-2xl font-black text-base-content block mt-0.5">
-                  {activeAssignment.vehicle.alias || 'Sin Alias'}
+                  {activeAssignment.vehicle.alias || "Sin Alias"}
                 </span>
                 <span className="inline-block mt-2 badge badge-neutral text-xs font-mono tracking-wider font-semibold">
                   Placa: {activeAssignment.vehicle.plateNumber}
@@ -281,19 +284,25 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 {activeAssignment.vehicle.make && (
                   <div className="flex justify-between border-b border-base-200/40 pb-1.5">
                     <span className="text-base-content/50">Marca</span>
-                    <span className="font-semibold">{activeAssignment.vehicle.make}</span>
+                    <span className="font-semibold">
+                      {activeAssignment.vehicle.make}
+                    </span>
                   </div>
                 )}
                 {activeAssignment.vehicle.model && (
                   <div className="flex justify-between border-b border-base-200/40 pb-1.5">
                     <span className="text-base-content/50">Modelo</span>
-                    <span className="font-semibold">{activeAssignment.vehicle.model}</span>
+                    <span className="font-semibold">
+                      {activeAssignment.vehicle.model}
+                    </span>
                   </div>
                 )}
                 {activeAssignment.vehicle.year && (
                   <div className="flex justify-between border-b border-base-200/40 pb-1.5">
                     <span className="text-base-content/50">Año</span>
-                    <span className="font-semibold">{activeAssignment.vehicle.year}</span>
+                    <span className="font-semibold">
+                      {activeAssignment.vehicle.year}
+                    </span>
                   </div>
                 )}
                 {activeAssignment.vehicle.vin && (
@@ -311,9 +320,12 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
               <div className="p-4 bg-base-200 rounded-full mb-3 text-base-content/30">
                 <Truck className="size-8" />
               </div>
-              <p className="text-sm text-base-content/50 font-bold italic">Sin vehículo asignado</p>
+              <p className="text-sm text-base-content/50 font-bold italic">
+                Sin vehículo asignado
+              </p>
               <p className="text-xs text-base-content/40 mt-1 max-w-[200px]">
-                Tu administrador de flota te asignará un vehículo pronto para comenzar a registrar viajes.
+                Tu administrador de flota te asignará un vehículo pronto para
+                comenzar a registrar viajes.
               </p>
             </div>
           )}
@@ -354,8 +366,11 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 return (
                   <div
                     key={index}
-                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded ? 'border-emerald-500/30 shadow-md' : 'border-base-200 hover:border-base-300'
-                      }`}
+                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${
+                      isExpanded
+                        ? "border-emerald-500/30 shadow-md"
+                        : "border-base-200 hover:border-base-300"
+                    }`}
                   >
                     {/* Header */}
                     <div
@@ -371,7 +386,9 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`badge badge-sm font-extrabold ${getScoreBadgeColor(snap.overallScore)}`}>
+                        <span
+                          className={`badge badge-sm font-extrabold ${getScoreBadgeColor(snap.overallScore)}`}
+                        >
                           {formattedOverall} pts
                         </span>
                         {isExpanded ? (
@@ -392,7 +409,10 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                               Distancia
                             </span>
                             <span className="text-sm font-black text-base-content block mt-0.5">
-                              {weeklyKm.toLocaleString(undefined, { maximumFractionDigits: 1 })} km
+                              {weeklyKm.toLocaleString(undefined, {
+                                maximumFractionDigits: 1,
+                              })}{" "}
+                              km
                             </span>
                           </div>
                           <div className="p-3 border-l border-base-300/40">
@@ -407,9 +427,18 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
 
                         {/* Sub-scores Progress Bars */}
                         <div className="space-y-3 pt-1">
-                          <ScoreProgressBar score={snap.safetyScore} label="Seguridad Vial" />
-                          <ScoreProgressBar score={snap.ecoScore} label="Eficiencia Ecológica" />
-                          <ScoreProgressBar score={snap.assetScore} label="Cuidado del Vehículo" />
+                          <ScoreProgressBar
+                            score={snap.safetyScore}
+                            label="Seguridad Vial"
+                          />
+                          <ScoreProgressBar
+                            score={snap.ecoScore}
+                            label="Eficiencia Ecológica"
+                          />
+                          <ScoreProgressBar
+                            score={snap.assetScore}
+                            label="Cuidado del Vehículo"
+                          />
                         </div>
                       </div>
                     )}

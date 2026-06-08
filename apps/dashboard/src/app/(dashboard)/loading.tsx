@@ -1,5 +1,5 @@
 // app/(dashboard)/loading.tsx
-import React from 'react';
+import React from "react";
 
 export default function DashboardLoading() {
   return (
@@ -33,7 +33,10 @@ export default function DashboardLoading() {
       {/* Desktop view radial gauges skeleton */}
       <div className="hidden md:grid md:grid-cols-3 gap-6">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="card bg-base-100/50 backdrop-blur-md border border-base-200 p-6 flex flex-col items-center justify-between min-h-[220px] shadow-md">
+          <div
+            key={i}
+            className="card bg-base-100/50 backdrop-blur-md border border-base-200 p-6 flex flex-col items-center justify-between min-h-[220px] shadow-md"
+          >
             <div className="space-y-1.5 flex flex-col items-center">
               <div className="skeleton h-4 w-24 rounded" />
               <div className="skeleton h-3 w-36 rounded" />
@@ -47,7 +50,10 @@ export default function DashboardLoading() {
       {/* Stats Cards Skeleton */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="card bg-base-100/50 backdrop-blur-md border border-base-200 p-5 shadow-sm">
+          <div
+            key={i}
+            className="card bg-base-100/50 backdrop-blur-md border border-base-200 p-5 shadow-sm"
+          >
             <div className="flex items-center gap-4">
               <div className="skeleton size-12 rounded-xl shrink-0" />
               <div className="space-y-2 flex-1">

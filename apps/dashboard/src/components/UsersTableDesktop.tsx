@@ -1,22 +1,27 @@
-'use client';
+"use client";
 
-import { FleetUserSummary, TableColumn, UsersTableDesktopProps } from '@/types';
-import React from 'react';
-import { Table } from '@/components/ui/Table';
-import { Shield, Mail, UserCheck, UserX, Calendar } from 'lucide-react';
-import { ROLES } from '@/utils/enums';
+import { FleetUserSummary, TableColumn, UsersTableDesktopProps } from "@/types";
+import React from "react";
+import { Table } from "@/components/ui/Table";
+import { Shield, Mail, UserCheck, UserX, Calendar } from "lucide-react";
+import { ROLES } from "@/utils/enums";
 
-export function UsersTableDesktop({ users, actorRole, onLink, onUnlink }: UsersTableDesktopProps) {
+export function UsersTableDesktop({
+  users,
+  actorRole,
+  onLink,
+  onUnlink,
+}: UsersTableDesktopProps) {
   const columns: TableColumn<FleetUserSummary>[] = [
     {
-      key: 'name',
-      header: 'Nombre',
-      className: 'font-bold text-base-content',
+      key: "name",
+      header: "Nombre",
+      className: "font-bold text-base-content",
       render: (u) => (
         <div className="flex items-center gap-3">
           <div className="avatar placeholder">
             <div className="bg-neutral text-neutral-content rounded-full w-9 h-9 flex items-center justify-center font-bold text-xs">
-              {u.name ? u.name.substring(0, 2).toUpperCase() : 'US'}
+              {u.name ? u.name.substring(0, 2).toUpperCase() : "US"}
             </div>
           </div>
           <div>
@@ -30,19 +35,21 @@ export function UsersTableDesktop({ users, actorRole, onLink, onUnlink }: UsersT
       ),
     },
     {
-      key: 'role',
-      header: 'Rol',
+      key: "role",
+      header: "Rol",
       render: (u) => (
-        <span className={`badge badge-sm font-semibold text-[10px] text-white py-1 px-2 ${
-          u.role === 'OWNER' ? 'badge-primary' : 'badge-secondary'
-        }`}>
-          {u.role === 'OWNER' ? 'Propietario (Owner)' : 'Administrador (Admin)'}
+        <span
+          className={`badge badge-sm font-semibold text-[10px] text-white py-1 px-2 ${
+            u.role === "OWNER" ? "badge-primary" : "badge-secondary"
+          }`}
+        >
+          {u.role === "OWNER" ? "Propietario (Owner)" : "Administrador (Admin)"}
         </span>
       ),
     },
     {
-      key: 'driverLink',
-      header: 'Vínculo Conductor',
+      key: "driverLink",
+      header: "Vínculo Conductor",
       render: (u) => {
         const hasDriverLink = !!u.driver;
         return hasDriverLink && u.driver ? (
@@ -52,7 +59,8 @@ export function UsersTableDesktop({ users, actorRole, onLink, onUnlink }: UsersT
               Vínculo Activo
             </span>
             <div className="text-[10px] text-base-content/60 font-mono mt-0.5">
-              ID: {u.driver.nationalId} {u.driver.phone ? `| Tel: ${u.driver.phone}` : ''}
+              ID: {u.driver.nationalId}{" "}
+              {u.driver.phone ? `| Tel: ${u.driver.phone}` : ""}
             </div>
           </div>
         ) : (
@@ -64,33 +72,39 @@ export function UsersTableDesktop({ users, actorRole, onLink, onUnlink }: UsersT
       },
     },
     {
-      key: 'createdAt',
-      header: 'Registro',
-      className: 'text-xs text-base-content/60 font-medium',
+      key: "createdAt",
+      header: "Registro",
+      className: "text-xs text-base-content/60 font-medium",
       render: (u) => (
         <div className="flex items-center gap-1.5">
           <Calendar className="size-3.5 text-base-content/30" />
           <span>
-            {new Date(u.createdAt).toLocaleDateString('es-ES', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric',
+            {new Date(u.createdAt).toLocaleDateString("es-ES", {
+              year: "numeric",
+              month: "short",
+              day: "numeric",
             })}
           </span>
         </div>
       ),
     },
     {
-      key: 'actions',
-      header: 'Acciones',
-      headerClassName: 'text-right',
-      className: 'text-right',
+      key: "actions",
+      header: "Acciones",
+      headerClassName: "text-right",
+      className: "text-right",
       render: (u) => {
         const hasDriverLink = !!u.driver;
-        const canManage = (actorRole === ROLES.SUPER_ADMIN && u.role !== ROLES.SUPER_ADMIN) ||
-                          (actorRole === ROLES.OWNER && u.role === ROLES.ADMIN);
+        const canManage =
+          (actorRole === ROLES.SUPER_ADMIN && u.role !== ROLES.SUPER_ADMIN) ||
+          (actorRole === ROLES.OWNER && u.role === ROLES.ADMIN);
 
-        if (!canManage) return <span className="text-base-content/30 text-xs italic">Solo lectura</span>;
+        if (!canManage)
+          return (
+            <span className="text-base-content/30 text-xs italic">
+              Solo lectura
+            </span>
+          );
 
         return hasDriverLink ? (
           <button

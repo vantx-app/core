@@ -8,7 +8,7 @@ import {
   DriverDocumentStatus,
   Prisma,
 } from '@prisma/client';
-import { Cron, CronExpression } from '@nestjs/schedule';
+// import { Cron, CronExpression } from '@nestjs/schedule';
 import {
   DriverDocumentExtractedData,
   DiditSessionResponse,
@@ -24,7 +24,7 @@ export class DiditVerificationService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private readonly httpService: HttpService,
-  ) {}
+  ) { }
 
   /**
    * Crea una sesión de verificación de identidad con Didit.
@@ -189,7 +189,7 @@ export class DiditVerificationService {
       }
 
       // Extraer fecha de vencimiento y tipo de licencia si está aprobado
-      let expirationDate: string | null = null;
+      // let expirationDate: string | null = null;
       let licenseType: string | null = null;
 
       if (
@@ -199,7 +199,7 @@ export class DiditVerificationService {
       ) {
         const verification = decision.id_verifications[0];
         if (verification) {
-          expirationDate = verification.expiration_date || null;
+          // expirationDate = verification.expiration_date || null;
           if (doc.type === DriverDocumentType.DRIVERS_LICENSE) {
             licenseType =
               verification.extra_fields?.dl_categories ||
@@ -250,36 +250,36 @@ export class DiditVerificationService {
   /**
    * Cron de respaldo para sincronizar todas las sesiones pendientes o en revisión manual de Didit.
    */
-  @Cron(CronExpression.EVERY_HOUR)
-  async syncAllPendingDiditSessions(): Promise<void> {
-    this.logger.log(
-      'Iniciando cron de sincronización de documentos con Didit...',
-    );
-    try {
-      const pendingDocs = await this.prisma.driverDocument.findMany({
-        where: {
-          status: {
-            in: [
-              DriverDocumentStatus.PENDING_VALIDATION,
-              DriverDocumentStatus.PENDING_MANUAL_REVIEW,
-            ],
-          },
-        },
-      });
+  // @Cron(CronExpression.EVERY_HOUR)
+  // async syncAllPendingDiditSessions(): Promise<void> {
+  //   this.logger.log(
+  //     'Iniciando cron de sincronización de documentos con Didit...',
+  //   );
+  //   try {
+  //     const pendingDocs = await this.prisma.driverDocument.findMany({
+  //       where: {
+  //         status: {
+  //           in: [
+  //             DriverDocumentStatus.PENDING_VALIDATION,
+  //             DriverDocumentStatus.PENDING_MANUAL_REVIEW,
+  //           ],
+  //         },
+  //       },
+  //     });
 
-      for (const doc of pendingDocs) {
-        if (doc.extractedData) {
-          const dataObj = doc.extractedData as DriverDocumentExtractedData;
-          if (dataObj.diditSessionId) {
-            await this.syncDiditSessionStatus(doc.id, dataObj.diditSessionId);
-          }
-        }
-      }
-      this.logger.log(
-        'Sincronización cron de documentos con Didit finalizada.',
-      );
-    } catch (err) {
-      this.logger.error('Error en cron de sincronización con Didit', err);
-    }
-  }
+  //     for (const doc of pendingDocs) {
+  //       if (doc.extractedData) {
+  //         const dataObj = doc.extractedData as DriverDocumentExtractedData;
+  //         if (dataObj.diditSessionId) {
+  //           await this.syncDiditSessionStatus(doc.id, dataObj.diditSessionId);
+  //         }
+  //       }
+  //     }
+  //     this.logger.log(
+  //       'Sincronización cron de documentos con Didit finalizada.',
+  //     );
+  //   } catch (err) {
+  //     this.logger.error('Error en cron de sincronización con Didit', err);
+  //   }
+  // }
 }

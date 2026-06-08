@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { WifiOff } from 'lucide-react';
+import React from "react";
+import { WifiOff } from "lucide-react";
 
 export default function OfflinePage() {
   const handleRetry = () => {
@@ -17,16 +17,18 @@ export default function OfflinePage() {
             <WifiOff className="w-12 h-12" />
           </div>
         </div>
-        
+
         <h1 className="text-2xl font-bold text-base-content mb-2">
           Sin conexión a Internet
         </h1>
-        
+
         <p className="text-base-content/70 mb-6">
-          Vantx requiere una conexión a Internet activa para sincronizar la telemetría en tiempo real, rastrear los vehículos y gestionar los conductores.
+          Vantx requiere una conexión a Internet activa para sincronizar la
+          telemetría en tiempo real, rastrear los vehículos y gestionar los
+          conductores.
         </p>
 
-        <button 
+        <button
           onClick={handleRetry}
           className="btn btn-primary w-full text-white font-semibold shadow-md transition-transform active:scale-95"
         >

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { DtcBadgeProps } from '@/types';
-import React from 'react';
-import { ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { DtcBadgeProps } from "@/types";
+import React from "react";
+import { ShieldAlert, CheckCircle2 } from "lucide-react";
 
 export function DtcBadge({ count, showOk = true }: DtcBadgeProps) {
   if (count > 0) {

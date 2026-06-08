@@ -1,12 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { Logger } from './logger';
+import { Logger } from "./logger";
 
-const logger = new Logger('Decoder');
+const logger = new Logger("Decoder");
 
 export function parseTeltonikaData(buffer: Buffer) {
   try {
     if (buffer.length < 8 || buffer.readUInt32BE(0) !== 0) {
-      logger.warn('Paquete descartado: Cabecera inicial inválida.');
+      logger.warn("Paquete descartado: Cabecera inicial inválida.");
       return null;
     }
 
@@ -118,11 +118,11 @@ export function parseTeltonikaData(buffer: Buffer) {
 
           if (id === 256 || id === 281) {
             ioData[id] = buffer
-              .toString('ascii', offset, offset + len)
-              .replace(/\0/g, '')
+              .toString("ascii", offset, offset + len)
+              .replace(/\0/g, "")
               .trim();
           } else {
-            ioData[id] = buffer.subarray(offset, offset + len).toString('hex');
+            ioData[id] = buffer.subarray(offset, offset + len).toString("hex");
           }
           offset += len;
         }

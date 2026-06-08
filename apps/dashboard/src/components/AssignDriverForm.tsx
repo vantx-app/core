@@ -1,32 +1,49 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
-import api from '@/utils/client/api-client';
-import { AssignDriverFormProps, AssignVehicleDriver } from '@/types';
-import { UserPlus, Loader2, UserCheck, UserX, Zap } from 'lucide-react';
-import { IdDocumentField } from '@/components/ui/IdDocumentField';
-import { Button } from '@/components/ui/Button';
-import { Alert } from '@/components/ui/Alert';
+import { useState, useEffect, useRef, FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import api from "@/utils/client/api-client";
+import { AssignDriverFormProps, AssignVehicleDriver } from "@/types";
+import { UserPlus, Loader2, UserCheck, UserX, Zap } from "lucide-react";
+import { IdDocumentField } from "@/components/ui/IdDocumentField";
+import { Button } from "@/components/ui/Button";
+import { Alert } from "@/components/ui/Alert";
 
-export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }: AssignDriverFormProps) {
+export default function AssignDriverForm({
+  vehicleId,
+  initialDriver,
+  onSuccess,
+}: AssignDriverFormProps) {
   const router = useRouter();
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [nationalIdInput, setNationalIdInput] = useState('');
+  const [nationalIdInput, setNationalIdInput] = useState("");
 
-  const [currentDriver, setCurrentDriver] = useState<AssignVehicleDriver | null | undefined>(initialDriver);
-  const [isLoadingDriver, setIsLoadingDriver] = useState(initialDriver === undefined);
+  const [currentDriver, setCurrentDriver] = useState<
+    AssignVehicleDriver | null | undefined
+  >(initialDriver);
+  const [isLoadingDriver, setIsLoadingDriver] = useState(
+    initialDriver === undefined,
+  );
 
-  const [previousDrivers, setPreviousDrivers] = useState<AssignVehicleDriver[]>([]);
+  const [previousDrivers, setPreviousDrivers] = useState<AssignVehicleDriver[]>(
+    [],
+  );
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(false);
   const [usePreviousDropdown, setUsePreviousDropdown] = useState(false);
-  const [selectedPreviousId, setSelectedPreviousId] = useState('');
+  const [selectedPreviousId, setSelectedPreviousId] = useState("");
 
-  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'loading' | 'found' | 'not_found' | 'error'>('idle');
-  const [verifiedDriverName, setVerifiedDriverName] = useState<string | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<
+    "idle" | "loading" | "found" | "not_found" | "error"
+  >("idle");
+  const [verifiedDriverName, setVerifiedDriverName] = useState<string | null>(
+    null,
+  );
   const [showAssignForm, setShowAssignForm] = useState(false);
-  const [currentUserDriver, setCurrentUserDriver] = useState<{ nationalId: string; name: string } | null>(null);
+  const [currentUserDriver, setCurrentUserDriver] = useState<{
+    nationalId: string;
+    name: string;
+  } | null>(null);
 
   // Almacenar initialDriver en una referencia para evitar ejecuciones de useEffect innecesarias si cambia la referencia del objeto
   const initialDriverRef = useRef(initialDriver);
@@ -36,7 +53,9 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
 
   const isInitialDriverUndefined = initialDriver === undefined;
   const initialDriverNationalId = initialDriver?.nationalId;
-  const initialDriverName = initialDriver ? `${initialDriver.firstName} ${initialDriver.lastName}` : '';
+  const initialDriverName = initialDriver
+    ? `${initialDriver.firstName} ${initialDriver.lastName}`
+    : "";
 
   // Obtener el conductor actual si no fue proporcionado previamente
   useEffect(() => {
@@ -55,47 +74,55 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
         setCurrentDriver(drv);
         setShowAssignForm(drv ? false : true);
       } catch (err) {
-        console.error('Error al obtener el conductor actual:', err);
+        console.error("Error al obtener el conductor actual:", err);
       } finally {
         setIsLoadingDriver(false);
       }
     };
 
     fetchCurrentDriver();
-  }, [vehicleId, isInitialDriverUndefined, initialDriverNationalId, initialDriverName]);
+  }, [
+    vehicleId,
+    isInitialDriverUndefined,
+    initialDriverNationalId,
+    initialDriverName,
+  ]);
 
   // Debounced search / verify by national ID
   useEffect(() => {
     if (usePreviousDropdown) {
-      setVerificationStatus('idle');
+      setVerificationStatus("idle");
       setVerifiedDriverName(null);
       return;
     }
 
     const trimmed = nationalIdInput.trim();
     if (!trimmed || trimmed.length < 3) {
-      setVerificationStatus('idle');
+      setVerificationStatus("idle");
       setVerifiedDriverName(null);
       return;
     }
 
-    setVerificationStatus('loading');
+    setVerificationStatus("loading");
     const delayDebounceFn = setTimeout(async () => {
       try {
-        const { data } = await api.get(`/drivers/verify-id/${encodeURIComponent(trimmed)}`);
+        const { data } = await api.get(
+          `/drivers/verify-id/${encodeURIComponent(trimmed)}`,
+        );
         if (data.exists) {
-          setVerificationStatus('found');
-          const name = data.firstName && data.lastName
-            ? `${data.firstName} ${data.lastName}`
-            : data.firstName || data.lastName || data.nationalId;
+          setVerificationStatus("found");
+          const name =
+            data.firstName && data.lastName
+              ? `${data.firstName} ${data.lastName}`
+              : data.firstName || data.lastName || data.nationalId;
           setVerifiedDriverName(name);
         } else {
-          setVerificationStatus('not_found');
+          setVerificationStatus("not_found");
           setVerifiedDriverName(null);
         }
       } catch (err) {
-        console.error('Error al verificar cédula:', err);
-        setVerificationStatus('error');
+        console.error("Error al verificar cédula:", err);
+        setVerificationStatus("error");
         setVerifiedDriverName(null);
       }
     }, 400);
@@ -107,9 +134,12 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const { data } = await api.get('/users/me');
-        if ((data.role === 'OWNER' || data.role === 'ADMIN') && data.driver) {
-          setCurrentUserDriver({ nationalId: data.driver.nationalId, name: data.name });
+        const { data } = await api.get("/users/me");
+        if ((data.role === "OWNER" || data.role === "ADMIN") && data.driver) {
+          setCurrentUserDriver({
+            nationalId: data.driver.nationalId,
+            name: data.name,
+          });
         }
       } catch {
         // Fallo silencioso
@@ -119,7 +149,9 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
     const fetchPreviousDrivers = async () => {
       setIsLoadingPrevious(true);
       try {
-        const { data } = await api.get(`/vehicles/${vehicleId}/previous-drivers`);
+        const { data } = await api.get(
+          `/vehicles/${vehicleId}/previous-drivers`,
+        );
         const prevList = data || [];
         setPreviousDrivers(prevList);
         if (prevList.length > 0) {
@@ -127,7 +159,7 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
           setSelectedPreviousId(prevList[0].nationalId);
         }
       } catch (err) {
-        console.error('Error al obtener conductores históricos:', err);
+        console.error("Error al obtener conductores históricos:", err);
       } finally {
         setIsLoadingPrevious(false);
       }
@@ -150,18 +182,21 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
       const drv = data?.driver || null;
       setCurrentDriver(drv);
       setShowAssignForm(false);
-      if (onSuccess) onSuccess(); else router.refresh();
+      if (onSuccess) onSuccess();
+      else router.refresh();
     } catch (err) {
       console.error(err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setApiError(message || 'Error al asignar conductor');
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setApiError(message || "Error al asignar conductor");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleUnassign = async () => {
-    if (!confirm('¿Estás seguro de que deseas desvincular a este conductor?')) return;
+    if (!confirm("¿Estás seguro de que deseas desvincular a este conductor?"))
+      return;
     setApiError(null);
     setIsSubmitting(true);
 
@@ -176,8 +211,9 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
       }
     } catch (err) {
       console.error(err);
-      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
-      setApiError(message || 'Error al desvincular el conductor');
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setApiError(message || "Error al desvincular el conductor");
     } finally {
       setIsSubmitting(false);
     }
@@ -185,17 +221,19 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const idToAssign = usePreviousDropdown ? selectedPreviousId : nationalIdInput;
+    const idToAssign = usePreviousDropdown
+      ? selectedPreviousId
+      : nationalIdInput;
     await handleAssign(idToAssign);
   };
 
   const getInitials = (name: string) =>
     name
-      ?.split(' ')
+      ?.split(" ")
       .map((n) => n[0])
       .slice(0, 2)
-      .join('')
-      .toUpperCase() || '?';
+      .join("")
+      .toUpperCase() || "?";
 
   if (isLoadingDriver) {
     return (
@@ -247,7 +285,9 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
               <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75">
                 Estado:
               </span>
-              <span className="font-semibold text-xs block mt-0.5">Sin conductor asignado</span>
+              <span className="font-semibold text-xs block mt-0.5">
+                Sin conductor asignado
+              </span>
             </div>
           </div>
         )}
@@ -269,39 +309,45 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
           <div className="divider my-0 opacity-40"></div>
 
           {/* Quick Access: Self-assignment */}
-          {currentUserDriver && (!currentDriver || currentDriver.nationalId !== currentUserDriver.nationalId) && (
-            <>
-              <div className="flex items-center justify-between gap-3 p-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white font-extrabold text-[11px] flex items-center justify-center shadow-sm">
-                    {getInitials(currentUserDriver.name)}
+          {currentUserDriver &&
+            (!currentDriver ||
+              currentDriver.nationalId !== currentUserDriver.nationalId) && (
+              <>
+                <div className="flex items-center justify-between gap-3 p-3 bg-emerald-500/8 border border-emerald-500/20 rounded-xl">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 shrink-0 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-500 text-white font-extrabold text-[11px] flex items-center justify-center shadow-sm">
+                      {getInitials(currentUserDriver.name)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                        <UserCheck className="size-3" /> Tu perfil
+                      </p>
+                      <p className="text-xs font-semibold text-base-content truncate">
+                        {currentUserDriver.name}
+                      </p>
+                      <p className="text-[9px] font-mono text-base-content/50">
+                        {currentUserDriver.nationalId}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[9px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                      <UserCheck className="size-3" /> Tu perfil
-                    </p>
-                    <p className="text-xs font-semibold text-base-content truncate">{currentUserDriver.name}</p>
-                    <p className="text-[9px] font-mono text-base-content/50">{currentUserDriver.nationalId}</p>
-                  </div>
+                  <Button
+                    size="xs"
+                    variant="success"
+                    onClick={() => handleAssign(currentUserDriver.nationalId)}
+                    disabled={isSubmitting}
+                    leftIcon={<Zap className="size-3" />}
+                    className="shadow hover:brightness-110 active:scale-95 transition-all duration-200 shrink-0"
+                  >
+                    Asignarme
+                  </Button>
                 </div>
-                <Button
-                  size="xs"
-                  variant="success"
-                  onClick={() => handleAssign(currentUserDriver.nationalId)}
-                  disabled={isSubmitting}
-                  leftIcon={<Zap className="size-3" />}
-                  className="shadow hover:brightness-110 active:scale-95 transition-all duration-200 shrink-0"
-                >
-                  Asignarme
-                </Button>
-              </div>
-              <div className="divider text-[9px] text-base-content/30 my-0">o asigna otro conductor</div>
-            </>
-          )}
+                <div className="divider text-[9px] text-base-content/30 my-0">
+                  o asigna otro conductor
+                </div>
+              </>
+            )}
 
-          {apiError && (
-            <Alert variant="error" message={apiError} />
-          )}
+          {apiError && <Alert variant="error" message={apiError} />}
 
           {/* Form */}
           <form onSubmit={onSubmit} className="space-y-4">
@@ -317,14 +363,14 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
                   <div className="tabs tabs-boxed w-full grid grid-cols-2 mb-2 bg-base-200/50 p-1 rounded-xl">
                     <button
                       type="button"
-                      className={`tab tab-sm font-semibold rounded-lg transition-all duration-200 ${!usePreviousDropdown ? 'tab-active bg-primary text-white shadow-sm' : 'text-base-content/60'}`}
+                      className={`tab tab-sm font-semibold rounded-lg transition-all duration-200 ${!usePreviousDropdown ? "tab-active bg-primary text-white shadow-sm" : "text-base-content/60"}`}
                       onClick={() => setUsePreviousDropdown(false)}
                     >
                       Nuevo Conductor
                     </button>
                     <button
                       type="button"
-                      className={`tab tab-sm font-semibold rounded-lg transition-all duration-200 ${usePreviousDropdown ? 'tab-active bg-primary text-white shadow-sm' : 'text-base-content/60'}`}
+                      className={`tab tab-sm font-semibold rounded-lg transition-all duration-200 ${usePreviousDropdown ? "tab-active bg-primary text-white shadow-sm" : "text-base-content/60"}`}
                       onClick={() => setUsePreviousDropdown(true)}
                     >
                       Conductor Histórico
@@ -346,10 +392,13 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
                       disabled={isSubmitting}
                     >
                       {previousDrivers.map((driver) => (
-                        <option key={driver.nationalId} value={driver.nationalId}>
+                        <option
+                          key={driver.nationalId}
+                          value={driver.nationalId}
+                        >
                           {driver.firstName && driver.lastName
                             ? `${driver.firstName} ${driver.lastName}`
-                            : driver.nationalId}{' '}
+                            : driver.nationalId}{" "}
                           ({driver.nationalId})
                         </option>
                       ))}
@@ -365,41 +414,50 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
                     />
 
                     {/* Real-time Verification Status */}
-                    {verificationStatus === 'loading' && (
+                    {verificationStatus === "loading" && (
                       <div className="flex items-center gap-1.5 text-xs text-base-content/50 pl-0.5 mt-1">
                         <Loader2 className="size-3.5 animate-spin text-primary" />
                         <span>Verificando conductor...</span>
                       </div>
                     )}
-                    {verificationStatus === 'found' && (
+                    {verificationStatus === "found" && (
                       <Alert
                         variant="success"
                         message={
                           <div>
-                            <span className="font-semibold">Conductor encontrado: </span>
-                            <span className="font-bold">{verifiedDriverName}</span>
+                            <span className="font-semibold">
+                              Conductor encontrado:{" "}
+                            </span>
+                            <span className="font-bold">
+                              {verifiedDriverName}
+                            </span>
                           </div>
                         }
                       />
                     )}
-                    {verificationStatus === 'not_found' && (
+                    {verificationStatus === "not_found" && (
                       <Alert
                         variant="warning"
                         message={
-                          <span>Este conductor no está registrado en el sistema. Primero agrégalo en la sección de <strong>Conductores</strong> para poder asignarlo.</span>
+                          <span>
+                            Este conductor no está registrado en el sistema.
+                            Primero agrégalo en la sección de{" "}
+                            <strong>Conductores</strong> para poder asignarlo.
+                          </span>
                         }
                       />
                     )}
-                    {verificationStatus === 'error' && (
+                    {verificationStatus === "error" && (
                       <Alert
                         variant="error"
                         message="Error al verificar el conductor en el sistema."
                       />
                     )}
 
-                    {verificationStatus !== 'not_found' && (
+                    {verificationStatus !== "not_found" && (
                       <span className="text-[9px] text-base-content/40 pl-0.5 block leading-relaxed">
-                        Ingresa el documento para verificar la existencia del perfil del conductor.
+                        Ingresa el documento para verificar la existencia del
+                        perfil del conductor.
                       </span>
                     )}
                   </div>
@@ -426,7 +484,9 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
                 disabled={
                   usePreviousDropdown
                     ? !selectedPreviousId
-                    : !nationalIdInput.trim() || verificationStatus === 'loading' || verificationStatus === 'not_found'
+                    : !nationalIdInput.trim() ||
+                      verificationStatus === "loading" ||
+                      verificationStatus === "not_found"
                 }
               >
                 Asignar Conductor

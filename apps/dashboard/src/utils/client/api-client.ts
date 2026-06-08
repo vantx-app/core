@@ -1,10 +1,10 @@
-import { FailedRequest } from '@/types';
-import axios from 'axios';
-import Cookies from 'js-cookie';
-import { getCookieSettings } from '@vantx/auth';
+import { FailedRequest } from "@/types";
+import axios from "axios";
+import Cookies from "js-cookie";
+import { getCookieSettings } from "@vantx/auth";
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: "/api",
   withCredentials: true,
 });
 
@@ -23,7 +23,7 @@ const processQueue = (error: unknown, token: string | null = null) => {
 };
 
 api.interceptors.request.use((config) => {
-  const token = Cookies.get('access_token');
+  const token = Cookies.get("access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -37,7 +37,6 @@ api.interceptors.response.use(
 
     // Detectamos 401 y aseguramos que no sea un reintento previo
     if (error.response?.status === 401 && !originalRequest._retry) {
-
       if (isRefreshing) {
         // Si ya hay un refresh en curso, ponemos esta petición en cola
         return new Promise((resolve, reject) => {
@@ -56,16 +55,20 @@ api.interceptors.response.use(
       try {
         // FIX CRÍTICO: Usamos 'axios' puro, NO la instancia 'api' para evitar loops.
         // Hacemos proxy a NestJS a través de Nginx usando '/api/auth/refresh'
-        const { data } = await axios.post('/api/auth/refresh', {}, {
-          withCredentials: true, // Vital para enviar la cookie del refresh_token
-        });
+        const { data } = await axios.post(
+          "/api/auth/refresh",
+          {},
+          {
+            withCredentials: true, // Vital para enviar la cookie del refresh_token
+          },
+        );
 
         const newAccessToken = data.accessToken;
 
-        // Sobrescribimos el access_token. 
+        // Sobrescribimos el access_token.
         // Las configuraciones deben igualar exactamente lo que pusimos en el middleware.
         const authSettings = getCookieSettings(15 * 60 * 1000);
-        Cookies.set('access_token', newAccessToken, {
+        Cookies.set("access_token", newAccessToken, {
           path: authSettings.path,
           domain: authSettings.domain,
           sameSite: authSettings.sameSite as any,
@@ -79,19 +82,24 @@ api.interceptors.response.use(
         // Reintentamos la petición que falló originalmente
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
-
       } catch (refreshError) {
         // Si el refresh falla (ej. Refresh Token expirado), rechazamos toda la cola
         processQueue(refreshError, null);
 
         // Limpiamos rastros
         const deleteSettings = getCookieSettings(0);
-        Cookies.remove('access_token', { path: deleteSettings.path, domain: deleteSettings.domain });
-        Cookies.remove('refresh_token', { path: deleteSettings.path, domain: deleteSettings.domain });
+        Cookies.remove("access_token", {
+          path: deleteSettings.path,
+          domain: deleteSettings.domain,
+        });
+        Cookies.remove("refresh_token", {
+          path: deleteSettings.path,
+          domain: deleteSettings.domain,
+        });
 
         // Redirección forzada (MVP Friendly)
-        if (typeof window !== 'undefined') {
-          window.location.href = '/login?expired=true';
+        if (typeof window !== "undefined") {
+          window.location.href = "/login?expired=true";
         }
 
         return Promise.reject(refreshError);
@@ -103,7 +111,7 @@ api.interceptors.response.use(
 
     // Si es cualquier otro error (400, 403, 500), lo dejamos pasar
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

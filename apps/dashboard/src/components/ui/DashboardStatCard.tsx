@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { DashboardStatCardProps } from '@/types';
-import React from 'react';
-import Link from 'next/link';
+import { DashboardStatCardProps } from "@/types";
+import React from "react";
+import Link from "next/link";
 
 export function DashboardStatCard({
   icon,
   label,
   value,
   href,
-  className = '',
+  className = "",
 }: DashboardStatCardProps) {
   // Base classes for the card body
   const bodyContent = (
@@ -30,7 +30,10 @@ export function DashboardStatCard({
 
   if (href) {
     return (
-      <Link href={href} className={`${containerClasses} active:scale-[0.98] cursor-pointer`}>
+      <Link
+        href={href}
+        className={`${containerClasses} active:scale-[0.98] cursor-pointer`}
+      >
         {bodyContent}
       </Link>
     );

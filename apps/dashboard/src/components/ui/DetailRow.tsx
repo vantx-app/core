@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { DetailRowProps } from '@/types';
-import React from 'react';
+import { DetailRowProps } from "@/types";
+import React from "react";
 
 export function DetailRow({
   label,
   value,
   border = true,
-  className = '',
+  className = "",
 }: DetailRowProps) {
   return (
     <div
       className={`flex justify-between items-center py-1.5 ${
-        border ? 'border-b border-base-200/30' : ''
+        border ? "border-b border-base-200/30" : ""
       } ${className}`}
     >
       <span className="text-base-content/50">{label}</span>

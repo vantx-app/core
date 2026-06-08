@@ -1,48 +1,54 @@
-'use client';
+"use client";
 
-import { MobileViewVehicleSummary, VehicleMobileViewProps, AssignVehicleDriver } from '@/types';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { useAuth } from '@/context/AuthContext';
-import { ROLES } from '@/utils/enums';
 import {
-  Car,
-  Plus,
-  Pencil,
-  UserCog,
-  Eye,
-  Route
-} from 'lucide-react';
-import { MobileDrawer } from '@/components/MobileDrawer';
-import VehicleForm from '@/components/VehicleForm';
-import AssignDriverForm from '@/components/AssignDriverForm';
+  MobileViewVehicleSummary,
+  VehicleMobileViewProps,
+  AssignVehicleDriver,
+} from "@/types";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "@/context/AuthContext";
+import { ROLES } from "@/utils/enums";
+import { Car, Plus, Pencil, UserCog, Eye, Route } from "lucide-react";
+import { MobileDrawer } from "@/components/MobileDrawer";
+import VehicleForm from "@/components/VehicleForm";
+import AssignDriverForm from "@/components/AssignDriverForm";
 
-export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewProps) {
+export function VehicleMobileView({
+  vehicles,
+  targetOrgId,
+}: VehicleMobileViewProps) {
   const router = useRouter();
   const { role } = useAuth();
-  const canCreate = [ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN].includes(role);
+  const canCreate = [ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN].includes(
+    role,
+  );
 
   // Drawer states
-  const [activeDrawer, setActiveDrawer] = useState<'new' | 'edit' | 'assign' | null>(null);
-  const [selectedVehicle, setSelectedVehicle] = useState<MobileViewVehicleSummary | null>(null);
-  const [currentDriver, setCurrentDriver] = useState<AssignVehicleDriver | null>(null);
+  const [activeDrawer, setActiveDrawer] = useState<
+    "new" | "edit" | "assign" | null
+  >(null);
+  const [selectedVehicle, setSelectedVehicle] =
+    useState<MobileViewVehicleSummary | null>(null);
+  const [currentDriver, setCurrentDriver] =
+    useState<AssignVehicleDriver | null>(null);
 
   const handleOpenEdit = (vehicle: MobileViewVehicleSummary) => {
     setSelectedVehicle(vehicle);
-    setActiveDrawer('edit');
+    setActiveDrawer("edit");
   };
 
   const handleOpenAssign = (vehicle: MobileViewVehicleSummary) => {
     setSelectedVehicle(vehicle);
     const driver = vehicle.assignments?.[0]?.driver || null;
     setCurrentDriver(driver);
-    setActiveDrawer('assign');
+    setActiveDrawer("assign");
   };
 
   const handleOpenNew = () => {
     setSelectedVehicle(null);
-    setActiveDrawer('new');
+    setActiveDrawer("new");
   };
 
   const closeDrawer = () => {
@@ -51,27 +57,27 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
     setCurrentDriver(null);
   };
 
-  const getStatusBadgeClass = (status: MobileViewVehicleSummary['status']) => {
+  const getStatusBadgeClass = (status: MobileViewVehicleSummary["status"]) => {
     switch (status) {
-      case 'ACTIVE':
-        return 'bg-success/10 text-success border-success/20';
-      case 'IN_MAINTENANCE':
-        return 'bg-warning/10 text-warning border-warning/20';
-      case 'DECOMMISSIONED':
-        return 'bg-error/10 text-error border-error/20';
+      case "ACTIVE":
+        return "bg-success/10 text-success border-success/20";
+      case "IN_MAINTENANCE":
+        return "bg-warning/10 text-warning border-warning/20";
+      case "DECOMMISSIONED":
+        return "bg-error/10 text-error border-error/20";
       default:
-        return 'bg-base-200 text-base-content/60 border-base-300';
+        return "bg-base-200 text-base-content/60 border-base-300";
     }
   };
 
-  const getStatusLabel = (status: MobileViewVehicleSummary['status']) => {
+  const getStatusLabel = (status: MobileViewVehicleSummary["status"]) => {
     switch (status) {
-      case 'ACTIVE':
-        return 'Activo';
-      case 'IN_MAINTENANCE':
-        return 'En Mantenimiento';
-      case 'DECOMMISSIONED':
-        return 'Decomisionado';
+      case "ACTIVE":
+        return "Activo";
+      case "IN_MAINTENANCE":
+        return "En Mantenimiento";
+      case "DECOMMISSIONED":
+        return "Decomisionado";
       default:
         return status;
     }
@@ -89,7 +95,9 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
               {vehicle.alias}
             </h3>
           </div>
-          <span className={`badge badge-sm font-semibold border ${getStatusBadgeClass(vehicle.status)}`}>
+          <span
+            className={`badge badge-sm font-semibold border ${getStatusBadgeClass(vehicle.status)}`}
+          >
             {getStatusLabel(vehicle.status)}
           </span>
         </div>
@@ -99,15 +107,21 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div>
             <span className="text-base-content/40 block">Marca</span>
-            <span className="font-semibold text-base-content/85">{vehicle.make || '-'}</span>
+            <span className="font-semibold text-base-content/85">
+              {vehicle.make || "-"}
+            </span>
           </div>
           <div>
             <span className="text-base-content/40 block">Modelo</span>
-            <span className="font-semibold text-base-content/85">{vehicle.model || '-'}</span>
+            <span className="font-semibold text-base-content/85">
+              {vehicle.model || "-"}
+            </span>
           </div>
           <div>
             <span className="text-base-content/40 block">Año</span>
-            <span className="font-semibold text-base-content/85">{vehicle.year || '-'}</span>
+            <span className="font-semibold text-base-content/85">
+              {vehicle.year || "-"}
+            </span>
           </div>
         </div>
 
@@ -115,7 +129,8 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
           <span className="text-base-content/50 font-medium">Conductor:</span>
           {vehicle.assignments?.[0]?.driver ? (
             <span className="font-bold text-base-content/90">
-              {vehicle.assignments[0].driver.firstName && vehicle.assignments[0].driver.lastName
+              {vehicle.assignments[0].driver.firstName &&
+              vehicle.assignments[0].driver.lastName
                 ? `${vehicle.assignments[0].driver.firstName} ${vehicle.assignments[0].driver.lastName}`
                 : vehicle.assignments[0].driver.nationalId}
             </span>
@@ -127,14 +142,22 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
 
       <div className="flex flex-wrap justify-end gap-2 mt-4 pt-3 border-t border-base-200">
         <Link
-          href={targetOrgId ? `/vehicle/${vehicle.id}/view?targetOrgId=${targetOrgId}` : `/vehicle/${vehicle.id}/view`}
+          href={
+            targetOrgId
+              ? `/vehicle/${vehicle.id}/view?targetOrgId=${targetOrgId}`
+              : `/vehicle/${vehicle.id}/view`
+          }
           className="btn btn-outline border-base-300 hover:bg-base-200 btn-sm gap-1.5 rounded-xl text-xs text-base-content font-semibold"
         >
           <Eye className="size-3.5" />
           Ver
         </Link>
         <Link
-          href={targetOrgId ? `/vehicle/${vehicle.id}/trips?targetOrgId=${targetOrgId}` : `/vehicle/${vehicle.id}/trips`}
+          href={
+            targetOrgId
+              ? `/vehicle/${vehicle.id}/trips?targetOrgId=${targetOrgId}`
+              : `/vehicle/${vehicle.id}/trips`
+          }
           className="btn btn-outline border-base-300 hover:bg-base-200 btn-sm gap-1.5 rounded-xl text-xs text-base-content font-semibold"
         >
           <Route className="size-3.5" />
@@ -159,17 +182,37 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
   );
 
   const showGrouping = vehicles.length > 5;
-  const activeVehicles = vehicles.filter(v => v.status === 'ACTIVE');
-  const maintenanceVehicles = vehicles.filter(v => v.status === 'IN_MAINTENANCE');
-  const decommissionedVehicles = vehicles.filter(v => v.status === 'DECOMMISSIONED');
+  const activeVehicles = vehicles.filter((v) => v.status === "ACTIVE");
+  const maintenanceVehicles = vehicles.filter(
+    (v) => v.status === "IN_MAINTENANCE",
+  );
+  const decommissionedVehicles = vehicles.filter(
+    (v) => v.status === "DECOMMISSIONED",
+  );
 
   const groups = [
-    { id: 'active', name: 'Activos', badge: 'bg-success', vehicles: activeVehicles },
-    { id: 'maintenance', name: 'En Mantenimiento', badge: 'bg-warning', vehicles: maintenanceVehicles },
-    { id: 'decommissioned', name: 'Decomisionados', badge: 'bg-neutral-content/40', vehicles: decommissionedVehicles },
+    {
+      id: "active",
+      name: "Activos",
+      badge: "bg-success",
+      vehicles: activeVehicles,
+    },
+    {
+      id: "maintenance",
+      name: "En Mantenimiento",
+      badge: "bg-warning",
+      vehicles: maintenanceVehicles,
+    },
+    {
+      id: "decommissioned",
+      name: "Decomisionados",
+      badge: "bg-neutral-content/40",
+      vehicles: decommissionedVehicles,
+    },
   ];
 
-  const firstNonEmptyGroup = groups.find(g => g.vehicles.length > 0)?.id || 'active';
+  const firstNonEmptyGroup =
+    groups.find((g) => g.vehicles.length > 0)?.id || "active";
 
   return (
     <div className="space-y-6">
@@ -201,7 +244,9 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
                   aria-label={`Mostrar vehículos ${group.name}`}
                 />
                 <div className="collapse-title text-sm font-bold flex items-center gap-2.5 pr-10 text-base-content bg-base-200/20">
-                  <span className={`size-2.5 rounded-full ${group.badge} ${group.id === 'active' ? 'animate-pulse' : ''}`} />
+                  <span
+                    className={`size-2.5 rounded-full ${group.badge} ${group.id === "active" ? "animate-pulse" : ""}`}
+                  />
                   <span>{group.name}</span>
                   <span className="badge badge-neutral badge-sm ml-2 font-mono font-bold bg-base-300 border-none text-base-content/85">
                     {group.vehicles.length}
@@ -224,18 +269,26 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
 
       {/* New/Edit Vehicle Drawer */}
       <MobileDrawer
-        open={activeDrawer === 'new' || activeDrawer === 'edit'}
+        open={activeDrawer === "new" || activeDrawer === "edit"}
         onOpenChange={(open) => {
           if (!open) closeDrawer();
         }}
-        title={activeDrawer === 'new' ? 'Registrar Vehículo' : 'Editar Vehículo'}
-        subtitle={activeDrawer === 'new' ? 'Nueva Unidad en Flota' : selectedVehicle?.alias}
+        title={
+          activeDrawer === "new" ? "Registrar Vehículo" : "Editar Vehículo"
+        }
+        subtitle={
+          activeDrawer === "new"
+            ? "Nueva Unidad en Flota"
+            : selectedVehicle?.alias
+        }
         icon={<Car className="size-5" />}
         onClose={closeDrawer}
       >
         <div className="p-5">
           <VehicleForm
-            vehicleId={activeDrawer === 'edit' ? selectedVehicle?.id : undefined}
+            vehicleId={
+              activeDrawer === "edit" ? selectedVehicle?.id : undefined
+            }
             targetOrgId={targetOrgId}
             onSuccess={() => {
               closeDrawer();
@@ -248,7 +301,7 @@ export function VehicleMobileView({ vehicles, targetOrgId }: VehicleMobileViewPr
 
       {/* Assign Driver Drawer */}
       <MobileDrawer
-        open={activeDrawer === 'assign' && !!selectedVehicle}
+        open={activeDrawer === "assign" && !!selectedVehicle}
         onOpenChange={(open) => {
           if (!open) closeDrawer();
         }}

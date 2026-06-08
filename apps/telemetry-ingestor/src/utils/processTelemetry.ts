@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import * as net from 'net';
-import { parseTeltonikaData, Logger } from '@vantx/telemetry-parser';
-import { processDataBatch } from './processDataBatch';
+import * as net from "net";
+import { parseTeltonikaData, Logger } from "@vantx/telemetry-parser";
+import { processDataBatch } from "./processDataBatch";
 
-const logger = new Logger('TCP');
+const logger = new Logger("TCP");
 
 export async function processTelemetry(
   data: Buffer,

@@ -2,16 +2,16 @@ name: Build and Push Dashboard Docker Image
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
     paths:
-      - 'apps/dashboard/**'
-      - 'packages/auth/**'
-      - 'packages/ui/**'
-      - 'packages/tsconfig/**'
-      - 'package.json'
-      - 'package-lock.json'
-      - 'turbo.json'
-      - '.github/workflows/deploy-dashboard.yml'
+      - "apps/dashboard/**"
+      - "packages/auth/**"
+      - "packages/ui/**"
+      - "packages/tsconfig/**"
+      - "package.json"
+      - "package-lock.json"
+      - "turbo.json"
+      - ".github/workflows/deploy-dashboard.yml"
   workflow_dispatch:
 
 env:

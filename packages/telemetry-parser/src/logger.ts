@@ -4,25 +4,25 @@ export class Logger {
   private formatMessage(level: string, message: string): string {
     const timestamp = new Date()
       .toISOString()
-      .replace('T', ' ')
+      .replace("T", " ")
       .substring(0, 19);
-    const ctx = this.context ? ` [${this.context}]` : '';
+    const ctx = this.context ? ` [${this.context}]` : "";
     return `[Ingestor] - ${timestamp} ${level.padEnd(5)}:${ctx} ${message}`;
   }
 
   log(message: string, ...optionalParams: any[]) {
-    console.log(this.formatMessage('LOG', message), ...optionalParams);
+    console.log(this.formatMessage("LOG", message), ...optionalParams);
   }
 
   warn(message: string, ...optionalParams: any[]) {
-    console.warn(this.formatMessage('WARN', message), ...optionalParams);
+    console.warn(this.formatMessage("WARN", message), ...optionalParams);
   }
 
   error(message: string, ...optionalParams: any[]) {
-    console.error(this.formatMessage('ERROR', message), ...optionalParams);
+    console.error(this.formatMessage("ERROR", message), ...optionalParams);
   }
 
   debug(message: string, ...optionalParams: any[]) {
-    console.debug(this.formatMessage('DEBUG', message), ...optionalParams);
+    console.debug(this.formatMessage("DEBUG", message), ...optionalParams);
   }
 }

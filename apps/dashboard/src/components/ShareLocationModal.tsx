@@ -1,10 +1,19 @@
-'use client';
+"use client";
 
-import { ShareLocationModalProps, TrackingLink } from '@/types';
-import { useState, useEffect } from 'react';
-import { X, Copy, Share2, Check, Loader2, MapPin, Clock, ExternalLink } from 'lucide-react';
-import api from '@/utils/client/api-client';
-import { MobileDrawer } from './MobileDrawer';
+import { ShareLocationModalProps, TrackingLink } from "@/types";
+import { useState, useEffect } from "react";
+import {
+  X,
+  Copy,
+  Share2,
+  Check,
+  Loader2,
+  MapPin,
+  Clock,
+  ExternalLink,
+} from "lucide-react";
+import api from "@/utils/client/api-client";
+import { MobileDrawer } from "./MobileDrawer";
 
 export default function ShareLocationModal({
   isOpen,
@@ -17,9 +26,9 @@ export default function ShareLocationModal({
   // Prevenir errores de hidratación entre servidor y cliente (hydration mismatch)
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  
-  const [clientName, setClientName] = useState('');
-  const [selectedDuration, setSelectedDuration] = useState('24h');
+
+  const [clientName, setClientName] = useState("");
+  const [selectedDuration, setSelectedDuration] = useState("24h");
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [isCopied, setIsCopied] = useState(false);
@@ -30,18 +39,18 @@ export default function ShareLocationModal({
 
   // Detectar pantalla móvil
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     const checkIsMobile = () => setIsMobile(window.innerWidth < 1024);
     checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-    return () => window.removeEventListener('resize', checkIsMobile);
+    window.addEventListener("resize", checkIsMobile);
+    return () => window.removeEventListener("resize", checkIsMobile);
   }, []);
 
   // Limpiar el estado al abrir o cerrar el modal
   useEffect(() => {
     if (isOpen) {
-      setClientName('');
-      setSelectedDuration('24h');
+      setClientName("");
+      setSelectedDuration("24h");
       setGeneratedLink(null);
       setIsCopied(false);
     }
@@ -62,8 +71,8 @@ export default function ShareLocationModal({
       onLinkGenerated(data);
     } catch (err) {
       // Registrar error en consola (en español)
-      console.error('Error al generar enlace de rastreo:', err);
-      showToast('Error al generar enlace de rastreo', 'error');
+      console.error("Error al generar enlace de rastreo:", err);
+      showToast("Error al generar enlace de rastreo", "error");
     } finally {
       setIsGenerating(false);
     }
@@ -73,13 +82,13 @@ export default function ShareLocationModal({
     if (!generatedLink) return;
     navigator.clipboard.writeText(generatedLink);
     setIsCopied(true);
-    showToast('Enlace copiado al portapapeles');
+    showToast("Enlace copiado al portapapeles");
     setTimeout(() => setIsCopied(false), 2000);
   };
 
   const handleShare = async () => {
     if (!generatedLink) return;
-    if (typeof navigator !== 'undefined' && navigator.share) {
+    if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
           title: `Rastreo de ${vehicleName}`,
@@ -88,7 +97,7 @@ export default function ShareLocationModal({
         });
       } catch (err) {
         // Omitir error de cancelación por parte del usuario
-        console.error('Error al compartir enlace:', err);
+        console.error("Error al compartir enlace:", err);
       }
     } else {
       handleCopy();
@@ -144,9 +153,9 @@ export default function ShareLocationModal({
           </label>
           <div className="flex gap-2">
             {[
-              { id: '2h', label: '2 Horas' },
-              { id: '12h', label: '12 Horas' },
-              { id: '24h', label: '24 Horas' },
+              { id: "2h", label: "2 Horas" },
+              { id: "12h", label: "12 Horas" },
+              { id: "24h", label: "24 Horas" },
             ].map((dur) => {
               const isSelected = selectedDuration === dur.id;
               return (
@@ -156,8 +165,8 @@ export default function ShareLocationModal({
                   onClick={() => setSelectedDuration(dur.id)}
                   className={`btn btn-sm flex-1 font-bold ${
                     isSelected
-                      ? 'btn-primary text-white border-primary'
-                      : 'btn-outline border-base-300 text-base-content/70 hover:bg-base-200'
+                      ? "btn-primary text-white border-primary"
+                      : "btn-outline border-base-300 text-base-content/70 hover:bg-base-200"
                   }`}
                 >
                   {dur.label}
@@ -165,10 +174,11 @@ export default function ShareLocationModal({
               );
             })}
           </div>
-          {selectedDuration !== '24h' && (
+          {selectedDuration !== "24h" && (
             <p className="text-[10px] text-amber-600 dark:text-amber-400 mt-1.5 font-medium flex items-center gap-1 animate-in fade-in duration-200">
               <Clock className="size-3 shrink-0" />
-              La duración personalizada estará disponible pronto. Por ahora expira en 24h.
+              La duración personalizada estará disponible pronto. Por ahora
+              expira en 24h.
             </p>
           )}
         </div>
@@ -196,7 +206,8 @@ export default function ShareLocationModal({
   };
 
   const renderSuccess = () => {
-    const isShareSupported = typeof navigator !== 'undefined' && !!navigator.share;
+    const isShareSupported =
+      typeof navigator !== "undefined" && !!navigator.share;
 
     return (
       <div className="space-y-4 animate-in fade-in duration-300">
@@ -215,15 +226,19 @@ export default function ShareLocationModal({
             <input
               type="text"
               readOnly
-              value={generatedLink || ''}
+              value={generatedLink || ""}
               className="input input-bordered flex-1 text-xs font-mono bg-base-200 text-base-content/80 select-all"
             />
             <button
               onClick={handleCopy}
-              className={`btn btn-square ${isCopied ? 'btn-success text-white border-success' : 'btn-primary text-white border-primary'}`}
+              className={`btn btn-square ${isCopied ? "btn-success text-white border-success" : "btn-primary text-white border-primary"}`}
               title="Copiar"
             >
-              {isCopied ? <Check className="size-4" /> : <Copy className="size-4" />}
+              {isCopied ? (
+                <Check className="size-4" />
+              ) : (
+                <Copy className="size-4" />
+              )}
             </button>
           </div>
         </div>
@@ -234,7 +249,7 @@ export default function ShareLocationModal({
             className="btn btn-primary flex-1 text-white font-bold gap-2"
           >
             <Share2 className="size-4" />
-            {isShareSupported ? 'Compartir' : 'Copiar Enlace'}
+            {isShareSupported ? "Compartir" : "Copiar Enlace"}
           </button>
           {generatedLink && (
             <a
@@ -293,7 +308,9 @@ export default function ShareLocationModal({
         {/* Cabecera */}
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="font-extrabold text-lg tracking-tight text-base-content">Compartir Ubicación</h3>
+            <h3 className="font-extrabold text-lg tracking-tight text-base-content">
+              Compartir Ubicación
+            </h3>
             <p className="text-xs text-base-content/60 font-medium mt-0.5">
               Generar un enlace público para {vehicleName}
             </p>

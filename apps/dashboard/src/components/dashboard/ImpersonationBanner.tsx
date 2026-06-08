@@ -1,28 +1,34 @@
-'use client';
+"use client";
 
-import { useSearchParams } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { ROLES } from '@/utils/enums';
-import { useEffect, useState } from 'react';
-import api from '@/utils/client/api-client';
-import Link from 'next/link';
-import { Eye, X } from 'lucide-react';
+import { useSearchParams } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import { ROLES } from "@/utils/enums";
+import { useEffect, useState } from "react";
+import api from "@/utils/client/api-client";
+import Link from "next/link";
+import { Eye, X } from "lucide-react";
 
 export function ImpersonationBanner() {
   const searchParams = useSearchParams();
-  const targetOrgId = searchParams.get('targetOrgId');
+  const targetOrgId = searchParams.get("targetOrgId");
   const { role } = useAuth();
-  const [orgName, setOrgName] = useState('');
+  const [orgName, setOrgName] = useState("");
 
   useEffect(() => {
     if (role === ROLES.SUPER_ADMIN && targetOrgId) {
-      api.get('/organizations')
+      api
+        .get("/organizations")
         .then(({ data }) => {
-          const org = data.find((o: { id: string; name: string }) => o.id === targetOrgId);
+          const org = data.find(
+            (o: { id: string; name: string }) => o.id === targetOrgId,
+          );
           if (org) setOrgName(org.name);
         })
         .catch((err) => {
-          console.error('Error al obtener organizaciones para el banner de impersonación:', err);
+          console.error(
+            "Error al obtener organizaciones para el banner de impersonación:",
+            err,
+          );
         });
     }
   }, [role, targetOrgId]);

@@ -1,4 +1,4 @@
-import { AssignVehicleDriver } from '@/types';
+import { AssignVehicleDriver } from "@/types";
 import AssignDriverForm from "@/components/AssignDriverForm";
 import { fetchServer } from "@/utils/server/api-server";
 import { UserCheck } from "lucide-react";
@@ -13,16 +13,17 @@ export default async function VehicleAssignPage({
 }) {
   const { id: vehicleId } = await params;
   const sParams = await searchParams;
-  const targetOrgId = typeof sParams.targetOrgId === 'string' ? sParams.targetOrgId : undefined;
+  const targetOrgId =
+    typeof sParams.targetOrgId === "string" ? sParams.targetOrgId : undefined;
   let driver: AssignVehicleDriver | null = null;
 
   try {
     const data = await fetchServer(`/vehicles/${vehicleId}/driver`, {
-      cache: 'no-store'
+      cache: "no-store",
     });
     driver = data?.driver || null;
   } catch (error) {
-    console.error('Error al obtener el conductor desde el servidor:', error);
+    console.error("Error al obtener el conductor desde el servidor:", error);
   }
 
   return (
@@ -30,7 +31,9 @@ export default async function VehicleAssignPage({
       {/* Back button */}
       <div>
         <BackButton
-          fallbackHref={targetOrgId ? `/vehicle?targetOrgId=${targetOrgId}` : "/vehicle"}
+          fallbackHref={
+            targetOrgId ? `/vehicle?targetOrgId=${targetOrgId}` : "/vehicle"
+          }
         >
           Volver a vehículos
         </BackButton>
@@ -46,7 +49,8 @@ export default async function VehicleAssignPage({
             Asignar Conductor
           </h1>
           <p className="text-xs text-base-content/60 mt-1">
-            Vincula un chofer a este vehículo para registrar sus trayectos y calcular su puntuación de seguridad.
+            Vincula un chofer a este vehículo para registrar sus trayectos y
+            calcular su puntuación de seguridad.
           </p>
         </div>
       </div>
