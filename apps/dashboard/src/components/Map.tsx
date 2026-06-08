@@ -148,8 +148,8 @@ export default function FleetMap() {
 
   // Sincronizar el estado seleccionado con la URL al cambiar de página o cargar
   useEffect(() => {
-    const vid = searchParams.get('vehicleId');
-    setSelectedVehicleId(vid || null);
+    const vid = searchParams.get('vehicleId') || null;
+    setSelectedVehicleId((prev) => prev !== vid ? vid : prev);
   }, [searchParams]);
 
   const vehicleId = selectedVehicleId;
@@ -247,7 +247,7 @@ export default function FleetMap() {
   useEffect(() => {
     if (!mapContainer.current || map.current) return;
 
-    map.current = new mapboxgl.Map({
+    const mapInstance = new mapboxgl.Map({
       container: mapContainer.current,
       accessToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string,
       style: 'mapbox://styles/mapbox/streets-v12',
@@ -255,38 +255,34 @@ export default function FleetMap() {
       zoom: 12,
     });
 
-    return () => {
-      Object.values(markersRef.current).forEach(m => m.remove());
-      markersRef.current = {};
-      markerElementsRef.current = {};
-      map.current?.remove();
-      map.current = null;
-    };
-  }, []);
+    map.current = mapInstance;
 
-  // Check Móvil (Igual que antes)
-  useEffect(() => {
-    const checkIsMobile = () => setIsMobile(window.innerWidth < 1024);
-    checkIsMobile();
-    window.addEventListener('resize', checkIsMobile);
-    return () => window.removeEventListener('resize', checkIsMobile);
-  }, []);
-
-  // Efecto de visibilidad de etiquetas según nivel de zoom del mapa
-  useEffect(() => {
-    if (!map.current) return;
     const LABEL_ZOOM_THRESHOLD = 10;
-
     const updateLabelVisibility = () => {
-      if (!map.current) return;
-      const visible = map.current.getZoom() >= LABEL_ZOOM_THRESHOLD;
+      const visible = mapInstance.getZoom() >= LABEL_ZOOM_THRESHOLD;
       Object.values(markerElementsRef.current).forEach(({ labelEl }) => {
         if (labelEl) labelEl.style.opacity = visible ? '1' : '0';
       });
     };
 
-    map.current.on('zoom', updateLabelVisibility);
-    return () => { map.current?.off('zoom', updateLabelVisibility); };
+    mapInstance.on('zoom', updateLabelVisibility);
+
+    return () => {
+      mapInstance.off('zoom', updateLabelVisibility);
+      Object.values(markersRef.current).forEach(m => m.remove());
+      markersRef.current = {};
+      markerElementsRef.current = {};
+      mapInstance.remove();
+      map.current = null;
+    };
+  }, []);
+
+  // Verificar si es pantalla móvil
+  useEffect(() => {
+    const checkIsMobile = () => setIsMobile(window.innerWidth < 1024);
+    checkIsMobile();
+    window.addEventListener('resize', checkIsMobile);
+    return () => window.removeEventListener('resize', checkIsMobile);
   }, []);
 
   // Ocultar la etiqueta del vehículo seguido — el HUD ya lo identifica
@@ -448,70 +444,70 @@ export default function FleetMap() {
     });
   }, [fleet, handleVehicleSelection]);
 
-  // Efecto de seguimiento continuo: re-centra el mapa suavemente cuando el vehículo se mueve
-  useEffect(() => {
-    if (!followedVehicleId || !map.current || !fleet[followedVehicleId]) return;
+  // Extraer coordenadas primitivas del vehículo seguido para evitar re-centrar el mapa cuando se mueven otros vehículos
+  const followedLat = followedVehicleId && fleet[followedVehicleId] ? fleet[followedVehicleId].latitude : null;
+  const followedLng = followedVehicleId && fleet[followedVehicleId] ? fleet[followedVehicleId].longitude : null;
 
-    const { latitude, longitude } = fleet[followedVehicleId];
+  // Efecto de seguimiento continuo: re-centra el mapa suavemente cuando el vehículo seguido se mueve
+  useEffect(() => {
+    if (followedLat === null || followedLng === null || !map.current) return;
 
     map.current.easeTo({
-      center: [longitude, latitude],
+      center: [followedLng, followedLat],
       duration: 800,
       easing: (t: number) => t,
     });
-  }, [fleet, followedVehicleId]);
+  }, [followedLat, followedLng]);
 
+  // Centrar/volar al vehículo seleccionado cuando cambia el id del vehículo
   useEffect(() => {
-    if (!map.current) return;
+    if (!map.current || !vehicleId || !fleet[vehicleId]) return;
 
-    const moveCamera = () => {
-      if (vehicleId && fleet[vehicleId]) {
-        // A. INTENCIÓN: Usuario seleccionó un vehículo.
-        const { latitude, longitude } = fleet[vehicleId];
+    const { latitude, longitude } = fleet[vehicleId];
+    const currentCenter = map.current.getCenter();
+    const isAlreadyCentered = Math.abs(currentCenter.lng - longitude) < 0.001 && Math.abs(currentCenter.lat - latitude) < 0.001;
 
-        // Evitamos animaciones si ya estamos viendo el vehículo
-        const currentCenter = map.current!.getCenter();
-        const isAlreadyCentered = Math.abs(currentCenter.lng - longitude) < 0.001;
+    if (!isAlreadyCentered) {
+      const fly = () => {
+        if (!map.current) return;
+        map.current.flyTo({
+          center: [longitude, latitude],
+          zoom: 15,
+          duration: 1200
+        });
+      };
 
-        if (!isAlreadyCentered) {
-          map.current!.flyTo({
-            center: [longitude, latitude],
-            zoom: 15,
-            duration: 1200 // Un poco más rápido para dar sensación de inmediatez
-          });
-        }
-      } else if (!vehicleId) {
-        // B. INTENCIÓN: Usuario está en la vista general.
-        const markers = Object.values(markersRef.current);
-
-        if (markers.length > 0) {
-          const bounds = new mapboxgl.LngLatBounds();
-          markers.forEach(marker => bounds.extend(marker.getLngLat()));
-
-          map.current!.fitBounds(bounds, {
-            maxZoom: 14,
-            duration: 1200
-          });
-          initialFitDone.current = true;
-        }
+      if (map.current.isStyleLoaded()) {
+        fly();
+      } else {
+        map.current.once('load', fly);
       }
-    };
-
-    // Solo ejecutamos si el mapa está listo
-    if (map.current.isStyleLoaded()) {
-      moveCamera();
-    } else {
-      map.current.once('load', moveCamera);
     }
+  }, [vehicleId]);
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vehicleId, isMobile]);
-  // Efecto auxiliar SOLO para el arranque inicial de la app
+  // Encuadrar la flota una sola vez cuando se cargan los datos por primera vez
   useEffect(() => {
-    if (!initialFitDone.current && Object.keys(fleet).length > 0 && !vehicleId) {
-      // Forzamos un update de "falsa" dependencia para que el cerebro encuadre la flota 
-      // cuando el socket entregue la data por primera vez.
-      setIsMobile((prev) => prev);
+    if (!map.current || initialFitDone.current || vehicleId) return;
+
+    const markers = Object.values(markersRef.current);
+    if (markers.length > 0) {
+      const fit = () => {
+        if (!map.current) return;
+        const bounds = new mapboxgl.LngLatBounds();
+        markers.forEach(marker => bounds.extend(marker.getLngLat()));
+
+        map.current.fitBounds(bounds, {
+          maxZoom: 14,
+          duration: 1200
+        });
+        initialFitDone.current = true;
+      };
+
+      if (map.current.isStyleLoaded()) {
+        fit();
+      } else {
+        map.current.once('load', fit);
+      }
     }
   }, [fleet, vehicleId]);
 

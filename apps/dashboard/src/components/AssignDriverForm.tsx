@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import api from '@/utils/client/api-client';
 import { AssignDriverFormProps, AssignVehicleDriver } from '@/types';
@@ -28,12 +28,22 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [currentUserDriver, setCurrentUserDriver] = useState<{ nationalId: string; name: string } | null>(null);
 
-  // Fetch current driver if not pre-provided
+  // Almacenar initialDriver en una referencia para evitar ejecuciones de useEffect innecesarias si cambia la referencia del objeto
+  const initialDriverRef = useRef(initialDriver);
   useEffect(() => {
-    if (initialDriver !== undefined) {
-      setCurrentDriver(initialDriver);
+    initialDriverRef.current = initialDriver;
+  }, [initialDriver]);
+
+  const isInitialDriverUndefined = initialDriver === undefined;
+  const initialDriverNationalId = initialDriver?.nationalId;
+  const initialDriverName = initialDriver ? `${initialDriver.firstName} ${initialDriver.lastName}` : '';
+
+  // Obtener el conductor actual si no fue proporcionado previamente
+  useEffect(() => {
+    if (!isInitialDriverUndefined) {
+      setCurrentDriver(initialDriverRef.current);
       setIsLoadingDriver(false);
-      setShowAssignForm(initialDriver ? false : true);
+      setShowAssignForm(initialDriverRef.current ? false : true);
       return;
     }
 
@@ -52,7 +62,7 @@ export default function AssignDriverForm({ vehicleId, initialDriver, onSuccess }
     };
 
     fetchCurrentDriver();
-  }, [vehicleId, initialDriver]);
+  }, [vehicleId, isInitialDriverUndefined, initialDriverNationalId, initialDriverName]);
 
   // Debounced search / verify by national ID
   useEffect(() => {

@@ -1,7 +1,7 @@
 'use client';
 
 import { OrganizationsPageInvitation, OrganizationsPageOrg, TableColumn, TableOrgWithScore } from '@/types';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '@/utils/client/api-client';
 import { formatDate, getOrgSubscriptionBadgeClass } from '@/utils/client';
 import Link from 'next/link';
@@ -83,6 +83,10 @@ export default function OrganizationsPage() {
   const [settingsSuccess, setSettingsSuccess] = useState<string | null>(null);
   const [settingsError, setSettingsError] = useState<string | null>(null);
 
+  // Refs de control para evitar peticiones API duplicadas al cambiar de pestaña
+  const lastFetchedSettingsRef = useRef(false);
+  const lastFetchedInvitationsRef = useRef(false);
+
   const fetchSettings = async () => {
     try {
       setIsLoadingSettings(true);
@@ -100,8 +104,9 @@ export default function OrganizationsPage() {
   };
 
   useEffect(() => {
-    if (activeTab === 'settings') {
+    if (activeTab === 'settings' && !lastFetchedSettingsRef.current) {
       fetchSettings();
+      lastFetchedSettingsRef.current = true;
     }
   }, [activeTab]);
 
@@ -205,8 +210,9 @@ export default function OrganizationsPage() {
   };
 
   useEffect(() => {
-    if (activeTab === 'invitations') {
+    if (activeTab === 'invitations' && !lastFetchedInvitationsRef.current) {
       fetchInvitations();
+      lastFetchedInvitationsRef.current = true;
     }
   }, [activeTab]);
 

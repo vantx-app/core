@@ -101,19 +101,24 @@ export function FleetProvider({ children, initialVehicles = [] }: FleetProviderP
     }
   }, [targetOrgId, isConnected]);
 
+  const initialVehiclesRef = useRef(initialVehicles);
+  useEffect(() => {
+    initialVehiclesRef.current = initialVehicles;
+  }, [initialVehicles]);
+
   const isMounted = useRef(false);
 
-  // Refetch and merge when the target organization ID changes
+  // Refetch y mezclar cuando cambia la organización objetivo
   useEffect(() => {
     if (!isMounted.current) {
       isMounted.current = true;
-      // Skip initial fetch if we already have initialVehicles pre-loaded on the server and no custom targetOrgId is requested
-      if (initialVehicles && initialVehicles.length > 0 && !targetOrgId) {
+      // Evitar el fetch inicial si ya tenemos vehículos precargados en el servidor y no hay targetOrgId
+      if (initialVehiclesRef.current && initialVehiclesRef.current.length > 0 && !targetOrgId) {
         return;
       }
     }
     fetchAndMergeFleet();
-  }, [targetOrgId, fetchAndMergeFleet, initialVehicles]);
+  }, [targetOrgId, fetchAndMergeFleet]);
 
   // Sync on tab visibility change to pick up any offline updates, while preserving active socket locations
   useEffect(() => {

@@ -5,7 +5,7 @@ import {
   SimpleDriver,
   VehicleTripsTrip,
 } from "@/types";
-import { useState, useEffect, Suspense, useCallback } from "react";
+import { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import api from "@/utils/client/api-client";
 import TripsHistoryView from "@/components/TripsHistoryView";
 import {
@@ -68,7 +68,11 @@ function ReportsPageContent() {
   const [driverTrips, setDriverTrips] = useState<VehicleTripsTrip[]>([]);
   const [isLoadingTrips, setIsLoadingTrips] = useState(false);
 
-  // Fetch directory of drivers for selection
+  // Refs de control para evitar llamadas API duplicadas al cambiar de pestaña
+  const lastFetchedBreakdownRef = useRef<{ weekKey: string; driverId: string } | null>(null);
+  const lastFetchedTripsDriverIdRef = useRef<string | null>(null);
+
+  // Obtener la lista de conductores para selección
   const fetchDrivers = useCallback(async () => {
     if (!isManagementRole) return;
     try {
@@ -77,24 +81,27 @@ function ReportsPageContent() {
         : "/drivers";
       const { data } = await api.get(url);
       setDrivers(data);
-      // Auto-select first driver if any, or matching driverIdParam
-      if (data.length > 0) {
-        const matchingDriver = driverIdParam && data.find((d: SimpleDriver) => d.id === driverIdParam);
-        if (matchingDriver) {
-          setSelectedDriverId(matchingDriver.id);
-        } else {
-          setSelectedDriverId(data[0].id);
-        }
-      }
     } catch (err) {
-      console.error("Error fetching drivers", err);
+      console.error("Error al obtener conductores", err);
       setErrorMsg("Error al cargar la lista de conductores.");
     }
-  }, [isManagementRole, targetOrgId, driverIdParam]);
+  }, [isManagementRole, targetOrgId]);
 
   useEffect(() => {
     fetchDrivers();
   }, [fetchDrivers]);
+
+  // Sincronizar el conductor seleccionado basado en la lista de conductores y el parámetro de la URL
+  useEffect(() => {
+    if (drivers.length > 0) {
+      const matchingDriver = driverIdParam && drivers.find((d: SimpleDriver) => d.id === driverIdParam);
+      if (matchingDriver) {
+        setSelectedDriverId(matchingDriver.id);
+      } else {
+        setSelectedDriverId(drivers[0].id);
+      }
+    }
+  }, [drivers, driverIdParam]);
 
   // Load selected driver snapshots (available weeks)
   const fetchDriverStats = useCallback(async () => {
@@ -109,6 +116,10 @@ function ReportsPageContent() {
     setDriverSnapshots([]);
     setBreakdownData(null);
     setSelectedWeekKey("");
+    
+    // Limpiar caché de llamadas previas
+    lastFetchedBreakdownRef.current = null;
+    lastFetchedTripsDriverIdRef.current = null;
 
     try {
       const endpoint =
@@ -134,7 +145,7 @@ function ReportsPageContent() {
     } finally {
       setIsLoadingDriver(false);
     }
-  }, [selectedDriverId]);
+  }, [selectedDriverId, isManagementRole]);
 
   useEffect(() => {
     fetchDriverStats();
@@ -146,6 +157,15 @@ function ReportsPageContent() {
       setBreakdownData(null);
       return;
     }
+
+    // Evitar peticiones API duplicadas si ya tenemos el desglose de esta semana y conductor
+    if (
+      lastFetchedBreakdownRef.current?.weekKey === selectedWeekKey &&
+      lastFetchedBreakdownRef.current?.driverId === selectedDriverId
+    ) {
+      return;
+    }
+
     const [year, week] = selectedWeekKey.split("-").map(Number);
     setIsLoadingBreakdown(true);
     try {
@@ -156,6 +176,7 @@ function ReportsPageContent() {
 
       const { data } = await api.get(endpoint);
       setBreakdownData(data);
+      lastFetchedBreakdownRef.current = { weekKey: selectedWeekKey, driverId: selectedDriverId };
     } catch (err) {
       console.error(err);
     } finally {
@@ -176,6 +197,11 @@ function ReportsPageContent() {
       return;
     }
 
+    // Evitar peticiones API duplicadas si ya tenemos los viajes de este conductor
+    if (lastFetchedTripsDriverIdRef.current === selectedDriverId) {
+      return;
+    }
+
     setIsLoadingTrips(true);
     try {
       const endpoint =
@@ -185,12 +211,13 @@ function ReportsPageContent() {
 
       const { data } = await api.get(endpoint);
       setDriverTrips(data);
+      lastFetchedTripsDriverIdRef.current = selectedDriverId;
     } catch (err) {
       console.error(err);
     } finally {
       setIsLoadingTrips(false);
     }
-  }, [selectedDriverId]);
+  }, [selectedDriverId, isManagementRole]);
 
   useEffect(() => {
     if (activeTab === "daily") {
