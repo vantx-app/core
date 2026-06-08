@@ -14,7 +14,6 @@ import {
   Zap,
   Truck,
   ArrowLeft,
-  Calendar,
 } from "lucide-react";
 import api from "@/utils/client/api-client";
 import { DriverInfoLabel } from "@/components/ui/DriverInfoLabel";
@@ -116,6 +115,24 @@ export default function TripsHistoryView({
     };
   }, [isFullscreen]);
 
+  // Sincronizar el estado del mapa móvil con el historial de navegación del navegador
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      if (window.history.state?.mapActive) {
+        setIsMobileMapActive(true);
+      }
+
+      const handlePopState = (event: PopStateEvent) => {
+        setIsMobileMapActive(!!event.state?.mapActive);
+      };
+
+      window.addEventListener("popstate", handlePopState);
+      return () => {
+        window.removeEventListener("popstate", handlePopState);
+      };
+    }
+  }, []);
+
   const selectedTrip = trips.find((t) => t.id === selectedTripId) || null;
 
   useEffect(() => {
@@ -169,11 +186,21 @@ export default function TripsHistoryView({
   }, [routeCoordinates]);
 
   const handleTripSelection = (tripId: string) => {
+    if (tripId === selectedTripId) {
+      if (!isMobileMapActive) {
+        window.history.pushState({ mapActive: true }, "");
+        setIsMobileMapActive(true);
+      }
+      return;
+    }
     // Activamos síncronamente el estado de carga y limpiamos coordenadas previas
     setIsLoadingRoute(true);
     setRouteCoordinates([]);
     setSelectedTripId(tripId);
-    setIsMobileMapActive(true);
+    if (!isMobileMapActive) {
+      window.history.pushState({ mapActive: true }, "");
+      setIsMobileMapActive(true);
+    }
     // Ya no colapsamos la lista automáticamente al seleccionar para mejorar la navegación
   };
 
@@ -215,19 +242,17 @@ export default function TripsHistoryView({
                     <button
                       key={trip.id}
                       onClick={() => handleTripSelection(trip.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex flex-col gap-2 ${
-                        isSelected
+                      className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex flex-col gap-2 ${isSelected
                           ? "bg-primary/10 border-primary shadow-sm"
                           : "bg-base-100/50 border-base-200 hover:border-base-300 text-base-content"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between w-full text-[10px]">
                         <span
-                          className={`badge badge-xs font-black px-1.5 border ${
-                            isOngoing
+                          className={`badge badge-xs font-black px-1.5 border ${isOngoing
                               ? "bg-blue-500/10 border-blue-500/20 text-blue-600 animate-pulse"
                               : "bg-base-200 border-base-300 text-base-content/70"
-                          }`}
+                            }`}
                         >
                           {isOngoing ? "En Curso" : "Completado"}
                         </span>
@@ -252,9 +277,8 @@ export default function TripsHistoryView({
                             <Truck className="size-3 text-base-content/40 shrink-0" />
                             {isManagementRole && (trip.vehicleId || trip.vehicle?.id) ? (
                               <Link
-                                href={`/vehicle/${trip.vehicleId || trip.vehicle?.id}/view${
-                                  targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
-                                }`}
+                                href={`/vehicle/${trip.vehicleId || trip.vehicle?.id}/view${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                                  }`}
                                 className="truncate font-semibold text-primary hover:underline"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -273,9 +297,8 @@ export default function TripsHistoryView({
                             <User className="size-3 text-base-content/40 shrink-0" />
                             {isManagementRole && trip.driver?.id ? (
                               <Link
-                                href={`/reports?driverId=${trip.driver.id}&tab=daily${
-                                  targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
-                                }`}
+                                href={`/reports?driverId=${trip.driver.id}&tab=daily${targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
+                                  }`}
                                 className="flex flex-col text-left group hover:underline text-primary"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -300,51 +323,6 @@ export default function TripsHistoryView({
                         )}
                       </div>
 
-                      {/* Detalles expandidos al seleccionar el viaje */}
-                      {isSelected && (
-                        <div className="mt-2 pt-2 border-t border-primary/20 space-y-2 text-left w-full transition-all duration-300">
-                          {/* Fecha Completa */}
-                          <div className="text-[10px] text-base-content/60 font-semibold flex items-center gap-1">
-                            <Calendar className="size-3 text-primary shrink-0" />
-                            <span>{formatTripDate(trip.startTime)}</span>
-                          </div>
-
-                          {/* Estadísticas de velocidad obtenidas de la telemetría */}
-                          {isLoadingRoute ? (
-                            <div className="flex items-center gap-1.5 text-[10px] text-primary/70 animate-pulse py-1">
-                              <Loader2 className="size-3 animate-spin shrink-0" />
-                              <span>Cargando estadísticas...</span>
-                            </div>
-                          ) : error ? (
-                            <div className="text-[10px] text-error font-semibold py-1">
-                              Sin estadísticas de velocidad
-                            </div>
-                          ) : tripMetrics ? (
-                            <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
-                              <div className="bg-primary/5 border border-primary/10 rounded-lg p-1.5">
-                                <span className="text-base-content/40 uppercase block text-[8px] leading-none">
-                                  V. Promedio
-                                </span>
-                                <span className="text-sm font-mono text-primary block mt-0.5">
-                                  {tripMetrics.avgSpeed} km/h
-                                </span>
-                              </div>
-                              <div className="bg-rose-500/5 border border-rose-500/10 rounded-lg p-1.5">
-                                <span className="text-error/60 uppercase block text-[8px] leading-none">
-                                  V. Máxima
-                                </span>
-                                <span className="text-sm font-mono text-error block mt-0.5">
-                                  {tripMetrics.maxSpeed} km/h
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="text-[10px] text-base-content/40 italic py-1">
-                              Sin telemetría GPS
-                            </div>
-                          )}
-                        </div>
-                      )}
                     </button>
                   );
                 })}
@@ -373,9 +351,8 @@ export default function TripsHistoryView({
                     <Truck className="size-3.5 text-primary shrink-0" />
                     {isManagementRole && (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
                       <Link
-                        href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${
-                          targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
-                        }`}
+                        href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                          }`}
                         className="truncate text-primary hover:underline font-semibold"
                       >
                         {selectedTrip.vehicle?.alias || "Sin Alias"} (
@@ -393,9 +370,8 @@ export default function TripsHistoryView({
                     <User className="size-3.5 text-primary shrink-0" />
                     {isManagementRole && selectedTrip.driver?.id ? (
                       <Link
-                        href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${
-                          targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
-                        }`}
+                        href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
+                          }`}
                         className="truncate text-primary hover:underline font-semibold"
                       >
                         {selectedTrip.driver.firstName && selectedTrip.driver.lastName
@@ -467,9 +443,8 @@ export default function TripsHistoryView({
                   <Truck className="size-3.5 text-primary shrink-0" />
                   {isManagementRole && (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
                     <Link
-                      href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${
-                        targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
-                      }`}
+                      href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                        }`}
                       className="text-xs font-bold text-primary hover:underline truncate"
                     >
                       {selectedTrip.vehicle?.alias || "Vehículo"}
@@ -485,9 +460,8 @@ export default function TripsHistoryView({
                   <User className="size-3.5 text-primary shrink-0" />
                   {isManagementRole && selectedTrip.driver?.id ? (
                     <Link
-                      href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${
-                        targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
-                      }`}
+                      href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
+                        }`}
                       className="text-xs font-bold text-primary hover:underline truncate"
                     >
                       {selectedTrip.driver.firstName && selectedTrip.driver.lastName
@@ -600,12 +574,10 @@ export default function TripsHistoryView({
           key="stable-map-panel"
           className={`
             relative bg-base-100/50 overflow-hidden shadow-sm flex flex-col
-            ${
-              isFullscreen
-                ? "flex-grow h-full w-full border-none rounded-none"
-                : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${
-                    isMobileMapActive ? "flex h-[500px] sm:h-[600px] lg:h-full lg:min-h-0" : "hidden"
-                  }`
+            ${isFullscreen
+              ? "flex-grow h-full w-full border-none rounded-none"
+              : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${isMobileMapActive ? "flex h-[500px] sm:h-[600px] lg:h-full lg:min-h-0" : "hidden"
+              }`
             }
           `}
         >
