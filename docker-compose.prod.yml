@@ -1,10 +1,10 @@
 services:
   # ----------------------------------
-  # FRONTEND (Next.js Standalone)
+  # LANDING PAGE (Next.js Standalone)
   # ----------------------------------
-  vantx_frontend:
-    image: ghcr.io/vantx-app/dashboard:latest
-    container_name: vantx_frontend
+  vantx_landing:
+    image: ghcr.io/vantx-app/landing:latest
+    container_name: vantx_landing
     networks:
       - vantx-network
     deploy:
@@ -19,6 +19,29 @@ services:
       - INTERNAL_API_URL=http://vantx_server:8000
     ports:
       - "127.0.0.1:3000:3000"
+    depends_on:
+      - vantx_server
+
+  # ----------------------------------
+  # DASHBOARD (Next.js Standalone)
+  # ----------------------------------
+  vantx_dashboard:
+    image: ghcr.io/vantx-app/dashboard:latest
+    container_name: vantx_dashboard
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOSTNAME=0.0.0.0
+      - INTERNAL_API_URL=http://vantx_server:8000
+    ports:
+      - "127.0.0.1:3001:3001"
     depends_on:
       - vantx_server
 

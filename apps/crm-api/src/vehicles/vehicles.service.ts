@@ -24,9 +24,9 @@ export class VehiclesService {
     let baseUrl =
       process.env.FRONTEND_URL ||
       process.env.CORS_ORIGIN ||
-      'http://localhost:3000';
+      'http://localhost:3001';
     if (baseUrl === '*') {
-      baseUrl = 'http://localhost:3000';
+      baseUrl = 'http://localhost:3001';
     } else if (baseUrl.includes(',')) {
       baseUrl = baseUrl.split(',')[0].trim();
     }

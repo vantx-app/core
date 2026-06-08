@@ -78,7 +78,7 @@ export class BillingService {
     const apiUrl =
       process.env.PAGUELOFACIL_API_URL ||
       'https://sandbox.paguelofacil.com/LinkDeamon.cfm';
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3001';
     const returnUrl = `${frontendUrl}/billing?status=success&payment_method=paguelofacil`;
 
     // Generar enlace en PágueloFácil LinkDeamon

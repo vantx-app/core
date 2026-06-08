@@ -14,7 +14,11 @@ import { Logger } from '@nestjs/common';
 // cors: '*' allows your Next.js local server to connect without CORS errors
 @WebSocketGateway({
   cors: {
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000', // Be specific to your Next.js port
+    origin: process.env.CORS_ORIGIN
+      ? (process.env.CORS_ORIGIN.includes(',')
+        ? process.env.CORS_ORIGIN.split(',')
+        : process.env.CORS_ORIGIN)
+      : 'http://localhost:3001',
     credentials: true,
   },
   path: '/api/socket.io/',

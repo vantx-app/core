@@ -16,7 +16,11 @@ export class CustomSocketIoAdapter extends IoAdapter {
       pingInterval: 25000,
       pingTimeout: 20000,
       cors: {
-        origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+        origin: process.env.CORS_ORIGIN
+          ? (process.env.CORS_ORIGIN.includes(',')
+            ? process.env.CORS_ORIGIN.split(',')
+            : process.env.CORS_ORIGIN)
+          : 'http://localhost:3001',
         credentials: true,
       },
     });
