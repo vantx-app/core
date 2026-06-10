@@ -313,7 +313,7 @@ export default function VehicleForm({
           <Input
             type="text"
             label="Alias del Vehículo"
-            placeholder="Ej. Camión Cisterna #3"
+            placeholder="Ej. Vehículo Cisterna #3"
             disabled={isSubmitting}
             {...register("alias")}
           />
@@ -354,7 +354,7 @@ export default function VehicleForm({
             helperText={
               !vehicleId
                 ? "Kilometraje base del vehículo al momento de registrarlo."
-                : "Kilometraje real actual del camión."
+                : "Kilometraje real actual del vehículo."
             }
             {...register("currentOdometer")}
           />

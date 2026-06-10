@@ -109,7 +109,7 @@ export class VehiclesController {
     return this.vehiclesService.findAllByOrgId(user.orgId, liveState);
   }
 
-  // Intención clara: "Asignar un chofer a este camión"
+  // Intención clara: "Asignar un chofer a este vehículo"
   @Post(':id/assign')
   async assignDriver(
     @Param('id', ParseUUIDPipe) vehicleId: string,
@@ -124,7 +124,7 @@ export class VehiclesController {
     return result;
   }
 
-  // Intención clara: "Liberar el camión"
+  // Intención clara: "Liberar el vehículo"
   @Post(':id/unassign')
   async unassignVehicle(@Param('id', ParseUUIDPipe) vehicleId: string) {
     const result = await this.assignmentService.unassignVehicle(vehicleId);

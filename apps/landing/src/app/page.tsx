@@ -146,7 +146,7 @@ function LandingContent() {
             </h2>
             <p className="text-slate-600 text-sm leading-relaxed mb-6">
               VantX calcula semanalmente calificaciones de seguridad basados en
-              eventos reales detectados en los sensores del camión:
+              eventos reales detectados en los sensores del vehículo:
               aceleraciones bruscas, frenados intempestivos, giros de alta
               gravedad y excesos de velocidad.
             </p>

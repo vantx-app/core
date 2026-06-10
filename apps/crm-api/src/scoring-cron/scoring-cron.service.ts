@@ -503,7 +503,7 @@ export class ScoringCronService {
     let cursor: string | undefined = undefined;
     let hasMore = true;
 
-    // CACHÉ EN MEMORIA: Evita hacer queries repetitivos para el mismo camión
+    // CACHÉ EN MEMORIA: Evita hacer queries repetitivos para el mismo vehículo
     const vehicleConfigCache = new Map<string, RuleEngineConfig>();
 
     while (hasMore) {
@@ -853,7 +853,7 @@ export class ScoringCronService {
         for (const v of vehicles) {
           const summary = summaryMap.get(v.id);
 
-          // Si no hay resumen, significa que el camión no generó telemetría esta semana
+          // Si no hay resumen, significa que el vehículo no generó telemetría esta semana
           if (!summary) continue;
 
           const totalKm = summary._sum.totalKm || 0;

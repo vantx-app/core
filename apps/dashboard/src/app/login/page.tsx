@@ -85,7 +85,7 @@ function LoginForm() {
             </div>
             <div className="space-y-3">
               <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-400">Camión T-105</span>
+                <span className="text-slate-400">Vehículo T-105</span>
                 <span className="text-blue-400 font-medium font-mono">
                   En Ruta
                 </span>

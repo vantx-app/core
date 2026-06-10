@@ -214,7 +214,10 @@ export function OwnerDashboard({
         </div>
         <ScoreProgressBar score={avgSafety} label="Seguridad Vial" />
         <ScoreProgressBar score={avgEco} label="Eficiencia de Combustible" />
-        <ScoreProgressBar score={avgAsset} label="Salud del Activo / Camión" />
+        <ScoreProgressBar
+          score={avgAsset}
+          label="Salud del Activo / Vehículo"
+        />
       </div>
 
       {/* Three Score Cards (Radial Gauges side-by-side) - Desktop view */}
@@ -233,7 +236,7 @@ export function OwnerDashboard({
         />
         <RadialScoreGauge
           score={avgAsset}
-          title="Salud del Activo / Camión"
+          title="Salud del Activo / Vehículo"
           subtitle="Códigos DTC y temperaturas"
           footerText="Cuidado de Mecánica"
         />

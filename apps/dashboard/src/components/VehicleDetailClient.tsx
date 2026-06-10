@@ -259,7 +259,7 @@ export function VehicleDetailClient({
     },
     {
       key: "health",
-      header: "Salud del Camión",
+      header: "Salud del Vehículo",
       render: (snap) => {
         const avg =
           ((snap.maintenanceScore ?? 100) + (snap.fuelEfficiency ?? 100)) / 2;
@@ -927,7 +927,7 @@ export function VehicleDetailClient({
                         </span>
                         <span
                           className={`badge badge-sm font-bold ${getScoreBadgeColor(((snap.maintenanceScore ?? 100) + (snap.fuelEfficiency ?? 100)) / 2)} justify-start w-fit`}
-                          title="Salud del Camión"
+                          title="Salud del Vehículo"
                         >
                           Salud:{" "}
                           {Math.round(

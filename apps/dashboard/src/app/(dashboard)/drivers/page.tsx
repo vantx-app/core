@@ -156,7 +156,7 @@ function DriversPageContent() {
             <div
               className={`p-2 rounded-xl border flex flex-col items-center justify-center ${colorClass}`}
             >
-              <span className="text-2xl font-black">
+              <span className="text-xl font-black">
                 {Math.round(safetyScore)}
               </span>
               <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
@@ -164,20 +164,24 @@ function DriversPageContent() {
               </span>
             </div>
 
-            <div className="p-2 rounded-xl border border-base-300/50 bg-base-100 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-base-content">
+            <div
+              className={`p-2 rounded-xl border flex flex-col items-center justify-center ${colorClass}`}
+            >
+              <span className="text-xl font-black">
                 {Math.round(ecoScore)}
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider text-base-content/50">
+              <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
                 Eco-Conduc.
               </span>
             </div>
 
-            <div className="p-2 rounded-xl border border-base-300/50 bg-base-100 flex flex-col items-center justify-center">
-              <span className="text-xl font-bold text-base-content">
+            <div
+              className={`p-2 rounded-xl border flex flex-col items-center justify-center ${colorClass}`}
+            >
+              <span className="text-xl font-black">
                 {Math.round(assetScore)}
               </span>
-              <span className="text-[9px] font-bold uppercase tracking-wider text-base-content/50">
+              <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
                 Cuidado Mot.
               </span>
             </div>
