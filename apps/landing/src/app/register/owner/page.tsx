@@ -77,7 +77,7 @@ function OwnerRegisterStepper() {
     if (!token) {
       setValidationStatus("invalid");
       setErrorMessage(
-        "No se ha proporcionado un enlace o token de invitación."
+        "No se ha proporcionado un enlace o token de invitación.",
       );
       return;
     }
@@ -90,7 +90,7 @@ function OwnerRegisterStepper() {
         } else {
           setValidationStatus("invalid");
           setErrorMessage(
-            "El enlace de invitación no es válido o ya fue utilizado."
+            "El enlace de invitación no es válido o ya fue utilizado.",
           );
         }
       } catch (error) {
@@ -229,7 +229,8 @@ function OwnerRegisterStepper() {
               ¡Registro Exitoso!
             </h1>
             <p className="text-sm text-slate-400">
-              Tu organización y cuenta de propietario se han creado correctamente.
+              Tu organización y cuenta de propietario se han creado
+              correctamente.
             </p>
           </div>
           <div className="text-slate-500 text-xs animate-pulse">
@@ -331,7 +332,13 @@ function OwnerRegisterStepper() {
             <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
               <span className="text-blue-500">Paso 1: Datos de Usuario</span>
               <span className="text-slate-700">|</span>
-              <span className={currentStep === "organization" ? "text-blue-500" : ""}>Paso 2: Organización</span>
+              <span
+                className={
+                  currentStep === "organization" ? "text-blue-500" : ""
+                }
+              >
+                Paso 2: Organización
+              </span>
             </div>
           </div>
 
@@ -392,7 +399,8 @@ function OwnerRegisterStepper() {
                         required: "La contraseña es requerida",
                         minLength: {
                           value: 6,
-                          message: "La contraseña debe tener al menos 6 caracteres",
+                          message:
+                            "La contraseña debe tener al menos 6 caracteres",
                         },
                       })}
                     />
@@ -425,7 +433,8 @@ function OwnerRegisterStepper() {
                     />
                   </label>
                   <p className="text-slate-400 text-xs mt-1">
-                    Activa esta opción para vincular automáticamente un perfil de conductor y registrar tu telemetría histórica.
+                    Activa esta opción para vincular automáticamente un perfil
+                    de conductor y registrar tu telemetría histórica.
                   </p>
                 </div>
 
@@ -440,7 +449,9 @@ function OwnerRegisterStepper() {
                       className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
                       placeholder="Ej. Juan Pérez"
                       {...register("name", {
-                        required: !isDriver ? "El nombre completo es requerido" : false,
+                        required: !isDriver
+                          ? "El nombre completo es requerido"
+                          : false,
                       })}
                     />
                     {errors.name && (
@@ -465,7 +476,9 @@ function OwnerRegisterStepper() {
                           className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
                           placeholder="Nombre"
                           {...register("firstName", {
-                            required: isDriver ? "El nombre es requerido" : false,
+                            required: isDriver
+                              ? "El nombre es requerido"
+                              : false,
                           })}
                         />
                         {errors.firstName && (
@@ -483,7 +496,9 @@ function OwnerRegisterStepper() {
                           className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
                           placeholder="Apellido"
                           {...register("lastName", {
-                            required: isDriver ? "El apellido es requerido" : false,
+                            required: isDriver
+                              ? "El apellido es requerido"
+                              : false,
                           })}
                         />
                         {errors.lastName && (
@@ -498,7 +513,9 @@ function OwnerRegisterStepper() {
                       name="nationalId"
                       control={control}
                       rules={{
-                        required: isDriver ? "El documento de identidad es requerido" : false,
+                        required: isDriver
+                          ? "El documento de identidad es requerido"
+                          : false,
                       }}
                       render={({ field }) => (
                         <IdDocumentField

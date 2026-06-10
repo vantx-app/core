@@ -58,11 +58,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         window.location.href = "http://localhost:3001";
       } else {
         const errData = await response.json().catch(() => ({}));
-        setApiError(errData.message || "Credenciales inválidas. Inténtalo de nuevo.");
+        setApiError(
+          errData.message || "Credenciales inválidas. Inténtalo de nuevo.",
+        );
       }
     } catch (error) {
       console.error("Login error:", error);
-      setApiError("Error de red. Asegúrate de que los servicios estén activos.");
+      setApiError(
+        "Error de red. Asegúrate de que los servicios estén activos.",
+      );
     }
   };
 
@@ -97,7 +101,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               type="email"
               disabled={isSubmitting}
               className={`w-full bg-slate-50 border ${
-                errors.email ? "border-red-400 focus:ring-red-400/20" : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
+                errors.email
+                  ? "border-red-400 focus:ring-red-400/20"
+                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
               } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
               placeholder="ejemplo@vantx.app"
               {...register("email", {
@@ -127,7 +133,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               type={showPassword ? "text" : "password"}
               disabled={isSubmitting}
               className={`w-full bg-slate-50 border ${
-                errors.password ? "border-red-400 focus:ring-red-400/20" : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
+                errors.password
+                  ? "border-red-400 focus:ring-red-400/20"
+                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
               } rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
               placeholder="••••••••"
               {...register("password", {
@@ -144,7 +152,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
             >
-              {showPassword ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+              {showPassword ? (
+                <EyeOff className="size-4" />
+              ) : (
+                <Eye className="size-4" />
+              )}
             </button>
           </div>
           {errors.password && (

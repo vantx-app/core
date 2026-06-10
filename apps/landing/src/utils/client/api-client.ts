@@ -65,7 +65,7 @@ api.interceptors.response.use(
 
         const newAccessToken = data.accessToken;
         const authSettings = getCookieSettings(15 * 60 * 1000);
-        
+
         Cookies.set("access_token", newAccessToken, {
           path: authSettings.path,
           domain: authSettings.domain,

@@ -188,7 +188,11 @@ function RegisterStepper() {
             <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
               <span className="text-blue-500">Paso 1: Verificación</span>
               <span className="text-slate-700">|</span>
-              <span className={currentStep === "details" ? "text-blue-500" : ""}>Paso 2: Registro</span>
+              <span
+                className={currentStep === "details" ? "text-blue-500" : ""}
+              >
+                Paso 2: Registro
+              </span>
             </div>
           </div>
 

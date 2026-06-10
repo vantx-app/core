@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { ShieldCheck, Mail, Phone, Building2, User, FileText } from "lucide-react";
+import {
+  ShieldCheck,
+  Mail,
+  Phone,
+  Building2,
+  User,
+  FileText,
+} from "lucide-react";
 
 export function OwnerContactForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -34,9 +41,13 @@ export function OwnerContactForm() {
         <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-600">
           <ShieldCheck className="size-8" />
         </div>
-        <h3 className="text-2xl font-bold text-slate-800">Solicitud Recibida</h3>
+        <h3 className="text-2xl font-bold text-slate-800">
+          Solicitud Recibida
+        </h3>
         <p className="text-slate-500 text-sm max-w-sm">
-          Gracias por tu interés en VantX. Un especialista de flotas se pondrá en contacto contigo a través del correo o teléfono provisto en menos de 24 horas.
+          Gracias por tu interés en VantX. Un especialista de flotas se pondrá
+          en contacto contigo a través del correo o teléfono provisto en menos
+          de 24 horas.
         </p>
       </div>
     );
@@ -45,61 +56,86 @@ export function OwnerContactForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div className="text-center mb-6">
-        <h3 className="text-xl font-extrabold text-slate-850">Solicitar Demostración</h3>
+        <h3 className="text-xl font-extrabold text-slate-850">
+          Solicitar Demostración
+        </h3>
         <p className="text-slate-500 text-xs mt-1">
-          Completa tus datos y un especialista te guiará para configurar el hardware OBD-II en tu flota.
+          Completa tus datos y un especialista te guiará para configurar el
+          hardware OBD-II en tu flota.
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Name */}
         <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-600 block pl-0.5">Nombre Completo</label>
+          <label className="text-xs font-bold text-slate-600 block pl-0.5">
+            Nombre Completo
+          </label>
           <div className="relative">
             <User className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
             <input
               type="text"
               disabled={isSubmitting}
               className={`w-full bg-slate-50 border ${
-                errors.name ? "border-red-400 focus:ring-red-400/20" : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
+                errors.name
+                  ? "border-red-400 focus:ring-red-400/20"
+                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
               } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
               placeholder="Juan Pérez"
               {...register("name", { required: "El nombre es obligatorio" })}
             />
           </div>
-          {errors.name && <span className="text-red-500 text-[11px] block pl-0.5">{errors.name.message}</span>}
+          {errors.name && (
+            <span className="text-red-500 text-[11px] block pl-0.5">
+              {errors.name.message}
+            </span>
+          )}
         </div>
 
         {/* Company */}
         <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-600 block pl-0.5">Nombre de la Empresa</label>
+          <label className="text-xs font-bold text-slate-600 block pl-0.5">
+            Nombre de la Empresa
+          </label>
           <div className="relative">
             <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
             <input
               type="text"
               disabled={isSubmitting}
               className={`w-full bg-slate-50 border ${
-                errors.company ? "border-red-400 focus:ring-red-400/20" : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
+                errors.company
+                  ? "border-red-400 focus:ring-red-400/20"
+                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
               } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
               placeholder="Logística S.A."
-              {...register("company", { required: "La empresa es obligatoria" })}
+              {...register("company", {
+                required: "La empresa es obligatoria",
+              })}
             />
           </div>
-          {errors.company && <span className="text-red-500 text-[11px] block pl-0.5">{errors.company.message}</span>}
+          {errors.company && (
+            <span className="text-red-500 text-[11px] block pl-0.5">
+              {errors.company.message}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Email */}
         <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-600 block pl-0.5">Correo Corporativo</label>
+          <label className="text-xs font-bold text-slate-600 block pl-0.5">
+            Correo Corporativo
+          </label>
           <div className="relative">
             <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
             <input
               type="email"
               disabled={isSubmitting}
               className={`w-full bg-slate-50 border ${
-                errors.email ? "border-red-400 focus:ring-red-400/20" : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
+                errors.email
+                  ? "border-red-400 focus:ring-red-400/20"
+                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
               } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
               placeholder="juan@empresa.com"
               {...register("email", {
@@ -111,31 +147,45 @@ export function OwnerContactForm() {
               })}
             />
           </div>
-          {errors.email && <span className="text-red-500 text-[11px] block pl-0.5">{errors.email.message}</span>}
+          {errors.email && (
+            <span className="text-red-500 text-[11px] block pl-0.5">
+              {errors.email.message}
+            </span>
+          )}
         </div>
 
         {/* Phone */}
         <div className="space-y-1">
-          <label className="text-xs font-bold text-slate-600 block pl-0.5">Teléfono de Contacto</label>
+          <label className="text-xs font-bold text-slate-600 block pl-0.5">
+            Teléfono de Contacto
+          </label>
           <div className="relative">
             <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
             <input
               type="tel"
               disabled={isSubmitting}
               className={`w-full bg-slate-50 border ${
-                errors.phone ? "border-red-400 focus:ring-red-400/20" : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
+                errors.phone
+                  ? "border-red-400 focus:ring-red-400/20"
+                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
               } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
               placeholder="+507 6000-0000"
               {...register("phone", { required: "El teléfono es obligatorio" })}
             />
           </div>
-          {errors.phone && <span className="text-red-500 text-[11px] block pl-0.5">{errors.phone.message}</span>}
+          {errors.phone && (
+            <span className="text-red-500 text-[11px] block pl-0.5">
+              {errors.phone.message}
+            </span>
+          )}
         </div>
       </div>
 
       {/* Fleet Size */}
       <div className="space-y-1">
-        <label className="text-xs font-bold text-slate-600 block pl-0.5">Tamaño de la Flota (Camiones)</label>
+        <label className="text-xs font-bold text-slate-600 block pl-0.5">
+          Tamaño de la Flota (Camiones)
+        </label>
         <select
           disabled={isSubmitting}
           className="w-full bg-slate-50 border border-slate-200 focus:border-blue-600 focus:ring-blue-600/20 rounded-xl py-2.5 px-3 text-sm text-slate-800 focus:outline-none focus:ring-4 transition-all"
@@ -150,7 +200,9 @@ export function OwnerContactForm() {
 
       {/* Message */}
       <div className="space-y-1">
-        <label className="text-xs font-bold text-slate-600 block pl-0.5">Mensaje o Requerimientos Especiales</label>
+        <label className="text-xs font-bold text-slate-600 block pl-0.5">
+          Mensaje o Requerimientos Especiales
+        </label>
         <div className="relative">
           <FileText className="absolute left-3.5 top-3.5 size-4 text-slate-400 pointer-events-none" />
           <textarea

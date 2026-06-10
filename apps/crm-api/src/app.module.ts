@@ -21,7 +21,7 @@ import { RulesEngineService } from './rules-engine/rules-engine.service';
 import { ScoringCronService } from './scoring-cron/scoring-cron.service';
 import { ScoringController } from './scoring-cron/scroring-cron.controller';
 import { AssignmentService } from './assignment/assignment.service';
-import { HereClientService } from './scoring-cron/here-client.service';
+import { AwsRoutesClientService } from './scoring-cron/aws-routes-client.service';
 import { VehiclesModule } from './vehicles/vehicles.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { CacheModule } from './common/cache.module';
@@ -52,7 +52,7 @@ import { HttpModule } from '@nestjs/axios';
     DriversService,
     RulesEngineService,
     ScoringCronService,
-    HereClientService,
+    AwsRoutesClientService,
     AssignmentService,
   ],
   imports: [

@@ -5,13 +5,19 @@ import { PrismaService } from 'src/prisma.service';
 import { RulesEngineService } from 'src/rules-engine/rules-engine.service';
 import { Prisma, TelemetryLog, VehicleCategory } from '@prisma/client';
 import { ConfigService } from '@nestjs/config';
-import { HereClientService } from './here-client.service';
+import {
+  AwsRoutesClientService,
+  RouteSpanWithSpeedLimit,
+} from './aws-routes-client.service';
 
 @Injectable()
 export class ScoringCronService {
   private readonly logger = new Logger(ScoringCronService.name);
   private readonly BATCH_SIZE = 50;
   private readonly MIN_KM_THRESHOLD = 5.0; // Ignorar tramos muy cortos
+  /** Distancia máxima al punto de ruta más cercano para usar el límite de velocidad del span.
+   *  Si el vehículo está más lejos que esto, se considera "Off Route" y se usa el fallback. */
+  private readonly MAX_SNAP_DISTANCE_KM = 0.02; // 20 metros
   private readonly DEFAULT_CONFIG: RuleEngineConfig = {
     engineVersion: '1.0',
     pillars: {
@@ -51,7 +57,7 @@ export class ScoringCronService {
     private prisma: PrismaService,
     private rulesEngine: RulesEngineService,
     private configService: ConfigService,
-    private hereClient: HereClientService,
+    private awsRoutesClient: AwsRoutesClientService,
   ) {}
 
   // =====================================================================
@@ -64,7 +70,7 @@ export class ScoringCronService {
     this.logger.log(
       'Iniciando Rollup Diario de Telemetría Orientado a Perfiles (Modo t3.small)...',
     );
-    this.hereClient.resetSuspension();
+    this.awsRoutesClient.resetSuspension();
 
     let dateStr: string;
 
@@ -317,7 +323,7 @@ export class ScoringCronService {
             "deviceUnpluggedCount" = EXCLUDED."deviceUnpluggedCount";
         `;
 
-        const apiKey = this.configService.get<string>('HERE_API_KEY');
+        const apiKey = this.configService.get<string>('AWS_GEO_ROUTES_API_KEY');
 
         const startOfDayPanama = new Date(`${dateStr}T00:00:00.000-05:00`);
         const endOfDayPanama = new Date(`${dateStr}T23:59:59.999-05:00`);
@@ -419,7 +425,7 @@ export class ScoringCronService {
                 totalOverspeedCount += fallbackResult.overspeedCount;
                 totalOverspeedSeverity += fallbackResult.overspeedSeverity;
               } else {
-                const tripResult = await this.evaluateOverspeedingWithHere(
+                const tripResult = await this.evaluateOverspeedingWithAwsRoutes(
                   tripLogs,
                   th.overspeed,
                   category,
@@ -985,7 +991,7 @@ export class ScoringCronService {
     );
   }
 
-  private async evaluateOverspeedingWithHere(
+  private async evaluateOverspeedingWithAwsRoutes(
     logs: TelemetryLog[],
     fallbackOverspeedThreshold: number,
     category: VehicleCategory,
@@ -1002,7 +1008,7 @@ export class ScoringCronService {
       return { overspeedCount: 0, overspeedSeverity: 0 };
     }
 
-    // Filtro de presupuesto: si la distancia recorrida es extremadamente corta, omitimos HERE API
+    // Filtro de presupuesto: si la distancia recorrida es extremadamente corta, omitimos la API
     const startLog = validLogs[0];
     const endLog = validLogs[validLogs.length - 1];
     const distanceKm = this.getDistance(
@@ -1015,125 +1021,65 @@ export class ScoringCronService {
       return { overspeedCount: 0, overspeedSeverity: 0 };
     }
 
-    // Mapear categoría a modo y atributos de HERE API
-    let mode = 'fastest;car';
-    let attributes = 'SPEED_LIMITS_FCn(*)';
-
+    // Mapear categoría del vehículo al TravelMode de AWS
     const isTruck =
       category === VehicleCategory.HEAVY_DUTY ||
       category === VehicleCategory.MACHINERY;
+    const travelMode = isTruck ? 'Truck' : 'Car';
 
-    if (isTruck) {
-      mode = 'fastest;truck';
-      attributes = 'SPEED_LIMITS_FCn(*),TRUCK_SPEED_LIMITS_FCn(*)';
+    // Extraer coordenadas de los logs
+    const coordinates = validLogs.map((log) => ({
+      lat: log.latitude,
+      lng: log.longitude,
+    }));
+
+    const routeResult =
+      await this.awsRoutesClient.calculateRouteWithSpeedLimits(
+        coordinates,
+        travelMode as 'Car' | 'Truck',
+      );
+
+    if (!routeResult) {
+      // Fallback si la API falla o está suspendida
+      const fallback = this.fallbackOverspeeding(
+        validLogs,
+        fallbackOverspeedThreshold,
+      );
+      return fallback;
     }
 
-    const CHUNK_SIZE = 500;
+    const { spans, geometry } = routeResult;
     let totalOverspeedCount = 0;
     let totalOverspeedSeverity = 0;
 
-    for (let start = 0; start < validLogs.length; start += CHUNK_SIZE) {
-      const chunk = validLogs.slice(start, start + CHUNK_SIZE);
-      if (chunk.length < 2) {
-        const log = chunk[0];
-        if (log.speed > fallbackOverspeedThreshold) {
-          totalOverspeedCount++;
-          totalOverspeedSeverity += log.speed - fallbackOverspeedThreshold;
-        }
-        continue;
-      }
-
-      let csvContent = 'LATITUDE,LONGITUDE,TIMESTAMP,SPEED_KMH,HEADING\n';
-      for (const log of chunk) {
-        csvContent += `${log.latitude},${log.longitude},${log.timestamp.toISOString()},${log.speed},${log.angle}\n`;
-      }
-
-      const matched = await this.hereClient.matchRoute(
-        csvContent,
-        mode,
-        attributes,
+    for (const log of validLogs) {
+      // Encontrar el punto más cercano en la geometría de la ruta y su distancia
+      const { index: closestIdx, distanceKm } = this.findClosestGeometryIndex(
+        log.latitude,
+        log.longitude,
+        geometry,
       );
-      if (!matched) {
-        // En caso de fallo de la API de HERE, usamos fallback simple
-        const fallback = this.fallbackOverspeeding(
-          chunk,
-          fallbackOverspeedThreshold,
+
+      let limitToUse: number;
+
+      if (distanceKm > this.MAX_SNAP_DISTANCE_KM) {
+        // Off Route: el punto GPS está demasiado lejos de la ruta calculada.
+        // Usar el umbral fallback para no asignar un límite incorrecto.
+        limitToUse = fallbackOverspeedThreshold;
+      } else {
+        // On Route: usar el límite de velocidad del span correspondiente.
+        const speedLimit = this.getSpeedLimitForGeometryIndex(
+          closestIdx,
+          spans,
         );
-        totalOverspeedCount += fallback.overspeedCount;
-        totalOverspeedSeverity += fallback.overspeedSeverity;
-        continue;
+        limitToUse = speedLimit ?? fallbackOverspeedThreshold;
       }
 
-      const { tracePoints, RouteLinks } = matched;
+      const threshold = limitToUse + 10;
 
-      // Usar mapa indexado directamente por linkId (con signo)
-      const linksMap = new Map<number, any>();
-      for (const link of RouteLinks) {
-        linksMap.set(link.linkId, link);
-      }
-
-      for (let i = 0; i < chunk.length; i++) {
-        const log = chunk[i];
-        const tracePoint = tracePoints[i];
-
-        if (!tracePoint || tracePoint.linkIdMatched === undefined) {
-          if (log.speed > fallbackOverspeedThreshold) {
-            totalOverspeedCount++;
-            totalOverspeedSeverity += log.speed - fallbackOverspeedThreshold;
-          }
-          continue;
-        }
-
-        const matchedLink = linksMap.get(tracePoint.linkIdMatched);
-        let speedLimit: number | null = null;
-
-        if (matchedLink && matchedLink.attributes) {
-          let targetAttrKey: string | undefined;
-
-          // Intentar obtener límites de velocidad de camiones si aplica
-          if (isTruck) {
-            targetAttrKey = Object.keys(matchedLink.attributes).find((k) =>
-              k.startsWith('TRUCK_SPEED_LIMITS_FC'),
-            );
-          }
-
-          // Si no es camión o no se encontraron límites de camión, usar límite general
-          if (!targetAttrKey) {
-            targetAttrKey = Object.keys(matchedLink.attributes).find((k) =>
-              k.startsWith('SPEED_LIMITS_FC'),
-            );
-          }
-
-          if (targetAttrKey) {
-            const speedLimitObj = Array.isArray(
-              matchedLink.attributes[targetAttrKey],
-            )
-              ? matchedLink.attributes[targetAttrKey][0]
-              : matchedLink.attributes[targetAttrKey];
-
-            if (speedLimitObj) {
-              const limitStr =
-                tracePoint.linkIdMatched >= 0
-                  ? speedLimitObj.FROM_REF_SPEED_LIMIT
-                  : speedLimitObj.TO_REF_SPEED_LIMIT;
-
-              if (limitStr) {
-                const parsedLimit = parseInt(limitStr, 10);
-                if (!isNaN(parsedLimit) && parsedLimit > 0) {
-                  speedLimit = parsedLimit;
-                }
-              }
-            }
-          }
-        }
-
-        const limitToUse = speedLimit || fallbackOverspeedThreshold;
-        const threshold = limitToUse + 10;
-
-        if (log.speed > threshold) {
-          totalOverspeedCount++;
-          totalOverspeedSeverity += log.speed - limitToUse;
-        }
+      if (log.speed > threshold) {
+        totalOverspeedCount++;
+        totalOverspeedSeverity += log.speed - limitToUse;
       }
     }
 
@@ -1141,6 +1087,54 @@ export class ScoringCronService {
       overspeedCount: totalOverspeedCount,
       overspeedSeverity: parseFloat(totalOverspeedSeverity.toFixed(3)),
     };
+  }
+
+  /**
+   * Encuentra el índice del punto en la geometría de la ruta más cercano
+   * a una coordenada GPS dada.
+   */
+  private findClosestGeometryIndex(
+    lat: number,
+    lng: number,
+    geometry: [number, number][],
+  ): { index: number; distanceKm: number } {
+    let minDist = Infinity;
+    let closestIdx = 0;
+
+    for (let i = 0; i < geometry.length; i++) {
+      const [gLng, gLat] = geometry[i];
+      const dist = this.getDistance(lat, lng, gLat, gLng);
+      if (dist < minDist) {
+        minDist = dist;
+        closestIdx = i;
+      }
+    }
+
+    return { index: closestIdx, distanceKm: minDist };
+  }
+
+  /**
+   * Dado un índice en la geometría de la ruta, determina qué span aplica
+   * y retorna su límite de velocidad.
+   */
+  private getSpeedLimitForGeometryIndex(
+    geometryIndex: number,
+    spans: RouteSpanWithSpeedLimit[],
+  ): number | null {
+    if (spans.length === 0) return null;
+
+    // Los spans están ordenados por geometryOffset.
+    // El span que aplica es el último cuyo offset <= geometryIndex.
+    let matchedSpan = spans[0];
+    for (const span of spans) {
+      if (span.geometryOffset <= geometryIndex) {
+        matchedSpan = span;
+      } else {
+        break;
+      }
+    }
+
+    return matchedSpan.speedLimit;
   }
 
   private fallbackOverspeeding(

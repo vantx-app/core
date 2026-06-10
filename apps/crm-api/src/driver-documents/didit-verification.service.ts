@@ -24,7 +24,7 @@ export class DiditVerificationService {
     private prisma: PrismaService,
     private configService: ConfigService,
     private readonly httpService: HttpService,
-  ) { }
+  ) {}
 
   /**
    * Crea una sesión de verificación de identidad con Didit.
