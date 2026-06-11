@@ -1,4 +1,4 @@
-export { };
+export {};
 
 const BASE_URL = 'http://localhost:8000/api';
 
@@ -8,7 +8,9 @@ async function run() {
     const password = process.env.BATCH_ADMIN_PASSWORD;
 
     if (!email || !password) {
-      throw new Error('Missing BATCH_ADMIN_EMAIL or BATCH_ADMIN_PASSWORD environment variables.');
+      throw new Error(
+        'Missing BATCH_ADMIN_EMAIL or BATCH_ADMIN_PASSWORD environment variables.',
+      );
     }
 
     // 1. Authenticate and get the token

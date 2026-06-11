@@ -130,30 +130,55 @@ export class DriversService {
     if (!driver) return null;
 
     let shouldMask = true;
+    let assignments: { from: Date; to: Date | null }[] = [];
+
     if (!queryingUser || queryingUser.role === ROLES.SUPER_ADMIN) {
       shouldMask = false;
     } else if (driver.shareScoresPublicly) {
       shouldMask = false;
     } else {
-      const activeAssignment = await this.prismaService.assignment.findFirst({
+      // Fetch all historical and active assignments for this driver within the querying user's organization
+      assignments = await this.prismaService.assignment.findMany({
         where: {
           driverId: driver.id,
-          to: null,
           vehicle: { orgId: queryingUser.orgId },
         },
+        select: {
+          from: true,
+          to: true,
+        },
       });
-      if (activeAssignment) {
+      if (assignments.length > 0) {
         shouldMask = false;
       }
     }
 
     const formatted = this.formatDriver(driver);
-    if (shouldMask && formatted.globalStats) {
-      formatted.globalStats.globalSafetyScore = null;
-      formatted.globalStats.globalEcoScore = null;
-      formatted.globalStats.globalAssetScore = null;
-      formatted.globalStats.globalOverallScore = null;
+    if (shouldMask) {
+      if (formatted.globalStats) {
+        formatted.globalStats.globalSafetyScore = null;
+        formatted.globalStats.globalEcoScore = null;
+        formatted.globalStats.globalAssetScore = null;
+        formatted.globalStats.globalOverallScore = null;
+      }
       formatted.scoreSnapshots = [];
+    } else if (
+      queryingUser &&
+      queryingUser.role !== ROLES.SUPER_ADMIN &&
+      !driver.shareScoresPublicly
+    ) {
+      // Filter snapshots to only return weeks that overlap with assignment periods in the owner's organization
+      formatted.scoreSnapshots = formatted.scoreSnapshots.filter((snapshot) => {
+        const { start, end } = this.getISOWeekRange(
+          snapshot.year,
+          snapshot.weekNumber,
+        );
+        return assignments.some((assign) => {
+          const assignFrom = new Date(assign.from);
+          const assignTo = assign.to ? new Date(assign.to) : null;
+          return assignFrom <= end && (assignTo === null || assignTo >= start);
+        });
+      });
     }
 
     return formatted;
