@@ -42,30 +42,30 @@ const DRIVERS = [
 
 export default function MarketplaceHome() {
   return (
-    <main className="min-h-screen bg-slate-900 text-slate-100 font-sans antialiased">
+    <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
       {/* Decorative background gradients */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="relative border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="relative border-b border-slate-200 bg-white/85 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               VantX Marketplace
             </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-medium">
+            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 font-medium">
               SSO Activo
             </span>
           </div>
           <div className="flex items-center gap-4">
             <a
               href="http://localhost:3001"
-              className="text-sm font-semibold hover:text-white text-slate-400 transition-colors"
+              className="text-sm font-semibold hover:text-slate-900 text-slate-500 transition-colors"
             >
               Volver al Panel CRM
             </a>
-            <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-sm font-semibold text-slate-300">
+            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-semibold text-slate-700">
               U
             </div>
           </div>
@@ -74,22 +74,22 @@ export default function MarketplaceHome() {
 
       {/* Hero Section */}
       <section className="relative max-w-7xl mx-auto px-6 py-12">
-        <div className="p-8 rounded-2xl bg-gradient-to-r from-blue-900/30 via-indigo-900/20 to-slate-900 border border-slate-800 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div className="p-8 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/60 to-slate-100/50 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
           <div>
-            <h1 className="text-3xl font-bold text-white mb-2">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
               Asignaciones en Tiempo Real
             </h1>
-            <p className="text-slate-400 text-sm max-w-xl">
+            <p className="text-slate-600 text-sm max-w-xl">
               Encuentre conductores calificados e inicie contratos de servicio
               al instante. Todos los perfiles son validados mediante firma
               digital e historial telemático.
             </p>
           </div>
           <div className="flex gap-4">
-            <button className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-all shadow-lg shadow-blue-600/10">
+            <button className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-lg shadow-blue-600/10">
               Crear Oferta de Trabajo
             </button>
-            <button className="px-5 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 transition-all">
+            <button className="px-5 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-all shadow-sm">
               Ver Mis Contratos
             </button>
           </div>
@@ -101,15 +101,15 @@ export default function MarketplaceHome() {
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Sidebar Filters */}
           <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">
-            <div className="p-6 rounded-2xl bg-slate-900/50 border border-slate-800/80">
-              <h2 className="text-lg font-bold text-white mb-4">Filtros</h2>
+            <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900 mb-4">Filtros</h2>
 
               <div className="flex flex-col gap-4">
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 block mb-2">
+                  <label className="text-xs font-semibold text-slate-500 block mb-2">
                     TIPO DE VEHÍCULO
                   </label>
-                  <select className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm focus:outline-none focus:border-blue-500">
+                  <select className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors">
                     <option>Todos</option>
                     <option>Carga Pesada</option>
                     <option>Distribución</option>
@@ -118,10 +118,10 @@ export default function MarketplaceHome() {
                 </div>
 
                 <div>
-                  <label className="text-xs font-semibold text-slate-400 block mb-2">
+                  <label className="text-xs font-semibold text-slate-500 block mb-2">
                     ZONA GEOGRÁFICA
                   </label>
-                  <select className="w-full px-3 py-2 rounded-xl bg-slate-800 border border-slate-700 text-sm focus:outline-none focus:border-blue-500">
+                  <select className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors">
                     <option>Todas</option>
                     <option>Zona Norte</option>
                     <option>Zona Centro</option>
@@ -135,10 +135,10 @@ export default function MarketplaceHome() {
           {/* Drivers List */}
           <div className="flex-1 flex flex-col gap-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-white">
+              <h2 className="text-xl font-bold text-slate-900">
                 Conductores Disponibles
               </h2>
-              <span className="text-sm text-slate-400">
+              <span className="text-sm text-slate-500">
                 {DRIVERS.length} conductores encontrados
               </span>
             </div>
@@ -147,12 +147,12 @@ export default function MarketplaceHome() {
               {DRIVERS.map((driver) => (
                 <div
                   key={driver.id}
-                  className="p-6 rounded-2xl bg-slate-950/40 border border-slate-800/80 hover:border-slate-700 hover:bg-slate-950/60 transition-all duration-300 flex flex-col justify-between gap-6"
+                  className="p-6 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-6 shadow-sm"
                 >
                   {/* Card Header */}
                   <div className="flex items-start justify-between">
                     <div>
-                      <h3 className="text-lg font-bold text-white mb-1">
+                      <h3 className="text-lg font-bold text-slate-900 mb-1">
                         {driver.name}
                       </h3>
                       <span className="text-xs text-slate-500">
@@ -162,8 +162,8 @@ export default function MarketplaceHome() {
                     <span
                       className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
                         driver.status === "Disponible"
-                          ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-                          : "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-amber-50 text-amber-700 border-amber-200"
                       }`}
                     >
                       {driver.status}
@@ -171,20 +171,20 @@ export default function MarketplaceHome() {
                   </div>
 
                   {/* Card Body */}
-                  <div className="grid grid-cols-2 gap-4 border-y border-slate-800/50 py-4">
+                  <div className="grid grid-cols-2 gap-4 border-y border-slate-100 py-4">
                     <div>
-                      <span className="text-[10px] font-semibold text-slate-500 block uppercase">
+                      <span className="text-[10px] font-semibold text-slate-400 block uppercase">
                         CALIFICACIÓN
                       </span>
-                      <span className="text-sm font-semibold text-slate-300">
+                      <span className="text-sm font-semibold text-slate-700">
                         ⭐ {driver.rating}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] font-semibold text-slate-500 block uppercase">
+                      <span className="text-[10px] font-semibold text-slate-400 block uppercase">
                         VIAJES COMPLETADOS
                       </span>
-                      <span className="text-sm font-semibold text-slate-300">
+                      <span className="text-sm font-semibold text-slate-700">
                         {driver.trips} viajes
                       </span>
                     </div>
@@ -192,10 +192,10 @@ export default function MarketplaceHome() {
 
                   {/* Card Actions */}
                   <div className="flex items-center gap-3">
-                    <button className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white font-semibold text-xs border border-slate-700 transition-all">
+                    <button className="flex-1 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all">
                       Ver Perfil
                     </button>
-                    <button className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs transition-all shadow-md shadow-blue-600/5">
+                    <button className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all shadow-md shadow-blue-600/5">
                       Proponer Contrato
                     </button>
                   </div>
@@ -207,7 +207,7 @@ export default function MarketplaceHome() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-850 py-6 text-center text-xs text-slate-600 bg-slate-900/60">
+      <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-500 bg-white">
         <p>
           &copy; {new Date().getFullYear()} VantX Drivers Marketplace. Todos los
           derechos reservados.
