@@ -136,9 +136,24 @@ export const useFleetSocket = (
       }
     });
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.log(
+          "ℹ️ Cambio de visibilidad del documento: visible. Comprobando conexión del socket...",
+        );
+        if (socket && !socket.connected) {
+          console.log("🔌 Socket desconectado. Intentando reconectar...");
+          socket.connect();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     // Limpieza: Cuando el componente se desmonta o el token cambia
     return () => {
       console.log("🧹 Limpiando socket viejo...");
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       socket.disconnect();
       socketRef.current = null;
       setIsConnected(false);

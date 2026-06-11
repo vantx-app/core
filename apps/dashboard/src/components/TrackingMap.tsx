@@ -10,6 +10,7 @@ import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { io, Socket } from "socket.io-client";
 import { ShieldCheck, Navigation, Compass } from "lucide-react";
+import axios from "axios";
 
 // Configure Mapbox Token
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || "";
@@ -247,7 +248,57 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
       }
     });
 
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === "visible") {
+        console.log(
+          "ℹ️ Cambio de visibilidad del documento (mapa público): visible. Comprobando conexión...",
+        );
+
+        if (socket && !socket.connected) {
+          console.log(
+            "⚠️ El socket público está desconectado. Intentando reconectar...",
+          );
+          socket.connect();
+        }
+
+        try {
+          console.log(
+            "📡 Solicitando estado de ubicación actual por REST en cambio de visibilidad...",
+          );
+          const response = await axios.get(
+            `/api/vehicles/tracking-links/public/${id}`,
+          );
+          if (response.data) {
+            const data = response.data;
+            const newLat = data.lastLat;
+            const newLng = data.lastLng;
+            const newAngle = data.lastAngle ?? 0;
+            const newStatus = data.currentStatus ?? "STOPPED";
+
+            if (newLat != null && newLng != null) {
+              setDetails((prev) => ({
+                ...prev,
+                lastLat: newLat,
+                lastLng: newLng,
+                lastAngle: newAngle,
+                currentStatus: newStatus,
+              }));
+              updateMarker(newLat, newLng, newAngle, newStatus);
+            }
+          }
+        } catch (err) {
+          console.error(
+            "❌ Error al actualizar coordenadas públicas mediante API REST:",
+            err,
+          );
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       socket.disconnect();
       socketRef.current = null;
     };

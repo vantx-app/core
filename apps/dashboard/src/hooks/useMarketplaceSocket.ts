@@ -60,8 +60,25 @@ export function useMarketplaceSocket(
       onStatusChangedRef.current(data);
     });
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        console.log(
+          "ℹ️ Cambio de visibilidad del documento (marketplace): visible. Comprobando conexión del socket...",
+        );
+        if (socket && !socket.connected) {
+          console.log(
+            "⚠️ El socket de marketplace está desconectado. Intentando reconectar...",
+          );
+          socket.connect();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
       console.log("🧹 Disconnecting marketplace socket...");
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
       socket.disconnect();
       socketRef.current = null;
     };
