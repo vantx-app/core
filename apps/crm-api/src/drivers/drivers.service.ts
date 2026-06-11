@@ -125,6 +125,12 @@ export class DriversService {
           orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }],
           take: 12,
         },
+        assignments: {
+          orderBy: { from: 'desc' },
+          include: {
+            vehicle: true,
+          },
+        },
       },
     });
     if (!driver) return null;

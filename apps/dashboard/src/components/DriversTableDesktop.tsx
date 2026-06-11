@@ -6,8 +6,19 @@ import { Table } from "@/components/ui/Table";
 import { DriverAvatar } from "@/components/ui/DriverAvatar";
 import { CreditCard, Car, UserCheck } from "lucide-react";
 import { getScoreBadgeColor, formatDate } from "@/utils/client";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
+  const searchParams = useSearchParams();
+  const targetOrgId = searchParams.get("targetOrgId");
+
+  const getDetailLink = (driverId: string) => {
+    return targetOrgId
+      ? `/drivers/${driverId}/view?targetOrgId=${targetOrgId}`
+      : `/drivers/${driverId}/view`;
+  };
+
   const getStatusBadge = (status: DriverSummary["status"]) => {
     switch (status) {
       case "ACTIVE":
@@ -47,7 +58,10 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
             ? `${driver.firstName} ${driver.lastName}`
             : driver.nationalId);
         return (
-          <div className="flex items-center gap-3">
+          <Link
+            href={getDetailLink(driver.id)}
+            className="flex items-center gap-3 group/driver hover:opacity-85 transition-opacity"
+          >
             <DriverAvatar
               firstName={driver.firstName}
               lastName={driver.lastName}
@@ -55,7 +69,7 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
               size="md"
             />
             <div>
-              <div className="font-bold text-sm text-base-content">
+              <div className="font-bold text-sm text-base-content group-hover/driver:text-primary transition-colors">
                 {displayName}
               </div>
               {driver.phone && (
@@ -64,7 +78,7 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
                 </div>
               )}
             </div>
-          </div>
+          </Link>
         );
       },
     },
@@ -202,6 +216,20 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
       key: "status",
       header: "Estado",
       render: (driver) => getStatusBadge(driver.status),
+    },
+    {
+      key: "actions",
+      header: "Acciones",
+      headerClassName: "text-right",
+      className: "text-right",
+      render: (driver) => (
+        <Link
+          href={getDetailLink(driver.id)}
+          className="btn btn-xs btn-ghost text-primary font-bold normal-case rounded-lg"
+        >
+          Ver Detalle
+        </Link>
+      ),
     },
   ];
 

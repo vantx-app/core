@@ -96,6 +96,12 @@ function DriversPageContent() {
   const firstNonEmptyGroup =
     groups.find((g) => g.drivers.length > 0)?.id || "active";
 
+  const getDetailLink = (driverId: string) => {
+    return targetOrgId
+      ? `/drivers/${driverId}/view?targetOrgId=${targetOrgId}`
+      : `/drivers/${driverId}/view`;
+  };
+
   const renderDriverCard = (driver: DriversPageDriver) => {
     const activeAssignment = driver.assignments?.[0];
     const hasStats = driver.globalStats && driver.globalStats.globalSafetyScore !== null;
@@ -111,9 +117,10 @@ function DriversPageContent() {
     const colorClass = getScoreColor(safetyScore);
 
     return (
-      <div
+      <Link
         key={driver.id}
-        className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col justify-between text-left"
+        href={getDetailLink(driver.id)}
+        className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col justify-between text-left cursor-pointer"
       >
         <div className="card-body p-6 space-y-4">
           {/* Top Bar: Status and Badge */}
@@ -195,7 +202,7 @@ function DriversPageContent() {
             </div>
           )}
         </div>
-      </div>
+      </Link>
     );
   };
 
