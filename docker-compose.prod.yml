@@ -46,6 +46,28 @@ services:
       - vantx_server
 
   # ----------------------------------
+  # MARKETPLACE (Next.js Standalone)
+  # ----------------------------------
+  vantx_marketplace:
+    image: ghcr.io/vantx-app/marketplace:latest
+    container_name: vantx_marketplace
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 200M
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - HOSTNAME=0.0.0.0
+    ports:
+      - "127.0.0.1:3002:3002"
+    depends_on:
+      - vantx_server
+
+  # ----------------------------------
   # BACKEND (NestJS API)
   # ----------------------------------
   vantx_server:

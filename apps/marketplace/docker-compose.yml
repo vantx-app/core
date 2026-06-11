@@ -1,0 +1,10 @@
+services:
+  frontend:
+    image: ghcr.io/vantx-app/marketplace:latest
+    container_name: vantx_marketplace_frontend
+    network_mode: host
+    environment:
+      - NODE_ENV=production
+      - PORT=3002
+      - HOSTNAME=0.0.0.0
+    restart: always
