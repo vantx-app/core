@@ -63,22 +63,22 @@ function LandingContent() {
       </header>
 
       {/* Hero Section */}
-      <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-24 text-center z-10">
-        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-600/20 bg-blue-600/5 text-blue-700 text-xs font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
-            Telemetría J1939/J1708 & CAN-bus
-          </div>
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white text-slate-700 text-xs font-semibold shadow-sm">
-            Powered by <span className="font-bold text-blue-600">Teltonika</span>
-          </div>
-        </div>
+      <section className="relative max-w-6xl mx-auto px-6 pt-14 pb-24 text-center z-10">
         <h1 className="text-5xl md:text-7xl font-black tracking-tight text-slate-900 mb-8 leading-[1.1]">
           Telemetría CAN-bus y <br />
           <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 bg-clip-text text-transparent">
             Conexión de Flotas Real
           </span>
         </h1>
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-600/20 bg-blue-600/5 text-blue-700 text-xs font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+            Telemetría J1939/J1708 & CAN-bus
+          </div>
+          <div className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white text-slate-700 text-xs font-semibold shadow-sm">
+            Powered by<span className="font-bold text-blue-600">Teltonika</span>
+          </div>
+        </div>
         <p className="max-w-2xl mx-auto text-base md:text-lg text-slate-600 font-normal leading-relaxed mb-12">
           VantX integra hardware Teltonika y adaptadores ECAN02 para certificar el desempeño
           de tus vehículos. Conectamos estadísticas reales de conducción (Driver Score) para
@@ -288,7 +288,7 @@ function LandingContent() {
           <div className="order-2 lg:order-1 glass-card p-6 md:p-8 bg-white/90 border-slate-200 relative overflow-hidden">
             <div className="absolute -top-10 -left-10 w-40 h-40 bg-emerald-600/5 rounded-full blur-3xl pointer-events-none" />
             <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
-            
+
             <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
               Criterios de Asignación de Viaje
@@ -367,7 +367,7 @@ function LandingContent() {
             <p className="text-slate-600 text-sm leading-relaxed mb-6">
               VantX elimina la incertidumbre en la contratación de transporte. Los propietarios de flotas acceden a conductores profesionales cuyos hábitos de conducción y seguridad vial han sido auditados directamente por el bus CAN.
             </p>
-            
+
             <div className="space-y-6">
               <div>
                 <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
