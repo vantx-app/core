@@ -249,15 +249,30 @@ export default function TripsHistoryView({
                       }`}
                     >
                       <div className="flex items-center justify-between w-full text-[10px]">
-                        <span
-                          className={`badge badge-xs font-black px-1.5 border ${
-                            isOngoing
-                              ? "bg-blue-500/10 border-blue-500/20 text-blue-600 animate-pulse"
-                              : "bg-base-200 border-base-300 text-base-content/70"
-                          }`}
-                        >
-                          {isOngoing ? "En Curso" : "Completado"}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`badge badge-xs font-black px-1.5 border ${
+                              isOngoing
+                                ? "bg-blue-500/10 border-blue-500/20 text-blue-600 animate-pulse"
+                                : "bg-base-200 border-base-300 text-base-content/70"
+                            }`}
+                          >
+                            {isOngoing ? "En Curso" : "Completado"}
+                          </span>
+                          {!isOngoing && trip.overallScore !== undefined && (
+                            <span
+                              className={`badge badge-xs font-black px-1.5 border ${
+                                trip.overallScore >= 90
+                                  ? "bg-green-500/10 border-green-500/20 text-green-600"
+                                  : trip.overallScore >= 75
+                                    ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-600"
+                                    : "bg-red-500/10 border-red-500/20 text-red-600"
+                              }`}
+                            >
+                              {Math.round(trip.overallScore)} pts
+                            </span>
+                          )}
+                        </div>
                         <span className="opacity-60 font-mono flex items-center gap-0.5">
                           <Clock className="size-2.5" />
                           {formatTripDuration(trip.startTime, trip.endTime)}
@@ -442,6 +457,42 @@ export default function TripsHistoryView({
               </span>
             </div>
           </div>
+          {selectedTrip.overallScore !== undefined && (
+            <div className="border-t border-base-200/50 pt-2 grid grid-cols-4 divide-x divide-base-200/50 text-center">
+              <div className="px-1">
+                <span className="text-[9px] text-primary block font-bold uppercase tracking-tight">
+                  Puntaje
+                </span>
+                <span className="font-black text-sm text-primary font-mono">
+                  {Math.round(selectedTrip.overallScore)}
+                </span>
+              </div>
+              <div className="px-1">
+                <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight">
+                  Seguridad
+                </span>
+                <span className="font-bold text-sm text-base-content/90 font-mono">
+                  {Math.round(selectedTrip.safetyScore ?? 100)}
+                </span>
+              </div>
+              <div className="px-1">
+                <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight">
+                  Eco
+                </span>
+                <span className="font-bold text-sm text-base-content/90 font-mono">
+                  {Math.round(selectedTrip.ecoScore ?? 100)}
+                </span>
+              </div>
+              <div className="px-1">
+                <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight">
+                  Cuidado
+                </span>
+                <span className="font-bold text-sm text-base-content/90 font-mono">
+                  {Math.round(selectedTrip.assetScore ?? 100)}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       );
     }
@@ -501,6 +552,43 @@ export default function TripsHistoryView({
           </div>
           <div className="w-px h-8 bg-base-300/60 shrink-0" />
           <div className="flex items-center gap-3 shrink-0">
+            {selectedTrip.overallScore !== undefined && (
+              <>
+                <div className="text-center">
+                  <span className="text-[9px] text-primary font-bold uppercase block leading-none">
+                    Score
+                  </span>
+                  <span className="text-xs font-black text-primary block mt-0.5 font-mono">
+                    {Math.round(selectedTrip.overallScore)}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none">
+                    Seg.
+                  </span>
+                  <span className="text-xs font-black text-base-content/90 block mt-0.5 font-mono">
+                    {Math.round(selectedTrip.safetyScore ?? 100)}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none">
+                    Eco
+                  </span>
+                  <span className="text-xs font-black text-base-content/90 block mt-0.5 font-mono">
+                    {Math.round(selectedTrip.ecoScore ?? 100)}
+                  </span>
+                </div>
+                <div className="text-center">
+                  <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none">
+                    Cuid.
+                  </span>
+                  <span className="text-xs font-black text-base-content/90 block mt-0.5 font-mono">
+                    {Math.round(selectedTrip.assetScore ?? 100)}
+                  </span>
+                </div>
+                <div className="w-px h-6 bg-base-300/60 shrink-0" />
+              </>
+            )}
             <div className="text-center">
               <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none">
                 Dur.

@@ -5,6 +5,8 @@ import { RulesEngineService } from '../rules-engine/rules-engine.service';
 import { ConfigService } from '@nestjs/config';
 import { AwsRoutesClientService } from './aws-routes-client.service';
 import { VehicleCategory } from '@prisma/client';
+import { TelemetryRollupService } from './telemetry-rollup.service';
+import { WeeklyScoringService } from './weekly-scoring.service';
 
 describe('ScoringCronService', () => {
   let service: ScoringCronService;
@@ -58,6 +60,14 @@ describe('ScoringCronService', () => {
         { provide: RulesEngineService, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: AwsRoutesClientService, useValue: awsRoutesClientMock },
+        { provide: TelemetryRollupService, useValue: {} },
+        {
+          provide: WeeklyScoringService,
+          useValue: {
+            processWeeklyDrivers: jest.fn(),
+            processWeeklyVehicles: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

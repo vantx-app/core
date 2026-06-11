@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma.service';
 import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { AccessTokenPayload } from 'src/auth/types';
 import { CacheService } from '../common/cache.service';
+import { RulesEngineService } from '../rules-engine/rules-engine.service';
 
 describe('VehiclesService', () => {
   let service: VehiclesService;
@@ -66,6 +67,7 @@ describe('VehiclesService', () => {
         VehiclesService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: CacheService, useValue: cacheMock },
+        { provide: RulesEngineService, useValue: {} },
       ],
     }).compile();
 

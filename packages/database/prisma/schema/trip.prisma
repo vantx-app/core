@@ -3,8 +3,9 @@ model Trip {
   vehicleId String         @db.Uuid
   startTime DateTime
   endTime   DateTime?
-  telemetry TelemetryLog[]
-  vehicle   Vehicle        @relation(fields: [vehicleId], references: [id])
+  telemetry             TelemetryLog[]
+  vehicle               Vehicle                @relation(fields: [vehicleId], references: [id])
+  dailyTelemetryRollups DailyTelemetryRollup[]
 
   @@index([vehicleId])
   @@index([startTime])

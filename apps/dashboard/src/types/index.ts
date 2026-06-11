@@ -902,6 +902,10 @@ export interface VehicleTripsTrip {
   endTime: string | null;
   driver: VehicleTripsDriver | null;
   vehicle?: VehicleTripsVehicle | null;
+  overallScore?: number;
+  safetyScore?: number;
+  ecoScore?: number;
+  assetScore?: number;
 }
 
 export interface VehicleTripsDriver {

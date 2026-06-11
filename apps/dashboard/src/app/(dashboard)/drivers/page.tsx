@@ -167,9 +167,7 @@ function DriversPageContent() {
             <div
               className={`p-2 rounded-xl border flex flex-col items-center justify-center ${colorClass}`}
             >
-              <span className="text-xl font-black">
-                {Math.round(ecoScore)}
-              </span>
+              <span className="text-xl font-black">{Math.round(ecoScore)}</span>
               <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
                 Eco-Conduc.
               </span>

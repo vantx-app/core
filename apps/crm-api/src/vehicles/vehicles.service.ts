@@ -12,12 +12,50 @@ import { CacheService } from 'src/common/cache.service';
 import { Vehicle, VehicleLiveState, VehicleCategory } from '@prisma/client';
 import PDFDocument from 'pdfkit';
 import AdmZip from 'adm-zip';
+import { RulesEngineService } from 'src/rules-engine/rules-engine.service';
+import { RuleEngineConfig } from 'src/scoring-cron/scoring.interfaces';
 
 @Injectable()
 export class VehiclesService {
+  private readonly DEFAULT_CONFIG: RuleEngineConfig = {
+    engineVersion: '1.0',
+    pillars: {
+      SAFETY: { weight: 0.45, baseScore: 100 },
+      EFFICIENCY: { weight: 0.3, baseScore: 100 },
+      ASSET_CARE: { weight: 0.25, baseScore: 100 },
+    },
+    rules: [
+      {
+        code: 'OVERSPEEDING',
+        pillar: 'SAFETY',
+        deductionPer100Km: 12.0,
+        maxDeduction: 50.0,
+      },
+      {
+        code: 'EXCESSIVE_IDLING',
+        pillar: 'EFFICIENCY',
+        deductionPer100Km: 20.0,
+        maxDeduction: 60.0,
+      },
+      {
+        code: 'HIGH_RPM',
+        pillar: 'ASSET_CARE',
+        deductionPer100Km: 12.0,
+        maxDeduction: 50.0,
+      },
+      {
+        code: 'DEVICE_UNPLUGGED',
+        pillar: 'ASSET_CARE',
+        deductionPerEvent: 20.0,
+        maxDeduction: 60.0,
+      },
+    ],
+  };
+
   constructor(
     private prisma: PrismaService,
     private cacheService: CacheService,
+    private rulesEngineService: RulesEngineService,
   ) {}
 
   private getFrontendBaseUrl(): string {
@@ -292,9 +330,99 @@ export class VehiclesService {
     });
   }
 
+  private mapTripScores(trip: any) {
+    const rollups = trip.dailyTelemetryRollups || [];
+    if (rollups.length === 0) {
+      return {
+        overallScore: 100,
+        safetyScore: 100,
+        ecoScore: 100,
+        assetScore: 100,
+      };
+    }
+
+    const sum = {
+      totalKm: 0,
+      totalEngineHours: 0,
+      idlingHours: 0,
+      overspeedCount: 0,
+      overspeedSeverity: 0,
+      brakingCount: 0,
+      brakingSeverity: 0,
+      corneringCount: 0,
+      corneringSeverity: 0,
+      accelerationCount: 0,
+      accelerationSeverity: 0,
+      highRpmCount: 0,
+      highRpmSeverity: 0,
+      coldEngineStrainCount: 0,
+      coastingInNeutralCount: 0,
+      engineLuggingCount: 0,
+      highLoadStrainCount: 0,
+      criticalOverheatingCount: 0,
+      activeFaultCodesCount: 0,
+      deviceUnpluggedCount: 0,
+    };
+
+    for (const r of rollups) {
+      sum.totalKm += r.totalKm || 0;
+      sum.totalEngineHours += r.totalEngineHours || 0;
+      sum.idlingHours += r.idlingHours || 0;
+      sum.overspeedCount += r.overspeedCount || 0;
+      sum.overspeedSeverity += r.overspeedSeverity || 0;
+      sum.brakingCount += r.brakingCount || 0;
+      sum.brakingSeverity += r.brakingSeverity || 0;
+      sum.corneringCount += r.corneringCount || 0;
+      sum.corneringSeverity += r.corneringSeverity || 0;
+      sum.accelerationCount += r.accelerationCount || 0;
+      sum.accelerationSeverity += r.accelerationSeverity || 0;
+      sum.highRpmCount += r.highRpmCount || 0;
+      sum.highRpmSeverity += r.highRpmSeverity || 0;
+      sum.coldEngineStrainCount += r.coldEngineStrainCount || 0;
+      sum.coastingInNeutralCount += r.coastingInNeutralCount || 0;
+      sum.engineLuggingCount += r.engineLuggingCount || 0;
+      sum.highLoadStrainCount += r.highLoadStrainCount || 0;
+      sum.criticalOverheatingCount += r.criticalOverheatingCount || 0;
+      sum.activeFaultCodesCount += r.activeFaultCodesCount || 0;
+      sum.deviceUnpluggedCount += r.deviceUnpluggedCount || 0;
+    }
+
+    const config =
+      (trip.vehicle?.scoringProfile
+        ?.rulesEngine as unknown as RuleEngineConfig) || this.DEFAULT_CONFIG;
+
+    const summary = {
+      _sum: sum,
+    };
+
+    const details = this.rulesEngineService.evaluateAggregatedRollupWithDetails(
+      summary,
+      config,
+    );
+
+    return {
+      overallScore: details.scores.overallScore,
+      safetyScore: details.scores.safetyScore,
+      ecoScore: details.scores.ecoScore,
+      assetScore: details.scores.assetScore,
+    };
+  }
+
   async findTripsForVehicle(vehicleId: string) {
     const trips = await this.prisma.trip.findMany({
       where: { vehicleId },
+      include: {
+        dailyTelemetryRollups: true,
+        vehicle: {
+          select: {
+            scoringProfile: {
+              select: {
+                rulesEngine: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: { startTime: 'desc' },
     });
 
@@ -321,8 +449,14 @@ export class VehiclesService {
         return fromTime <= tripStart && toTime >= tripStart;
       });
 
+      const scores = this.mapTripScores(trip);
+
+      // Eliminar el include auxiliar vehicle de la respuesta final
+      const { vehicle, ...tripWithoutVehicle } = trip;
+
       return {
-        ...trip,
+        ...tripWithoutVehicle,
+        ...scores,
         driver: matchedAssignment?.driver || null,
       };
     });

@@ -588,6 +588,84 @@ export class DriversService {
     });
   }
 
+  private mapTripScores(trip: any) {
+    const rollups = trip.dailyTelemetryRollups || [];
+    if (rollups.length === 0) {
+      return {
+        overallScore: 100,
+        safetyScore: 100,
+        ecoScore: 100,
+        assetScore: 100,
+      };
+    }
+
+    const sum = {
+      totalKm: 0,
+      totalEngineHours: 0,
+      idlingHours: 0,
+      overspeedCount: 0,
+      overspeedSeverity: 0,
+      brakingCount: 0,
+      brakingSeverity: 0,
+      corneringCount: 0,
+      corneringSeverity: 0,
+      accelerationCount: 0,
+      accelerationSeverity: 0,
+      highRpmCount: 0,
+      highRpmSeverity: 0,
+      coldEngineStrainCount: 0,
+      coastingInNeutralCount: 0,
+      engineLuggingCount: 0,
+      highLoadStrainCount: 0,
+      criticalOverheatingCount: 0,
+      activeFaultCodesCount: 0,
+      deviceUnpluggedCount: 0,
+    };
+
+    for (const r of rollups) {
+      sum.totalKm += r.totalKm || 0;
+      sum.totalEngineHours += r.totalEngineHours || 0;
+      sum.idlingHours += r.idlingHours || 0;
+      sum.overspeedCount += r.overspeedCount || 0;
+      sum.overspeedSeverity += r.overspeedSeverity || 0;
+      sum.brakingCount += r.brakingCount || 0;
+      sum.brakingSeverity += r.brakingSeverity || 0;
+      sum.corneringCount += r.corneringCount || 0;
+      sum.corneringSeverity += r.corneringSeverity || 0;
+      sum.accelerationCount += r.accelerationCount || 0;
+      sum.accelerationSeverity += r.accelerationSeverity || 0;
+      sum.highRpmCount += r.highRpmCount || 0;
+      sum.highRpmSeverity += r.highRpmSeverity || 0;
+      sum.coldEngineStrainCount += r.coldEngineStrainCount || 0;
+      sum.coastingInNeutralCount += r.coastingInNeutralCount || 0;
+      sum.engineLuggingCount += r.engineLuggingCount || 0;
+      sum.highLoadStrainCount += r.highLoadStrainCount || 0;
+      sum.criticalOverheatingCount += r.criticalOverheatingCount || 0;
+      sum.activeFaultCodesCount += r.activeFaultCodesCount || 0;
+      sum.deviceUnpluggedCount += r.deviceUnpluggedCount || 0;
+    }
+
+    const config =
+      (trip.vehicle?.scoringProfile
+        ?.rulesEngine as unknown as RuleEngineConfig) || this.DEFAULT_CONFIG;
+
+    const summary = {
+      _sum: sum,
+    };
+
+    const details = this.rulesEngineService.evaluateAggregatedRollupWithDetails(
+      summary,
+      config,
+    );
+
+    return {
+      overallScore: details.scores.overallScore,
+      safetyScore: details.scores.safetyScore,
+      ecoScore: details.scores.ecoScore,
+      assetScore: details.scores.assetScore,
+    };
+  }
+
   async findTripsForDriver(
     driverIdOrMe: string,
     queryingUser: AccessTokenPayload,
@@ -633,8 +711,14 @@ export class DriversService {
             model: true,
             year: true,
             vin: true,
+            scoringProfile: {
+              select: {
+                rulesEngine: true,
+              },
+            },
           },
         },
+        dailyTelemetryRollups: true,
       },
       orderBy: { startTime: 'desc' },
     });
@@ -651,8 +735,11 @@ export class DriversService {
     });
 
     return trips.map((trip) => {
+      const scores = this.mapTripScores(trip);
+      const { vehicle, ...tripWithoutVehicle } = trip;
       return {
-        ...trip,
+        ...tripWithoutVehicle,
+        ...scores,
         driver,
       };
     });
