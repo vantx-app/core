@@ -15,8 +15,11 @@ const logger = new Logger("Ingestor");
 // Caché enriquecido: almacena id + startTime para evitar lecturas extra a la DB
 const activeTripsCache = new Map<string, { id: string; startTime: Date }>();
 
-// Guard 2: timestamp del último cierre por vehículo (para debounce post-apagado)
-const tripCloseTimeCache = new Map<string, number>();
+// Guard 2: caché del último viaje cerrado por vehículo (para reapertura/debounce)
+const lastClosedTripCache = new Map<
+  string,
+  { id: string; startTime: Date; closeTime: number }
+>();
 
 const MIN_TRIP_DURATION_MS = 60_000; // 1 minuto mínimo para que un viaje sea válido
 const POST_CLOSE_DEBOUNCE_MS = 90_000; // 90 s de silencio tras el cierre
@@ -69,7 +72,7 @@ export async function processDataBatch(records: any[], imei: string) {
     string,
     { id: string; startTime: Date; endTime?: Date }
   >();
-  const tripsToUpdate = new Map<string, { id: string; endTime: Date }>();
+  const tripsToUpdate = new Map<string, { id: string; endTime: Date | null }>();
   const tripsToDelete = new Set<string>();
   let newVinDetected: string | null = null;
   let newFuelTypeDetected:
@@ -235,12 +238,32 @@ export async function processDataBatch(records: any[], imei: string) {
 
     // Lógica de Viajes (Trips)
     if (!currentTrip && tripActive) {
-      // Guard 2: ignorar reaperturas dentro del período de debounce post-apagado
-      const lastClose = tripCloseTimeCache.get(vehicle.id);
+      // Guard 2: verificar si podemos reabrir un viaje cerrado recientemente (dentro del debounce)
+      const lastClosed = lastClosedTripCache.get(vehicle.id);
       const recTimeMs = (rec.timestamp as Date).getTime();
 
-      if (lastClose && recTimeMs - lastClose < POST_CLOSE_DEBOUNCE_MS) {
-        logger.log(`🔇 Debounce activo, reapertura ignorada: ${vehicle.alias}`);
+      if (lastClosed && recTimeMs - lastClosed.closeTime < POST_CLOSE_DEBOUNCE_MS) {
+        const reopenedTripId = lastClosed.id;
+        currentTrip = { id: reopenedTripId, startTime: lastClosed.startTime };
+        activeTripsCache.set(vehicle.id, currentTrip);
+
+        // Restaurar estado si fue marcado como eliminado o descartado
+        tripsToDelete.delete(reopenedTripId);
+
+        if (newTripsCreatedInBatch.has(reopenedTripId)) {
+          // Si se creó en este mismo lote, lo volvemos a poner para creación
+          tripsToCreate.set(reopenedTripId, {
+            id: reopenedTripId,
+            startTime: lastClosed.startTime,
+          });
+        } else {
+          // Si ya existía en la DB, limpiamos su endTime
+          tripsToUpdate.set(reopenedTripId, { id: reopenedTripId, endTime: null });
+        }
+
+        // Remover del caché de cierre ya que vuelve a estar activo
+        lastClosedTripCache.delete(vehicle.id);
+        logger.log(`🚗 Viaje Reabierto (Diferido): ${vehicle.alias}`);
       } else {
         const newTripId = uuidv7();
         currentTrip = { id: newTripId, startTime: rec.timestamp };
@@ -256,10 +279,10 @@ export async function processDataBatch(records: any[], imei: string) {
       // Guard 1: calcular duración desde caché — sin lectura extra a la DB
       const durationMs =
         (rec.timestamp as Date).getTime() - currentTrip.startTime.getTime();
+      const tripId = currentTrip.id;
 
       if (durationMs < MIN_TRIP_DURATION_MS) {
         // Viaje fantasma
-        const tripId = currentTrip.id;
         if (newTripsCreatedInBatch.has(tripId)) {
           // Si se creó en este lote, simplemente se descarta en memoria
           tripsToCreate.delete(tripId);
@@ -282,7 +305,6 @@ export async function processDataBatch(records: any[], imei: string) {
           }
         }
       } else {
-        const tripId = currentTrip.id;
         if (newTripsCreatedInBatch.has(tripId)) {
           const tripData = tripsToCreate.get(tripId);
           if (tripData) {
@@ -294,8 +316,12 @@ export async function processDataBatch(records: any[], imei: string) {
         logger.log(`🛑 Viaje Finalizado (Diferido): ${vehicle.alias}`);
       }
 
-      // Registrar tiempo de cierre para el debounce (Guard 2)
-      tripCloseTimeCache.set(vehicle.id, (rec.timestamp as Date).getTime());
+      // Registrar info de cierre para el debounce / posible reapertura
+      lastClosedTripCache.set(vehicle.id, {
+        id: tripId,
+        startTime: currentTrip.startTime,
+        closeTime: (rec.timestamp as Date).getTime(),
+      });
       currentTrip = undefined;
       activeTripsCache.delete(vehicle.id);
     }
