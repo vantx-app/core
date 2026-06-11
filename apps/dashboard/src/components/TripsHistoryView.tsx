@@ -22,6 +22,7 @@ import {
   formatTripDate,
   formatTimeOnly,
   formatTripDuration,
+  getScoreBadgeColor,
 } from "@/utils/client";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -361,15 +362,28 @@ export default function TripsHistoryView({
   const renderStatsOverlay = (variant: "map-float" | "fullscreen") => {
     if (!tripMetrics || !selectedTrip) return null;
 
-    if (variant === "fullscreen") {
-      return (
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-xl z-[45] bg-base-100/90 backdrop-blur-md border border-base-200 p-4 rounded-2xl shadow-xl flex flex-col gap-3">
-          <div className="flex items-center justify-between border-b border-base-200/50 pb-2">
-            <div className="flex flex-col min-w-0">
+    // Responsive positioning for standard and fullscreen views
+    const positionClasses =
+      variant === "fullscreen"
+        ? "absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-[45]"
+        : "absolute bottom-4 left-4 right-4 md:right-auto md:left-4 md:w-80 md:max-w-sm z-[45]";
+
+    const overallScore = selectedTrip.overallScore;
+    const badgeColorClass =
+      overallScore !== undefined
+        ? `${getScoreBadgeColor(overallScore)} font-black`
+        : "bg-neutral text-neutral-content font-black";
+
+    return (
+      <div className={`${positionClasses} pointer-events-none`}>
+        <div className="bg-base-100 border border-base-300 rounded-2xl shadow-xl p-4 flex flex-col gap-3 pointer-events-auto">
+          {/* Card Header: Entity Info and Overall Score */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col min-w-0 flex-1">
               <span className="text-[10px] text-base-content/50 font-bold uppercase tracking-wider">
                 {isDriverCentric ? "Vehículo" : "Conductor"}
               </span>
-              <div className="font-bold text-base-content/90 flex items-center gap-1.5 text-xs mt-0.5">
+              <div className="font-bold text-base-content/90 flex items-center gap-1.5 text-xs mt-0.5 min-w-0">
                 {isDriverCentric ? (
                   <>
                     <Truck className="size-3.5 text-primary shrink-0" />
@@ -397,7 +411,7 @@ export default function TripsHistoryView({
                     {isManagementRole && selectedTrip.driver?.id ? (
                       <Link
                         href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${
-                          targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
+                          targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
                         }`}
                         className="truncate text-primary hover:underline font-semibold"
                       >
@@ -416,212 +430,100 @@ export default function TripsHistoryView({
                   </>
                 )}
               </div>
-            </div>
-            <div className="text-right shrink-0">
-              <span className="text-[10px] text-base-content/50 font-bold uppercase tracking-wider block">
+              <span className="text-[9px] text-base-content/50 font-bold uppercase mt-1">
                 Fecha y Hora
               </span>
-              <span className="font-bold text-xs text-base-content/90 block mt-0.5 font-mono">
+              <span className="font-bold text-[10px] text-base-content/85 font-mono mt-0.5">
                 {formatTripDate(selectedTrip.startTime)}
               </span>
             </div>
+            {overallScore !== undefined && (
+              <div className="text-center shrink-0 flex flex-col items-center">
+                <span className="text-[9px] text-base-content/40 font-bold uppercase tracking-tight block leading-none mb-1">
+                  Puntaje
+                </span>
+                <span
+                  className={`inline-flex items-center justify-center text-xs h-7 min-w-[2.25rem] px-2 rounded-lg font-black ${badgeColorClass}`}
+                >
+                  {Math.round(overallScore)}
+                </span>
+              </div>
+            )}
           </div>
-          <div className="grid grid-cols-3 divide-x divide-base-200/50 text-center">
-            <div className="px-1">
-              <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight">
+
+          {/* Divider */}
+          <div className="border-t border-base-200"></div>
+
+          {/* Card Body: 3x2 Grid */}
+          <div className="grid grid-cols-3 gap-2.5 text-center">
+            {/* Duración */}
+            <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
+              <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
                 Duración
               </span>
-              <span className="font-bold text-sm text-base-content/90 font-mono">
+              <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
                 {formatTripDuration(
                   selectedTrip.startTime,
                   selectedTrip.endTime,
                 )}
               </span>
             </div>
-            <div className="px-1">
-              <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight">
+
+            {/* V. Promedio */}
+            <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
+              <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
                 V. Promedio
               </span>
-              <span className="font-bold text-sm text-base-content/90 font-mono">
+              <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
                 {tripMetrics.avgSpeed}{" "}
-                <span className="text-[9px] font-normal">km/h</span>
+                <span className="text-[8px] font-normal font-sans">km/h</span>
               </span>
             </div>
-            <div className="px-1">
-              <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight text-error/80">
+
+            {/* V. Máxima */}
+            <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
+              <span className="text-[9px] text-error/65 block font-bold uppercase tracking-tight">
                 V. Máxima
               </span>
-              <span className="font-bold text-sm text-error font-mono">
+              <span className="font-bold text-xs text-error font-mono block mt-0.5">
                 {tripMetrics.maxSpeed}{" "}
-                <span className="text-[9px] font-normal">km/h</span>
+                <span className="text-[8px] font-normal font-sans">km/h</span>
               </span>
             </div>
-          </div>
-          {selectedTrip.overallScore !== undefined && (
-            <div className="border-t border-base-200/50 pt-2 grid grid-cols-4 divide-x divide-base-200/50 text-center">
-              <div className="px-1">
-                <span className="text-[9px] text-primary block font-bold uppercase tracking-tight">
-                  Puntaje
-                </span>
-                <span className="font-black text-sm text-primary font-mono">
-                  {Math.round(selectedTrip.overallScore)}
-                </span>
-              </div>
-              <div className="px-1">
-                <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight">
-                  Seguridad
-                </span>
-                <span className="font-bold text-sm text-base-content/90 font-mono">
-                  {Math.round(selectedTrip.safetyScore ?? 100)}
-                </span>
-              </div>
-              <div className="px-1">
-                <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight">
-                  Eco
-                </span>
-                <span className="font-bold text-sm text-base-content/90 font-mono">
-                  {Math.round(selectedTrip.ecoScore ?? 100)}
-                </span>
-              </div>
-              <div className="px-1">
-                <span className="text-[9px] text-base-content/50 block font-bold uppercase tracking-tight">
-                  Cuidado
-                </span>
-                <span className="font-bold text-sm text-base-content/90 font-mono">
-                  {Math.round(selectedTrip.assetScore ?? 100)}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-      );
-    }
 
-    return (
-      <div className="absolute bottom-4 left-4 right-4 z-[45] pointer-events-none">
-        <div className="bg-base-100/90 backdrop-blur-md border border-base-200/80 rounded-2xl shadow-lg px-4 py-2.5 flex items-center gap-3 pointer-events-auto">
-          <div className="flex flex-col min-w-0 flex-1">
-            <div className="flex items-center gap-1.5">
-              {isDriverCentric ? (
-                <>
-                  <Truck className="size-3.5 text-primary shrink-0" />
-                  {isManagementRole &&
-                  (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
-                    <Link
-                      href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${
-                        targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
-                      }`}
-                      className="text-xs font-bold text-primary hover:underline truncate"
-                    >
-                      {selectedTrip.vehicle?.alias || "Vehículo"}
-                    </Link>
-                  ) : (
-                    <span className="text-xs font-bold truncate">
-                      {selectedTrip.vehicle?.alias || "Vehículo"}
-                    </span>
-                  )}
-                </>
-              ) : (
-                <>
-                  <User className="size-3.5 text-primary shrink-0" />
-                  {isManagementRole && selectedTrip.driver?.id ? (
-                    <Link
-                      href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${
-                        targetOrgId ? `&targetOrgId=${targetOrgId}` : ""
-                      }`}
-                      className="text-xs font-bold text-primary hover:underline truncate"
-                    >
-                      {selectedTrip.driver.firstName &&
-                      selectedTrip.driver.lastName
-                        ? `${selectedTrip.driver.firstName} ${selectedTrip.driver.lastName}`
-                        : selectedTrip.driver.nationalId}
-                    </Link>
-                  ) : (
-                    <DriverInfoLabel
-                      driver={selectedTrip.driver}
-                      showNationalId={false}
-                      className="text-xs font-bold truncate"
-                    />
-                  )}
-                </>
-              )}
-            </div>
-            <span className="text-[9px] text-base-content/60 font-semibold truncate mt-0.5">
-              {formatTripDate(selectedTrip.startTime)}
-            </span>
-          </div>
-          <div className="w-px h-8 bg-base-300/60 shrink-0" />
-          <div className="flex items-center gap-3 shrink-0">
-            {selectedTrip.overallScore !== undefined && (
+            {overallScore !== undefined && (
               <>
-                <div className="text-center">
-                  <span className="text-[9px] text-primary font-bold uppercase block leading-none">
-                    Score
+                {/* Seguridad */}
+                <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
+                  <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+                    Seguridad
                   </span>
-                  <span className="text-xs font-black text-primary block mt-0.5 font-mono">
-                    {Math.round(selectedTrip.overallScore)}
-                  </span>
-                </div>
-                <div className="text-center">
-                  <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none">
-                    Seg.
-                  </span>
-                  <span className="text-xs font-black text-base-content/90 block mt-0.5 font-mono">
+                  <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
                     {Math.round(selectedTrip.safetyScore ?? 100)}
                   </span>
                 </div>
-                <div className="text-center">
-                  <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none">
+
+                {/* Eco */}
+                <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
+                  <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
                     Eco
                   </span>
-                  <span className="text-xs font-black text-base-content/90 block mt-0.5 font-mono">
+                  <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
                     {Math.round(selectedTrip.ecoScore ?? 100)}
                   </span>
                 </div>
-                <div className="text-center">
-                  <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none">
-                    Cuid.
+
+                {/* Cuidado */}
+                <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
+                  <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+                    Cuidado
                   </span>
-                  <span className="text-xs font-black text-base-content/90 block mt-0.5 font-mono">
+                  <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
                     {Math.round(selectedTrip.assetScore ?? 100)}
                   </span>
                 </div>
-                <div className="w-px h-6 bg-base-300/60 shrink-0" />
               </>
             )}
-            <div className="text-center">
-              <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none">
-                Dur.
-              </span>
-              <span className="text-xs font-black font-mono text-base-content/90 block mt-0.5">
-                {formatTripDuration(
-                  selectedTrip.startTime,
-                  selectedTrip.endTime,
-                )}
-              </span>
-            </div>
-            <div className="text-center">
-              <span className="text-[9px] text-base-content/40 font-bold uppercase block leading-none flex items-center gap-0.5">
-                <Gauge className="size-2.5" />
-                Prom.
-              </span>
-              <span className="text-xs font-black font-mono text-base-content/90 block mt-0.5">
-                {tripMetrics.avgSpeed}
-                <span className="text-[8px] font-normal">km/h</span>
-              </span>
-            </div>
-            <div className="text-center">
-              <span className="text-[9px] text-error/60 font-bold uppercase block leading-none flex items-center gap-0.5">
-                <Zap className="size-2.5" />
-                Máx.
-              </span>
-              <span className="text-xs font-black font-mono text-error block mt-0.5">
-                {tripMetrics.maxSpeed}
-                <span className="text-[8px] font-normal text-error/70">
-                  km/h
-                </span>
-              </span>
-            </div>
           </div>
         </div>
       </div>
@@ -699,8 +601,17 @@ export default function TripsHistoryView({
           {/* Botón Volver (Solo Móvil) */}
           {!isFullscreen && isMobileMapActive && (
             <button
-              onClick={() => setIsMobileMapActive(false)}
-              className="absolute top-4 left-4 z-[45] btn btn-circle btn-sm bg-base-100/80 backdrop-blur-md border border-base-200 shadow-md hover:bg-base-100 text-base-content lg:hidden"
+              onClick={() => {
+                if (
+                  typeof window !== "undefined" &&
+                  window.history.state?.mapActive
+                ) {
+                  window.history.back();
+                } else {
+                  setIsMobileMapActive(false);
+                }
+              }}
+              className="absolute top-4 left-4 z-[45] btn btn-circle btn-sm bg-base-100 border border-base-300 shadow-md hover:bg-base-200 text-base-content lg:hidden"
               title="Volver a la lista"
             >
               <ArrowLeft className="size-4" />
@@ -709,7 +620,7 @@ export default function TripsHistoryView({
 
           {/* Cabecera en pantalla completa */}
           {isFullscreen && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-xl z-[45] flex items-center justify-between bg-base-100/90 backdrop-blur-md border border-base-200/80 px-3 py-2 rounded-2xl shadow-lg">
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-xl z-[45] flex items-center justify-between bg-base-100 border border-base-300 px-3 py-2 rounded-2xl shadow-lg">
               <button
                 onClick={() => setFullscreenAnimated(false)}
                 className="btn btn-ghost btn-xs btn-square rounded-xl text-base-content hover:bg-base-200/50"
@@ -754,7 +665,7 @@ export default function TripsHistoryView({
             !isLoadingRoute && (
               <button
                 onClick={() => setFullscreenAnimated(true)}
-                className="absolute top-4 right-4 z-[45] btn btn-circle btn-sm bg-base-100/80 backdrop-blur-md border border-base-200 shadow-md hover:bg-base-100 text-base-content"
+                className="absolute top-4 right-4 z-[45] btn btn-circle btn-sm bg-base-100 border border-base-300 shadow-md hover:bg-base-200 text-base-content"
                 title="Pantalla completa"
               >
                 <Maximize2 className="size-4" />
