@@ -82,6 +82,9 @@ export function DriverDetailClient({
   // Mobile accordion state for score snapshots
   const [expandedWeek, setExpandedWeek] = useState<number | null>(0);
 
+  // Accordion state for vehicle daily reports grouping
+  const [expandedVehicles, setExpandedVehicles] = useState<Record<string, boolean>>({});
+
   const displayName =
     driver.name ||
     (driver.firstName && driver.lastName
@@ -212,32 +215,56 @@ export function DriverDetailClient({
     },
   ];
 
-  // Group daily reports by Month/Year (reused helper style)
-  const getMonthYearLabel = (dateStr: string | Date) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("es-ES", {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    });
-  };
-
-  const groupedReports = useMemo(() => {
-    const groups: Record<string, DailyTelemetryRollup[]> = {};
-    dailyReports.forEach((report) => {
-      const label = getMonthYearLabel(report.date);
-      if (!groups[label]) {
-        groups[label] = [];
+  // Group daily reports by Vehicle
+  const reportsGroupedByVehicle = useMemo(() => {
+    const groups: Record<
+      string,
+      {
+        vehicleId: string | null;
+        vehicleAlias: string;
+        vehiclePlate: string;
+        totalKm: number;
+        totalHours: number;
+        reports: any[];
       }
-      groups[label].push(report);
+    > = {};
+
+    dailyReports.forEach((report) => {
+      const v = report.vehicle;
+      const vId = v?.id || "no-vehicle";
+      if (!groups[vId]) {
+        groups[vId] = {
+          vehicleId: v?.id || null,
+          vehicleAlias: v?.alias || "Sin Vehículo",
+          vehiclePlate: v?.plateNumber || "",
+          totalKm: 0,
+          totalHours: 0,
+          reports: [],
+        };
+      }
+      groups[vId].reports.push(report);
+      groups[vId].totalKm += report.totalKm || 0;
+      groups[vId].totalHours += report.totalEngineHours || 0;
     });
-    return groups;
+
+    // Sort reports inside each group by date descending
+    Object.values(groups).forEach((g) => {
+      g.reports.sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+    });
+
+    return Object.values(groups);
   }, [dailyReports]);
 
-  const monthKeys = Object.keys(groupedReports);
-  const firstMonthKey = monthKeys[0] || "";
+  const toggleVehicle = (vId: string) => {
+    setExpandedVehicles((prev) => ({
+      ...prev,
+      [vId]: !prev[vId],
+    }));
+  };
 
-  const renderDailyReportCard = (day: any) => {
+  const renderDailyReportCardNoVehicle = (day: any) => {
     const totalHarsh = day.brakingCount + day.corneringCount + day.accelerationCount;
     return (
       <div
@@ -247,9 +274,6 @@ export function DriverDetailClient({
         <div className="flex justify-between items-center pb-2 border-b border-base-200/50">
           <span className="font-bold text-sm text-base-content">
             {formatDateOnly(day.date)}
-          </span>
-          <span className="text-xs font-semibold text-base-content/60 font-mono">
-            {day.vehicle?.alias || day.vehicle?.plateNumber || "Sin Vehículo"}
           </span>
         </div>
 
@@ -328,23 +352,12 @@ export function DriverDetailClient({
     );
   };
 
-  const dailyReportColumns: TableColumn<any>[] = [
+  const dailyReportColumnsNoVehicle: TableColumn<any>[] = [
     {
       key: "date",
       header: "Fecha",
       className: "font-bold",
       render: (day) => formatDateOnly(day.date),
-    },
-    {
-      key: "vehicle",
-      header: "Vehículo",
-      render: (day) => day.vehicle ? (
-        <div className="font-semibold text-base-content/85 text-xs">
-          {day.vehicle.alias || "Sin Alias"} ({day.vehicle.plateNumber})
-        </div>
-      ) : (
-        <span className="text-base-content/40 italic">Sin Vehículo</span>
-      ),
     },
     {
       key: "totalKm",
@@ -448,61 +461,6 @@ export function DriverDetailClient({
               </p>
             </div>
           </div>
-        </div>
-
-        {/* Quick assignment indicators in header */}
-        <div className="flex flex-wrap gap-2 items-center">
-          {activeAssignment ? (
-            <div className="bg-success/5 border border-success/20 rounded-xl px-4 py-2 flex items-center justify-between gap-3 w-full sm:w-auto">
-              <div className="text-left">
-                <span className="text-[9px] text-success/60 uppercase font-black tracking-wider block">
-                  Vehículo Vinculado
-                </span>
-                <span className="text-xs font-bold text-success truncate block mt-0.5">
-                  {activeAssignment.vehicle.alias || "Sin Alias"} ({activeAssignment.vehicle.plateNumber})
-                </span>
-              </div>
-              <button
-                onClick={() => handleUnassign(activeAssignment.vehicleId)}
-                disabled={isUnassigning}
-                className="btn btn-xs btn-error btn-outline rounded-lg text-[10px] font-bold"
-              >
-                {isUnassigning ? <Loader2 className="size-3 animate-spin" /> : "Desvincular"}
-              </button>
-            </div>
-          ) : (
-            <div className="bg-base-200/50 border border-base-300 rounded-xl p-2.5 flex flex-col sm:flex-row gap-2 w-full sm:w-auto items-stretch sm:items-center">
-              <div className="flex items-center gap-2">
-                <Truck className="size-4 text-base-content/45" />
-                <span className="text-xs font-semibold text-base-content/65">Asignar Vehículo:</span>
-              </div>
-              <div className="flex gap-1.5">
-                <select
-                  value={selectedVehicleId}
-                  onChange={(e) => setSelectedVehicleId(e.target.value)}
-                  disabled={isAssigning}
-                  className="select select-xs select-bordered rounded-lg bg-base-100 focus:outline-none max-w-[160px] text-xs font-medium"
-                >
-                  <option value="">Seleccionar...</option>
-                  {availableVehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.alias || "Sin Alias"} ({v.plateNumber})
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleAssign}
-                  disabled={isAssigning || !selectedVehicleId}
-                  className="btn btn-xs btn-primary rounded-lg text-white font-bold"
-                >
-                  {isAssigning ? <Loader2 className="size-3 animate-spin" /> : "Asignar"}
-                </button>
-              </div>
-              {assignError && (
-                <span className="text-[10px] text-error font-medium block mt-1 sm:mt-0 sm:absolute sm:bottom-0 sm:right-0">{assignError}</span>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -673,10 +631,51 @@ export function DriverDetailClient({
             </h2>
             
             {activeAssignment == null && historicalAssignments.length === 0 ? (
-              <div className="py-12 flex flex-col items-center justify-center text-center text-base-content/40">
-                <Car className="size-12 opacity-35 mb-2" />
-                <span className="text-sm font-bold">Sin historial de vehículos</span>
-                <span className="text-xs max-w-[200px] mt-1">Este conductor no ha operado ningún vehículo en la flota.</span>
+              <div className="space-y-4">
+                {/* Available Assignment Form */}
+                {!activeAssignment && (
+                  <div className="bg-base-200/50 border border-base-300 rounded-xl p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <Truck className="size-5 text-base-content/45" />
+                      <div>
+                        <span className="text-xs font-bold text-base-content/85 block">Sin Vehículo Asignado</span>
+                        <span className="text-[10px] text-base-content/50 mt-0.5 block">Asigna una unidad libre de la flota para comenzar a registrar viajes.</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                      <select
+                        value={selectedVehicleId}
+                        onChange={(e) => setSelectedVehicleId(e.target.value)}
+                        disabled={isAssigning}
+                        className="select select-sm select-bordered rounded-xl bg-base-100 focus:outline-none flex-1 text-xs"
+                      >
+                        <option value="">Seleccionar vehículo disponible...</option>
+                        {availableVehicles.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.alias || "Sin Alias"} ({v.plateNumber})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleAssign}
+                        disabled={isAssigning || !selectedVehicleId}
+                        className="btn btn-sm btn-primary rounded-xl text-white font-bold"
+                      >
+                        {isAssigning ? <Loader2 className="size-4 animate-spin" /> : "Asignar Vehículo"}
+                      </button>
+                    </div>
+                    {assignError && (
+                      <span className="text-xs text-error font-medium block mt-1">{assignError}</span>
+                    )}
+                  </div>
+                )}
+                
+                <div className="py-8 flex flex-col items-center justify-center text-center text-base-content/40 border border-dashed border-base-300 rounded-xl bg-base-100/20">
+                  <Car className="size-12 opacity-35 mb-2" />
+                  <span className="text-sm font-bold">Sin historial de vehículos</span>
+                  <span className="text-xs max-w-[200px] mt-1">Este conductor no ha operado ningún vehículo en la flota.</span>
+                </div>
               </div>
             ) : (
               <div className="space-y-4 pt-1">
@@ -699,32 +698,75 @@ export function DriverDetailClient({
                     <button
                       onClick={() => handleUnassign(activeAssignment.vehicleId)}
                       disabled={isUnassigning}
-                      className="btn btn-sm btn-error btn-outline rounded-xl w-full sm:w-auto"
+                      className="btn btn-sm btn-error btn-outline rounded-xl w-full sm:w-auto shrink-0"
                     >
-                      {isUnassigning ? <Loader2 className="size-4 animate-spin" /> : "Desvincular"}
+                      {isUnassigning ? <Loader2 className="size-4 animate-spin" /> : "Desvincular Vehículo"}
                     </button>
                   </div>
                 )}
 
-                {historicalAssignments.map((a: any) => (
-                  <div
-                    key={a.id}
-                    className="border border-base-200 bg-base-100/50 p-4 rounded-xl flex items-center gap-3"
-                  >
-                    <div className="p-3 bg-base-200/50 rounded-xl text-base-content/40">
-                      <Truck className="size-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-sm text-base-content truncate">
-                        {a.vehicle.alias || "Sin Alias"} ({a.vehicle.plateNumber})
-                      </h4>
-                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-base-content/50 font-medium mt-1">
-                        <span>Desde: {new Date(a.from).toLocaleDateString("es-ES")}</span>
-                        <span>Hasta: {new Date(a.to).toLocaleDateString("es-ES")}</span>
+                {!activeAssignment && (
+                  <div className="bg-base-200/50 border border-base-300 rounded-xl p-4 flex flex-col gap-3">
+                    <div className="flex items-center gap-2">
+                      <Truck className="size-5 text-base-content/45" />
+                      <div>
+                        <span className="text-xs font-bold text-base-content/85 block">Sin Vehículo Asignado</span>
+                        <span className="text-[10px] text-base-content/50 mt-0.5 block">Asigna una unidad libre de la flota para comenzar a registrar viajes.</span>
                       </div>
                     </div>
+                    
+                    <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                      <select
+                        value={selectedVehicleId}
+                        onChange={(e) => setSelectedVehicleId(e.target.value)}
+                        disabled={isAssigning}
+                        className="select select-sm select-bordered rounded-xl bg-base-100 focus:outline-none flex-1 text-xs"
+                      >
+                        <option value="">Seleccionar vehículo disponible...</option>
+                        {availableVehicles.map((v) => (
+                          <option key={v.id} value={v.id}>
+                            {v.alias || "Sin Alias"} ({v.plateNumber})
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={handleAssign}
+                        disabled={isAssigning || !selectedVehicleId}
+                        className="btn btn-sm btn-primary rounded-xl text-white font-bold"
+                      >
+                        {isAssigning ? <Loader2 className="size-4 animate-spin" /> : "Asignar Vehículo"}
+                      </button>
+                    </div>
+                    {assignError && (
+                      <span className="text-xs text-error font-medium block mt-1">{assignError}</span>
+                    )}
                   </div>
-                ))}
+                )}
+
+                {historicalAssignments.length > 0 && (
+                  <div className="space-y-3 pt-2">
+                    <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-wider pl-0.5">Historial Pasado</h3>
+                    {historicalAssignments.map((a: any) => (
+                      <div
+                        key={a.id}
+                        className="border border-base-200 bg-base-100/50 p-4 rounded-xl flex items-center gap-3"
+                      >
+                        <div className="p-3 bg-base-200/50 rounded-xl text-base-content/40">
+                          <Truck className="size-6" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-bold text-sm text-base-content truncate">
+                            {a.vehicle.alias || "Sin Alias"} ({a.vehicle.plateNumber})
+                          </h4>
+                          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-base-content/50 font-medium mt-1">
+                            <span>Desde: {new Date(a.from).toLocaleDateString("es-ES")}</span>
+                            <span>Hasta: {new Date(a.to).toLocaleDateString("es-ES")}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -871,36 +913,87 @@ export function DriverDetailClient({
               </span>
             </div>
           ) : (
-            <>
-              {/* Desktop Table View */}
-              <div className="hidden lg:block">
-                <Table
-                  columns={dailyReportColumns}
-                  data={dailyReports}
-                  keyExtractor={(day) => day.id}
-                  className="table table-md w-full"
-                  pagination={true}
-                  pageSize={10}
-                />
-              </div>
+            <div className="space-y-4">
+              {reportsGroupedByVehicle.map((g, index) => {
+                const groupKey = g.vehicleId || "no-vehicle";
+                const isExpanded =
+                  expandedVehicles[groupKey] !== undefined
+                    ? expandedVehicles[groupKey]
+                    : index === 0;
 
-              {/* Mobile Card Groups */}
-              <div className="block lg:hidden space-y-4">
-                {monthKeys.map((monthLabel) => {
-                  const days = groupedReports[monthLabel];
-                  return (
-                    <div key={monthLabel} className="space-y-3">
-                      <h3 className="text-xs uppercase font-extrabold text-base-content/50 tracking-wider pl-1.5 pt-2">
-                        {monthLabel}
-                      </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {days.map(renderDailyReportCard)}
+                return (
+                  <div
+                    key={groupKey}
+                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${
+                      isExpanded
+                        ? "border-primary/30 shadow-md"
+                        : "border-base-200 hover:border-base-300"
+                    }`}
+                  >
+                    <div
+                      className="px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center cursor-pointer select-none gap-2 hover:bg-base-200/20 transition-colors"
+                      onClick={() => toggleVehicle(groupKey)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                          <Truck className="size-5" />
+                        </div>
+                        <div>
+                          <span className="text-sm font-black text-base-content">
+                            {g.vehicleAlias}
+                          </span>
+                          {g.vehiclePlate && (
+                            <span className="text-xs text-base-content/50 font-mono ml-2">
+                              [{g.vehiclePlate}]
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-4">
+                        <div className="flex gap-3 text-xs text-base-content/60 font-mono">
+                          <span>
+                            <strong>{g.totalKm.toFixed(1)}</strong> km
+                          </span>
+                          <span className="text-base-content/20">|</span>
+                          <span>
+                            <strong>{formatHours(g.totalHours)}</strong>
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          {isExpanded ? (
+                            <ChevronUp className="size-4 text-base-content/40" />
+                          ) : (
+                            <ChevronDown className="size-4 text-base-content/40" />
+                          )}
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
-              </div>
-            </>
+
+                    {isExpanded && (
+                      <div className="px-4 pb-4 pt-2 border-t border-base-200/40 animate-in fade-in duration-200 space-y-4">
+                        {/* Desktop view: Table */}
+                        <div className="hidden lg:block">
+                          <Table
+                            columns={dailyReportColumnsNoVehicle}
+                            data={g.reports}
+                            keyExtractor={(day) => day.id}
+                            className="table table-compact w-full text-xs"
+                            wrapperClassName="overflow-x-auto"
+                            pagination={g.reports.length > 5}
+                            pageSize={5}
+                          />
+                        </div>
+
+                        {/* Mobile view: Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:hidden">
+                          {g.reports.map(renderDailyReportCardNoVehicle)}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
