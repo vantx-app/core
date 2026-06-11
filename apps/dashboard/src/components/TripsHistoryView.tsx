@@ -366,7 +366,7 @@ export default function TripsHistoryView({
     const positionClasses =
       variant === "fullscreen"
         ? "absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-[45]"
-        : "absolute bottom-4 left-4 right-4 md:right-auto md:left-4 md:w-80 md:max-w-sm z-[45]";
+        : "relative w-full p-4 lg:absolute lg:bottom-4 lg:left-4 lg:right-auto lg:w-80 lg:max-w-sm lg:p-0 z-[45]";
 
     const overallScore = selectedTrip.overallScore;
     const badgeColorClass =
@@ -584,13 +584,13 @@ export default function TripsHistoryView({
                 ? "flex-grow h-full w-full border-none rounded-none"
                 : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${
                     isMobileMapActive
-                      ? "flex h-[500px] sm:h-[600px] lg:h-full lg:min-h-0"
+                      ? "flex h-auto lg:h-full lg:min-h-0"
                       : "hidden"
                   }`
             }
           `}
         >
-          <div className="absolute inset-0 z-10 w-full h-full">
+          <div className={`z-10 w-full ${isFullscreen ? "absolute inset-0 h-full" : "relative h-[320px] lg:absolute lg:inset-0 lg:h-full"}`}>
             <TripMap
               coordinates={routeCoordinates}
               isOngoing={!selectedTrip?.endTime}
