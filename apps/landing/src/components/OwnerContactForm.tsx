@@ -76,10 +76,11 @@ export function OwnerContactForm() {
             <input
               type="text"
               disabled={isSubmitting}
-              className={`w-full bg-slate-50 border ${errors.name
+              className={`w-full bg-slate-50 border ${
+                errors.name
                   ? "border-red-400 focus:border-red-500"
                   : "border-slate-200 focus:border-slate-400"
-                } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+              } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="Juan Pérez"
               {...register("name", { required: "El nombre es obligatorio" })}
             />
@@ -101,10 +102,11 @@ export function OwnerContactForm() {
             <input
               type="text"
               disabled={isSubmitting}
-              className={`w-full bg-slate-50 border ${errors.company
+              className={`w-full bg-slate-50 border ${
+                errors.company
                   ? "border-red-400 focus:border-red-500"
                   : "border-slate-200 focus:border-slate-400"
-                } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+              } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="Logística S.A."
               {...register("company", {
                 required: "La empresa es obligatoria",
@@ -130,10 +132,11 @@ export function OwnerContactForm() {
             <input
               type="email"
               disabled={isSubmitting}
-              className={`w-full bg-slate-50 border ${errors.email
+              className={`w-full bg-slate-50 border ${
+                errors.email
                   ? "border-red-400 focus:border-red-500"
                   : "border-slate-200 focus:border-slate-400"
-                } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+              } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="juan@empresa.com"
               {...register("email", {
                 required: "El correo es obligatorio",
@@ -161,10 +164,11 @@ export function OwnerContactForm() {
             <input
               type="tel"
               disabled={isSubmitting}
-              className={`w-full bg-slate-50 border ${errors.phone
+              className={`w-full bg-slate-50 border ${
+                errors.phone
                   ? "border-red-400 focus:border-red-500"
                   : "border-slate-200 focus:border-slate-400"
-                } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+              } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="+507 6000-0000"
               {...register("phone", { required: "El teléfono es obligatorio" })}
             />

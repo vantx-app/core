@@ -805,7 +805,7 @@ describe('DriversService', () => {
             year: 2023,
             vin: '1234567890ABCDEF',
           },
-        })
+        }),
       );
     });
   });

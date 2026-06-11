@@ -4,8 +4,11 @@
   /* Glassmorphism overrides */
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(0, 0, 0, 0.08);
-  --glass-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  --glass-shadow-hover: 0 15px 30px -5px rgba(29, 78, 216, 0.06), 0 10px 15px -6px rgba(29, 78, 216, 0.04);
+  --glass-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --glass-shadow-hover:
+    0 15px 30px -5px rgba(29, 78, 216, 0.06),
+    0 10px 15px -6px rgba(29, 78, 216, 0.04);
   --glass-border-hover: rgba(29, 78, 216, 0.2);
 
   /* Scrollbar Customization */

@@ -60,7 +60,9 @@ export default function MarketplaceHome() {
           </div>
           <div className="flex items-center gap-4">
             <a
-              href={process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3001"}
+              href={
+                process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3001"
+              }
               className="text-sm font-semibold hover:text-slate-900 text-slate-500 transition-colors"
             >
               Volver al Panel CRM
