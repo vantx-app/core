@@ -14,6 +14,12 @@ RUN npm install
 COPY --from=pruner /app/out/full/ .
 COPY --from=pruner /app/out/package-lock.json ./package-lock.json
 
+ARG NEXT_PUBLIC_DASHBOARD_URL
+ENV NEXT_PUBLIC_DASHBOARD_URL=$NEXT_PUBLIC_DASHBOARD_URL
+
+ARG NEXT_PUBLIC_MARKETPLACE_URL
+ENV NEXT_PUBLIC_MARKETPLACE_URL=$NEXT_PUBLIC_MARKETPLACE_URL
+
 RUN npm run build -- --filter=@vantx/landing
 
 # === STAGE 3: Runner ===

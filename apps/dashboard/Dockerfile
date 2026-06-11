@@ -17,6 +17,9 @@ COPY --from=pruner /app/out/package-lock.json ./package-lock.json
 ARG NEXT_PUBLIC_MAPBOX_TOKEN
 ENV NEXT_PUBLIC_MAPBOX_TOKEN=$NEXT_PUBLIC_MAPBOX_TOKEN
 
+ARG NEXT_PUBLIC_LANDING_URL
+ENV NEXT_PUBLIC_LANDING_URL=$NEXT_PUBLIC_LANDING_URL
+
 RUN npm run build -- --filter=@vantx/dashboard
 
 # === STAGE 3: Runner ===
