@@ -118,11 +118,15 @@ export class RulesEngineService {
       }
 
       // --- 2. CÁLCULO DE DEDUCCIONES ---
+      // Prior de distancia bayesiano para suavizar viajes cortos
+      const priorDistance = config.priorDistanceForNormalization ?? 100.0;
+      const distanceForNormalization = totalKm + priorDistance;
+
       if (rule.deductionPerSeverityUnit && severity > 0) {
-        const severityPer100Km = (severity / totalKm) * 100.0;
+        const severityPer100Km = (severity / distanceForNormalization) * 100.0;
         deduction = severityPer100Km * rule.deductionPerSeverityUnit;
       } else if (rule.deductionPer100Km) {
-        const ratePer100Km = (occurrences / totalKm) * 100.0;
+        const ratePer100Km = (occurrences / distanceForNormalization) * 100.0;
         deduction = ratePer100Km * rule.deductionPer100Km;
       } else if (rule.deductionPerEvent) {
         deduction = occurrences * rule.deductionPerEvent;

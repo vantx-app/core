@@ -60,10 +60,16 @@ describe('ScoringCronService', () => {
         { provide: RulesEngineService, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: AwsRoutesClientService, useValue: awsRoutesClientMock },
-        { provide: TelemetryRollupService, useValue: {} },
+        {
+          provide: TelemetryRollupService,
+          useValue: {
+            runDailyRollup: jest.fn().mockResolvedValue(undefined),
+          },
+        },
         {
           provide: WeeklyScoringService,
           useValue: {
+            runWeeklyScoring: jest.fn().mockResolvedValue(undefined),
             processWeeklyDrivers: jest.fn(),
             processWeeklyVehicles: jest.fn(),
           },

@@ -17,6 +17,7 @@ export interface RuleConfig {
 
 export interface RuleEngineConfig {
   engineVersion: string;
+  priorDistanceForNormalization?: number;
   pillars: {
     SAFETY: RulePillar;
     EFFICIENCY: RulePillar;
