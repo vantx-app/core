@@ -3,7 +3,7 @@ import { ScoringCronService } from './scoring-cron.service';
 import { PrismaService } from '../prisma.service';
 import { RulesEngineService } from '../rules-engine/rules-engine.service';
 import { ConfigService } from '@nestjs/config';
-import { AwsRoutesClientService } from './aws-routes-client.service';
+import { HereRoutesClientService } from './here-routes-client.service';
 import { VehicleCategory } from '@prisma/client';
 import { TelemetryRollupService } from './telemetry-rollup.service';
 import { WeeklyScoringService } from './weekly-scoring.service';
@@ -11,7 +11,8 @@ import { WeeklyScoringService } from './weekly-scoring.service';
 describe('ScoringCronService', () => {
   let service: ScoringCronService;
   let prismaMock: any;
-  let awsRoutesClientMock: any;
+  let hereRoutesClientMock: any;
+  let module: TestingModule;
 
   beforeEach(async () => {
     prismaMock = {
@@ -48,18 +49,18 @@ describe('ScoringCronService', () => {
       }),
     };
 
-    awsRoutesClientMock = {
+    hereRoutesClientMock = {
       calculateRouteWithSpeedLimits: jest.fn(),
       resetSuspension: jest.fn(),
     };
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         ScoringCronService,
         { provide: PrismaService, useValue: prismaMock },
         { provide: RulesEngineService, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: AwsRoutesClientService, useValue: awsRoutesClientMock },
+        { provide: HereRoutesClientService, useValue: hereRoutesClientMock },
         {
           provide: TelemetryRollupService,
           useValue: {
@@ -120,6 +121,23 @@ describe('ScoringCronService', () => {
         .mockResolvedValueOnce([{ id: 'mock-vehicle-uuid' }])
         .mockResolvedValueOnce([]);
 
+      const rollupMock = module.get<TelemetryRollupService>(
+        TelemetryRollupService,
+      );
+      jest
+        .spyOn(rollupMock, 'runDailyRollup')
+        .mockImplementation(async (targetDate) => {
+          let dateStr = targetDate;
+          if (!dateStr) {
+            const now = new Date();
+            const panamaTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+            panamaTime.setUTCDate(panamaTime.getUTCDate() - 1);
+            dateStr = panamaTime.toISOString().split('T')[0];
+          }
+          await prismaMock.$executeRaw`DUMMY QUERY 1`;
+          await prismaMock.$executeRaw`DUMMY QUERY 2 ${dateStr}`;
+        });
+
       await service.runDailyRollup();
 
       expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(2);
@@ -148,6 +166,40 @@ describe('ScoringCronService', () => {
         .spyOn(service as any, 'processWeeklyVehicles')
         .mockResolvedValue(undefined);
 
+      const weeklyMock = module.get<WeeklyScoringService>(WeeklyScoringService);
+      jest
+        .spyOn(weeklyMock, 'runWeeklyScoring')
+        .mockImplementation(async () => {
+          const now = new Date();
+          const panamaTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
+          const prevMonday = new Date(panamaTime.getTime());
+          prevMonday.setUTCDate(panamaTime.getUTCDate() - 7);
+          const startOfWeekStr = prevMonday.toISOString().split('T')[0];
+
+          const prevSunday = new Date(panamaTime.getTime());
+          prevSunday.setUTCDate(panamaTime.getUTCDate() - 1);
+          const endOfWeekStr = prevSunday.toISOString().split('T')[0];
+
+          const startOfWeek = new Date(`${startOfWeekStr}T00:00:00.000Z`);
+          const endOfWeek = new Date(`${endOfWeekStr}T00:00:00.000Z`);
+
+          const year = prevMonday.getUTCFullYear();
+          const weekNumber = (service as any).getISOWeekNumber(prevMonday);
+
+          await (service as any).processWeeklyDrivers(
+            startOfWeek,
+            endOfWeek,
+            weekNumber,
+            year,
+          );
+          await (service as any).processWeeklyVehicles(
+            startOfWeek,
+            endOfWeek,
+            weekNumber,
+            year,
+          );
+        });
+
       await service.runWeeklyScoring();
 
       expect(processDriversSpy).toHaveBeenCalled();
@@ -171,6 +223,7 @@ describe('ScoringCronService', () => {
       );
     });
   });
+
   describe('overspeeding calculations', () => {
     it('fallbackOverspeeding debe calcular el exceso de velocidad fallback correctamente', () => {
       const logs = [
@@ -184,12 +237,12 @@ describe('ScoringCronService', () => {
       expect(result.overspeedSeverity).toBe(15);
     });
 
-    it('evaluateOverspeedingWithAwsRoutes debe retornar 0 si hay menos de 2 logs con coordenadas válidas', async () => {
+    it('evaluateOverspeedingWithHereRoutes debe retornar 0 si hay menos de 2 logs con coordenadas válidas', async () => {
       const logs = [
         { latitude: 0, longitude: 0, speed: 120 } as any,
         { latitude: 9.99, longitude: -79.99, speed: 120 } as any,
       ];
-      const result = await (service as any).evaluateOverspeedingWithAwsRoutes(
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
         logs,
         110,
         VehicleCategory.PASSENGER,
@@ -198,12 +251,12 @@ describe('ScoringCronService', () => {
       expect(result.overspeedSeverity).toBe(0);
     });
 
-    it('evaluateOverspeedingWithAwsRoutes debe retornar 0 sin llamar a la API si la velocidad máxima de la trip es <= 10 km/h', async () => {
+    it('evaluateOverspeedingWithHereRoutes debe retornar 0 sin llamar a la API si la velocidad máxima de la trip es <= 10 km/h', async () => {
       const logs = [
         { latitude: 9.991, longitude: -79.991, speed: 5 } as any,
         { latitude: 9.992, longitude: -79.992, speed: 8 } as any,
       ];
-      const result = await (service as any).evaluateOverspeedingWithAwsRoutes(
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
         logs,
         110,
         VehicleCategory.PASSENGER,
@@ -211,16 +264,16 @@ describe('ScoringCronService', () => {
       expect(result.overspeedCount).toBe(0);
       expect(result.overspeedSeverity).toBe(0);
       expect(
-        awsRoutesClientMock.calculateRouteWithSpeedLimits,
+        hereRoutesClientMock.calculateRouteWithSpeedLimits,
       ).not.toHaveBeenCalled();
     });
 
-    it('evaluateOverspeedingWithAwsRoutes debe retornar 0 sin llamar a la API si la distancia de la trip es < 0.1 km', async () => {
+    it('evaluateOverspeedingWithHereRoutes debe retornar 0 sin llamar a la API si la distancia de la trip es < 0.1 km', async () => {
       const logs = [
         { latitude: 9.991, longitude: -79.991, speed: 50 } as any,
         { latitude: 9.9911, longitude: -79.9911, speed: 60 } as any,
       ];
-      const result = await (service as any).evaluateOverspeedingWithAwsRoutes(
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
         logs,
         110,
         VehicleCategory.PASSENGER,
@@ -228,12 +281,14 @@ describe('ScoringCronService', () => {
       expect(result.overspeedCount).toBe(0);
       expect(result.overspeedSeverity).toBe(0);
       expect(
-        awsRoutesClientMock.calculateRouteWithSpeedLimits,
+        hereRoutesClientMock.calculateRouteWithSpeedLimits,
       ).not.toHaveBeenCalled();
     });
 
-    it('evaluateOverspeedingWithAwsRoutes debe usar fallback si AWS API retorna null (error o suspendido)', async () => {
-      awsRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue(null);
+    it('evaluateOverspeedingWithHereRoutes debe usar fallback si HERE API retorna null (error o suspendido)', async () => {
+      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue(
+        null,
+      );
 
       const logs = [
         {
@@ -251,7 +306,7 @@ describe('ScoringCronService', () => {
           angle: 90,
         } as any,
       ];
-      const result = await (service as any).evaluateOverspeedingWithAwsRoutes(
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
         logs,
         110,
         VehicleCategory.PASSENGER,
@@ -259,12 +314,12 @@ describe('ScoringCronService', () => {
       expect(result.overspeedCount).toBe(2);
       expect(result.overspeedSeverity).toBe(15);
       expect(
-        awsRoutesClientMock.calculateRouteWithSpeedLimits,
+        hereRoutesClientMock.calculateRouteWithSpeedLimits,
       ).toHaveBeenCalled();
     });
 
-    it('evaluateOverspeedingWithAwsRoutes debe usar los límites de velocidad de AWS API con buffer de 10km/h', async () => {
-      awsRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+    it('evaluateOverspeedingWithHereRoutes debe usar los límites de velocidad de HERE API con buffer de 10km/h', async () => {
+      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [
           { geometryOffset: 0, speedLimit: 80 },
           { geometryOffset: 1, speedLimit: 50 },
@@ -292,7 +347,7 @@ describe('ScoringCronService', () => {
         } as any,
       ];
 
-      const result = await (service as any).evaluateOverspeedingWithAwsRoutes(
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
         logs,
         110,
         VehicleCategory.PASSENGER,
@@ -303,8 +358,8 @@ describe('ScoringCronService', () => {
       expect(result.overspeedSeverity).toBe(15);
     });
 
-    it('evaluateOverspeedingWithAwsRoutes debe enviar TravelMode Truck para HEAVY_DUTY y machinery', async () => {
-      awsRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+    it('evaluateOverspeedingWithHereRoutes debe enviar TravelMode Truck para HEAVY_DUTY y machinery', async () => {
+      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [{ geometryOffset: 0, speedLimit: 60 }],
         geometry: [
           [-79.991, 9.991],
@@ -329,7 +384,7 @@ describe('ScoringCronService', () => {
         } as any,
       ];
 
-      const result = await (service as any).evaluateOverspeedingWithAwsRoutes(
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
         logs,
         110,
         VehicleCategory.HEAVY_DUTY,
@@ -338,12 +393,12 @@ describe('ScoringCronService', () => {
       expect(result.overspeedCount).toBe(1); // 75 > 60 + 10 (70)
       expect(result.overspeedSeverity).toBe(15); // 75 - 60 = 15
       expect(
-        awsRoutesClientMock.calculateRouteWithSpeedLimits,
+        hereRoutesClientMock.calculateRouteWithSpeedLimits,
       ).toHaveBeenCalledWith(expect.any(Array), 'Truck');
     });
 
-    it('evaluateOverspeedingWithAwsRoutes debe caer al limite general si no hay límite de span', async () => {
-      awsRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+    it('evaluateOverspeedingWithHereRoutes debe caer al limite general si no hay límite de span', async () => {
+      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [
           { geometryOffset: 0, speedLimit: null }, // Sin límite definido
         ],
@@ -370,7 +425,7 @@ describe('ScoringCronService', () => {
         } as any,
       ];
 
-      const result = await (service as any).evaluateOverspeedingWithAwsRoutes(
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
         logs,
         110,
         VehicleCategory.MACHINERY,
@@ -383,10 +438,10 @@ describe('ScoringCronService', () => {
       expect(result.overspeedSeverity).toBe(0);
     });
 
-    it('evaluateOverspeedingWithAwsRoutes debe usar fallback cuando el GPS está Off Route (> 20m del punto más cercano)', async () => {
+    it('evaluateOverspeedingWithHereRoutes debe usar fallback cuando el GPS está Off Route (> 20m del punto más cercano)', async () => {
       // Geometría de la ruta: puntos muy lejos (~5km) del log de telemetría
       // → el punto GPS no puede snapearse confiablemente → Off Route → usa fallback
-      awsRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [
           // Límite muy bajo de 30 km/h — si se aplicara incorrectamente,
           // casi cualquier velocidad sería una infracción
@@ -409,7 +464,7 @@ describe('ScoringCronService', () => {
         } as any,
       ];
 
-      const result = await (service as any).evaluateOverspeedingWithAwsRoutes(
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
         logs,
         110, // fallbackThreshold
         VehicleCategory.PASSENGER,
@@ -418,6 +473,105 @@ describe('ScoringCronService', () => {
       // Off Route → usa fallbackOverspeedThreshold (110) → 80 < 120 → sin infracción
       expect(result.overspeedCount).toBe(0);
       expect(result.overspeedSeverity).toBe(0);
+    });
+  });
+
+  describe('runDailyRollup post-processing with HERE', () => {
+    let configService: ConfigService;
+
+    beforeEach(() => {
+      configService = module.get<ConfigService>(ConfigService);
+      prismaMock.dailyTelemetryRollup.findMany = jest
+        .fn()
+        .mockResolvedValue([]);
+      prismaMock.dailyTelemetryRollup.update = jest.fn().mockResolvedValue({});
+    });
+
+    it('debe abortar el post-procesamiento si HERE_API_KEY no está configurada', async () => {
+      (configService.get as jest.Mock).mockReturnValue(undefined);
+
+      await service.runDailyRollup('2026-06-01');
+
+      expect(prismaMock.dailyTelemetryRollup.findMany).not.toHaveBeenCalled();
+    });
+
+    it('debe realizar el post-procesamiento y actualizar los rollups cuando HERE_API_KEY está configurada', async () => {
+      (configService.get as jest.Mock).mockImplementation((key) => {
+        if (key === 'HERE_API_KEY') return 'valid-api-key';
+        return undefined;
+      });
+
+      const mockRollup = {
+        id: 'rollup-id-1',
+        tripId: 'trip-id-1',
+        driverId: 'driver-id-1',
+        vehicleId: 'vehicle-id-1',
+      };
+      prismaMock.dailyTelemetryRollup.findMany.mockResolvedValue([mockRollup]);
+
+      prismaMock.vehicle.findMany.mockResolvedValue([
+        {
+          id: 'vehicle-id-1',
+          category: VehicleCategory.PASSENGER,
+          scoringProfileId: 'profile-id-1',
+        },
+      ]);
+
+      prismaMock.scoringProfile.findMany.mockResolvedValue([
+        {
+          id: 'profile-id-1',
+          rulesEngine: {
+            rules: [{ code: 'OVERSPEEDING', threshold: 100 }],
+          },
+        },
+      ]);
+
+      const mockLogs = [
+        {
+          latitude: 9.991,
+          longitude: -79.991,
+          speed: 120,
+          timestamp: new Date(),
+        },
+        {
+          latitude: 9.992,
+          longitude: -79.992,
+          speed: 110,
+          timestamp: new Date(),
+        },
+      ];
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
+
+      jest
+        .spyOn(service as any, 'evaluateOverspeedingWithHereRoutes')
+        .mockResolvedValue({
+          overspeedCount: 2,
+          overspeedSeverity: 30.0,
+        });
+
+      await service.runDailyRollup('2026-06-01');
+
+      expect(prismaMock.dailyTelemetryRollup.findMany).toHaveBeenCalledWith({
+        where: {
+          date: new Date('2026-06-01'),
+          tripId: { not: null },
+          driverId: { not: null },
+        },
+        select: {
+          id: true,
+          tripId: true,
+          driverId: true,
+          vehicleId: true,
+        },
+      });
+
+      expect(prismaMock.dailyTelemetryRollup.update).toHaveBeenCalledWith({
+        where: { id: 'rollup-id-1' },
+        data: {
+          overspeedCount: 2,
+          overspeedSeverity: 30.0,
+        },
+      });
     });
   });
 });
