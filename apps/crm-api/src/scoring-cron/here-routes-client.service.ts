@@ -122,6 +122,8 @@ export class HereRoutesClientService {
     queryParams.append('destination', `${destination.lat},${destination.lng}`);
     queryParams.append('return', 'polyline');
     queryParams.append('spans', 'maxSpeed');
+    // Forzar modo planeación para desactivar Time-Aware Routing (evita tarifas Advanced Routing y tráfico)
+    queryParams.append('departureTime', 'any');
 
     if (waypoints) {
       for (const wp of waypoints) {
