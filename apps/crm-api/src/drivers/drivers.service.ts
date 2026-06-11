@@ -617,10 +617,10 @@ export class DriversService {
     const rollups = trip.dailyTelemetryRollups || [];
     if (rollups.length === 0) {
       return {
-        overallScore: 100,
-        safetyScore: 100,
-        ecoScore: 100,
-        assetScore: 100,
+        overallScore: null,
+        safetyScore: null,
+        ecoScore: null,
+        assetScore: null,
       };
     }
 

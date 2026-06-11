@@ -14,8 +14,12 @@ import {
   Zap,
   Truck,
   ArrowLeft,
+  Shield,
+  Leaf,
+  Wrench,
 } from "lucide-react";
 import api from "@/utils/client/api-client";
+import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
 import { DriverInfoLabel } from "@/components/ui/DriverInfoLabel";
 import {
   getLocalDateOnlyLabel,
@@ -23,6 +27,7 @@ import {
   formatTimeOnly,
   formatTripDuration,
   getScoreBadgeColor,
+  getScoreTextColor,
 } from "@/utils/client";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -243,24 +248,22 @@ export default function TripsHistoryView({
                     <button
                       key={trip.id}
                       onClick={() => handleTripSelection(trip.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex flex-col gap-2 ${
-                        isSelected
-                          ? "bg-primary/10 border-primary shadow-sm"
-                          : "bg-base-100/50 border-base-200 hover:border-base-300 text-base-content"
-                      }`}
+                      className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex flex-col gap-2 ${isSelected
+                        ? "bg-primary/10 border-primary shadow-sm"
+                        : "bg-base-100/50 border-base-200 hover:border-base-300 text-base-content"
+                        }`}
                     >
                       <div className="flex items-center justify-between w-full text-[10px]">
                         <div className="flex items-center gap-1.5">
                           <span
-                            className={`badge badge-xs font-black px-1.5 border ${
-                              isOngoing
-                                ? "bg-blue-500/10 border-blue-500/20 text-blue-600 animate-pulse"
-                                : "bg-base-200 border-base-300 text-base-content/70"
-                            }`}
+                            className={`badge badge-xs font-black px-1.5 border ${isOngoing
+                              ? "bg-blue-500/10 border-blue-500/20 text-blue-600 animate-pulse"
+                              : "bg-base-200 border-base-300 text-base-content/70"
+                              }`}
                           >
                             {isOngoing ? "En Curso" : "Completado"}
                           </span>
-                          {!isOngoing && trip.overallScore !== undefined && (
+                          {!isOngoing && trip.overallScore != null && (
                             <span
                               className={`badge badge-xs font-black px-1.5 ${getScoreBadgeColor(trip.overallScore)}`}
                             >
@@ -288,13 +291,12 @@ export default function TripsHistoryView({
                           <div className="flex items-center gap-1 min-w-0">
                             <Truck className="size-3 text-base-content/40 shrink-0" />
                             {isManagementRole &&
-                            (trip.vehicleId || trip.vehicle?.id) ? (
+                              (trip.vehicleId || trip.vehicle?.id) ? (
                               <Link
-                                href={`/vehicle/${trip.vehicleId || trip.vehicle?.id}/view${
-                                  targetOrgId
-                                    ? `?targetOrgId=${targetOrgId}`
-                                    : ""
-                                }`}
+                                href={`/vehicle/${trip.vehicleId || trip.vehicle?.id}/view${targetOrgId
+                                  ? `?targetOrgId=${targetOrgId}`
+                                  : ""
+                                  }`}
                                 className="truncate font-semibold text-primary hover:underline"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -313,11 +315,10 @@ export default function TripsHistoryView({
                             <User className="size-3 text-base-content/40 shrink-0" />
                             {isManagementRole && trip.driver?.id ? (
                               <Link
-                                href={`/reports?driverId=${trip.driver.id}&tab=daily${
-                                  targetOrgId
-                                    ? `&targetOrgId=${targetOrgId}`
-                                    : ""
-                                }`}
+                                href={`/reports?driverId=${trip.driver.id}&tab=daily${targetOrgId
+                                  ? `&targetOrgId=${targetOrgId}`
+                                  : ""
+                                  }`}
                                 className="flex flex-col text-left group hover:underline text-primary"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -353,172 +354,331 @@ export default function TripsHistoryView({
     </>
   );
 
-  const renderStatsOverlay = (variant: "map-float" | "fullscreen") => {
+  const renderStatsOverlay = (variant: "panel-flat" | "fullscreen") => {
     if (!tripMetrics || !selectedTrip) return null;
 
-    // Responsive positioning for standard and fullscreen views
-    const positionClasses =
-      variant === "fullscreen"
-        ? "absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-[45]"
-        : "relative w-full p-4 lg:absolute lg:bottom-4 lg:left-4 lg:right-auto lg:w-80 lg:max-w-sm lg:p-0 z-[45]";
-
     const overallScore = selectedTrip.overallScore;
+    const isOngoing = !selectedTrip.endTime;
     const badgeColorClass =
-      overallScore !== undefined
+      overallScore != null
         ? `${getScoreBadgeColor(overallScore)} font-black`
         : "bg-neutral text-neutral-content font-black";
 
-    return (
-      <div className={`${positionClasses} pointer-events-none`}>
-        <div className="bg-base-100 border border-base-300 rounded-2xl shadow-xl p-4 flex flex-col gap-3 pointer-events-auto">
-          {/* Card Header: Entity Info and Overall Score */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="text-[10px] text-base-content/50 font-bold uppercase tracking-wider">
-                {isDriverCentric ? "Vehículo" : "Conductor"}
-              </span>
-              <div className="font-bold text-base-content/90 flex items-center gap-1.5 text-xs mt-0.5 min-w-0">
-                {isDriverCentric ? (
-                  <>
-                    <Truck className="size-3.5 text-primary shrink-0" />
-                    {isManagementRole &&
-                    (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
-                      <Link
-                        href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${
-                          targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
-                        }`}
-                        className="truncate text-primary hover:underline font-semibold"
-                      >
-                        {selectedTrip.vehicle?.alias || "Sin Alias"} (
-                        {selectedTrip.vehicle?.plateNumber})
-                      </Link>
-                    ) : (
-                      <span className="truncate">
-                        {selectedTrip.vehicle?.alias || "Sin Alias"} (
-                        {selectedTrip.vehicle?.plateNumber})
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <User className="size-3.5 text-primary shrink-0" />
-                    {isManagementRole && selectedTrip.driver?.id ? (
-                      <Link
-                        href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${
-                          targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
-                        }`}
-                        className="truncate text-primary hover:underline font-semibold"
-                      >
-                        {selectedTrip.driver.firstName &&
-                        selectedTrip.driver.lastName
-                          ? `${selectedTrip.driver.firstName} ${selectedTrip.driver.lastName}`
-                          : selectedTrip.driver.nationalId}
-                      </Link>
-                    ) : (
-                      <DriverInfoLabel
-                        driver={selectedTrip.driver}
-                        showNationalId={false}
-                        className="inline-block font-bold text-xs truncate"
-                      />
-                    )}
-                  </>
-                )}
+    if (variant === "fullscreen") {
+      return (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-md z-[45] pointer-events-none">
+          <div className="bg-base-100 border border-base-300 rounded-2xl shadow-2xl p-4 flex flex-col gap-3.5 pointer-events-auto">
+            {/* Card Header: Entity Info and Overall Score */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="text-[10px] text-base-content/50 font-bold uppercase tracking-wider">
+                  {isDriverCentric ? "Vehículo" : "Conductor"}
+                </span>
+                <div className="font-bold text-base-content/90 flex items-center gap-1.5 text-xs mt-0.5 min-w-0">
+                  {isDriverCentric ? (
+                    <>
+                      <Truck className="size-3.5 text-primary shrink-0" />
+                      {isManagementRole &&
+                        (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
+                        <Link
+                          href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                            }`}
+                          className="truncate text-primary hover:underline font-semibold"
+                        >
+                          {selectedTrip.vehicle?.alias || "Sin Alias"} (
+                          {selectedTrip.vehicle?.plateNumber})
+                        </Link>
+                      ) : (
+                        <span className="truncate">
+                          {selectedTrip.vehicle?.alias || "Sin Alias"} (
+                          {selectedTrip.vehicle?.plateNumber})
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <User className="size-3.5 text-primary shrink-0" />
+                      {isManagementRole && selectedTrip.driver?.id ? (
+                        <Link
+                          href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                            }`}
+                          className="truncate text-primary hover:underline font-semibold"
+                        >
+                          {selectedTrip.driver.firstName &&
+                            selectedTrip.driver.lastName
+                            ? `${selectedTrip.driver.firstName} ${selectedTrip.driver.lastName}`
+                            : selectedTrip.driver.nationalId}
+                        </Link>
+                      ) : (
+                        <DriverInfoLabel
+                          driver={selectedTrip.driver}
+                          showNationalId={false}
+                          className="inline-block font-bold text-xs truncate"
+                        />
+                      )}
+                    </>
+                  )}
+                </div>
+                <span className="text-[9px] text-base-content/50 font-bold uppercase mt-1">
+                  Fecha y Hora
+                </span>
+                <span className="font-bold text-[10px] text-base-content/85 font-mono mt-0.5">
+                  {formatTripDate(selectedTrip.startTime)}
+                </span>
               </div>
-              <span className="text-[9px] text-base-content/50 font-bold uppercase mt-1">
-                Fecha y Hora
-              </span>
-              <span className="font-bold text-[10px] text-base-content/85 font-mono mt-0.5">
-                {formatTripDate(selectedTrip.startTime)}
+              {overallScore != null && (
+                <div className="text-center shrink-0 flex flex-col items-center">
+                  <span className="text-[9px] text-base-content/40 font-bold uppercase tracking-tight block leading-none mb-1">
+                    Puntaje
+                  </span>
+                  <span
+                    className={`inline-flex items-center justify-center text-xs h-7 min-w-[2.25rem] px-2 rounded-lg font-black ${badgeColorClass}`}
+                  >
+                    {Math.round(overallScore)}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-base-200"></div>
+
+            {/* Card Body: 3x2 Grid */}
+            <div className="grid grid-cols-3 gap-2 text-center">
+              {/* Duración */}
+              <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50 flex flex-col items-center justify-center">
+                <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+                  Duración
+                </span>
+                <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
+                  {formatTripDuration(
+                    selectedTrip.startTime,
+                    selectedTrip.endTime,
+                  )}
+                </span>
+              </div>
+
+              {/* V. Promedio */}
+              <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50 flex flex-col items-center justify-center">
+                <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+                  V. Promedio
+                </span>
+                <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
+                  {tripMetrics.avgSpeed}{" "}
+                  <span className="text-[8px] font-normal font-sans">km/h</span>
+                </span>
+              </div>
+
+              {/* V. Máxima */}
+              <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50 flex flex-col items-center justify-center">
+                <span className="text-[9px] text-rose-500/70 block font-bold uppercase tracking-tight">
+                  V. Máxima
+                </span>
+                <span className="font-bold text-xs text-rose-500 font-mono block mt-0.5">
+                  {tripMetrics.maxSpeed}{" "}
+                  <span className="text-[8px] font-normal font-sans">km/h</span>
+                </span>
+              </div>
+
+              {overallScore != null && (
+                <>
+                  {/* Seguridad */}
+                  <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50 flex flex-col items-center justify-center">
+                    <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+                      Seguridad
+                    </span>
+                    <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
+                      {selectedTrip.safetyScore != null ? Math.round(selectedTrip.safetyScore) : "-"}
+                    </span>
+                  </div>
+
+                  {/* Eco */}
+                  <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50 flex flex-col items-center justify-center">
+                    <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+                      Eco
+                    </span>
+                    <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
+                      {selectedTrip.ecoScore != null ? Math.round(selectedTrip.ecoScore) : "-"}
+                    </span>
+                  </div>
+
+                  {/* Cuidado */}
+                  <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50 flex flex-col items-center justify-center">
+                    <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+                      Cuidado
+                    </span>
+                    <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
+                      {selectedTrip.assetScore != null ? Math.round(selectedTrip.assetScore) : "-"}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="w-full bg-base-100 dark:bg-base-950/20 border-t border-base-200/70 p-5 flex flex-col lg:flex-row gap-6 items-stretch">
+        {/* Summary Block */}
+        <div className="flex items-center gap-5 shrink-0 w-full lg:w-auto lg:pr-8 lg:border-r border-base-200/50">
+          <div className="shrink-0 scale-95 origin-center">
+            <RadialScoreGauge
+              score={overallScore}
+              title="Puntaje"
+              size="md"
+              noCard={true}
+            />
+          </div>
+          <div className="flex flex-col min-w-0 flex-1 py-1">
+            <span className="text-[10px] text-base-content/40 font-black uppercase tracking-wider">
+              {isDriverCentric ? "Vehículo" : "Conductor"}
+            </span>
+            <div className="font-bold text-base-content/85 flex items-center gap-1.5 text-sm mt-1 min-w-0">
+              {isDriverCentric ? (
+                <>
+                  <Truck className="size-4 text-primary shrink-0" />
+                  {isManagementRole && (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
+                    <Link
+                      href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""}`}
+                      className="truncate text-primary hover:underline font-bold text-sm"
+                    >
+                      {selectedTrip.vehicle?.alias || "Sin Alias"} ({selectedTrip.vehicle?.plateNumber})
+                    </Link>
+                  ) : (
+                    <span className="truncate text-sm">
+                      {selectedTrip.vehicle?.alias || "Sin Alias"} ({selectedTrip.vehicle?.plateNumber})
+                    </span>
+                  )}
+                </>
+              ) : (
+                <>
+                  <User className="size-4 text-primary shrink-0" />
+                  {isManagementRole && selectedTrip.driver?.id ? (
+                    <Link
+                      href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""}`}
+                      className="truncate text-primary hover:underline font-bold text-sm"
+                    >
+                      {selectedTrip.driver.firstName && selectedTrip.driver.lastName
+                        ? `${selectedTrip.driver.firstName} ${selectedTrip.driver.lastName}`
+                        : selectedTrip.driver.nationalId}
+                    </Link>
+                  ) : (
+                    <DriverInfoLabel
+                      driver={selectedTrip.driver}
+                      showNationalId={false}
+                      className="inline-block font-bold text-sm truncate"
+                    />
+                  )}
+                </>
+              )}
+            </div>
+
+            <span className="text-[10px] text-base-content/40 font-black uppercase tracking-wider mt-3">
+              Fecha y Hora
+            </span>
+            <span className="font-bold text-xs text-base-content/75 font-mono mt-1">
+              {formatTripDate(selectedTrip.startTime)}
+            </span>
+
+            <div className="mt-3 flex items-center gap-2">
+              <span
+                className={`badge badge-sm font-black px-2 py-0.5 border ${
+                  isOngoing
+                    ? "bg-blue-500/10 border-blue-500/20 text-blue-600 animate-pulse"
+                    : "bg-base-200 border-base-300 text-base-content/70"
+                }`}
+              >
+                {isOngoing ? "En Curso" : "Completado"}
               </span>
             </div>
-            {overallScore !== undefined && (
-              <div className="text-center shrink-0 flex flex-col items-center">
-                <span className="text-[9px] text-base-content/40 font-bold uppercase tracking-tight block leading-none mb-1">
-                  Puntaje
-                </span>
-                <span
-                  className={`inline-flex items-center justify-center text-xs h-7 min-w-[2.25rem] px-2 rounded-lg font-black ${badgeColorClass}`}
-                >
-                  {Math.round(overallScore)}
-                </span>
-              </div>
-            )}
           </div>
+        </div>
 
-          {/* Divider */}
-          <div className="border-t border-base-200"></div>
-
-          {/* Card Body: 3x2 Grid */}
-          <div className="grid grid-cols-3 gap-2.5 text-center">
-            {/* Duración */}
-            <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
-              <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+        {/* Metrics Grid */}
+        <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+          {/* Duración */}
+          <div className="bg-base-200/15 dark:bg-base-900/10 hover:bg-base-200/30 dark:hover:bg-base-900/20 border border-base-200/50 dark:border-base-800/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all duration-300">
+            <div className="flex items-center justify-between w-full gap-2 text-base-content/40">
+              <span className="text-[10px] font-bold uppercase tracking-wider">
                 Duración
               </span>
-              <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
-                {formatTripDuration(
-                  selectedTrip.startTime,
-                  selectedTrip.endTime,
-                )}
-              </span>
+              <Clock className="size-4 text-blue-500/80 shrink-0" />
             </div>
+            <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
+              {formatTripDuration(selectedTrip.startTime, selectedTrip.endTime)}
+            </div>
+          </div>
 
-            {/* V. Promedio */}
-            <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
-              <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+          {/* V. Promedio */}
+          <div className="bg-base-200/15 dark:bg-base-900/10 hover:bg-base-200/30 dark:hover:bg-base-900/20 border border-base-200/50 dark:border-base-800/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all duration-300">
+            <div className="flex items-center justify-between w-full gap-2 text-base-content/40">
+              <span className="text-[10px] font-bold uppercase tracking-wider">
                 V. Promedio
               </span>
-              <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
-                {tripMetrics.avgSpeed}{" "}
-                <span className="text-[8px] font-normal font-sans">km/h</span>
-              </span>
+              <Gauge className="size-4 text-sky-500/80 shrink-0" />
             </div>
+            <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
+              {tripMetrics.avgSpeed} <span className="text-xs font-normal font-sans">km/h</span>
+            </div>
+          </div>
 
-            {/* V. Máxima */}
-            <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
-              <span className="text-[9px] text-error/65 block font-bold uppercase tracking-tight">
+          {/* V. Máxima */}
+          <div className="bg-base-200/15 dark:bg-base-900/10 hover:bg-base-200/30 dark:hover:bg-base-900/20 border border-base-200/50 dark:border-base-800/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all duration-300">
+            <div className="flex items-center justify-between w-full gap-2 text-rose-500/70">
+              <span className="text-[10px] font-bold uppercase tracking-wider">
                 V. Máxima
               </span>
-              <span className="font-bold text-xs text-error font-mono block mt-0.5">
-                {tripMetrics.maxSpeed}{" "}
-                <span className="text-[8px] font-normal font-sans">km/h</span>
-              </span>
+              <Zap className="size-4 text-rose-500/80 shrink-0" />
             </div>
+            <div className="mt-3 font-bold text-base text-rose-500 dark:text-rose-450 font-mono">
+              {tripMetrics.maxSpeed} <span className="text-xs font-normal text-rose-500/70 font-sans">km/h</span>
+            </div>
+          </div>
 
-            {overallScore !== undefined && (
-              <>
-                {/* Seguridad */}
-                <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
-                  <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+          {overallScore != null ? (
+            <>
+              {/* Seguridad */}
+              <div className="bg-base-200/15 dark:bg-base-900/10 hover:bg-base-200/30 dark:hover:bg-base-900/20 border border-base-200/50 dark:border-base-800/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all duration-300">
+                <div className="flex items-center justify-between w-full gap-2 text-base-content/40">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
                     Seguridad
                   </span>
-                  <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
-                    {Math.round(selectedTrip.safetyScore ?? 100)}
-                  </span>
+                  <Shield className="size-4 text-emerald-500/80 shrink-0" />
                 </div>
+                <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
+                  {selectedTrip.safetyScore != null ? Math.round(selectedTrip.safetyScore) : "-"}
+                </div>
+              </div>
 
-                {/* Eco */}
-                <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
-                  <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+              {/* Eco */}
+              <div className="bg-base-200/15 dark:bg-base-900/10 hover:bg-base-200/30 dark:hover:bg-base-900/20 border border-base-200/50 dark:border-base-800/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all duration-300">
+                <div className="flex items-center justify-between w-full gap-2 text-base-content/40">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
                     Eco
                   </span>
-                  <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
-                    {Math.round(selectedTrip.ecoScore ?? 100)}
-                  </span>
+                  <Leaf className="size-4 text-green-500/80 shrink-0" />
                 </div>
+                <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
+                  {selectedTrip.ecoScore != null ? Math.round(selectedTrip.ecoScore) : "-"}
+                </div>
+              </div>
 
-                {/* Cuidado */}
-                <div className="bg-base-200/30 p-2 rounded-xl border border-base-200/50">
-                  <span className="text-[9px] text-base-content/45 block font-bold uppercase tracking-tight">
+              {/* Cuidado */}
+              <div className="bg-base-200/15 dark:bg-base-900/10 hover:bg-base-200/30 dark:hover:bg-base-900/20 border border-base-200/50 dark:border-base-800/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all duration-300">
+                <div className="flex items-center justify-between w-full gap-2 text-base-content/40">
+                  <span className="text-[10px] font-bold uppercase tracking-wider">
                     Cuidado
                   </span>
-                  <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
-                    {Math.round(selectedTrip.assetScore ?? 100)}
-                  </span>
+                  <Wrench className="size-4 text-violet-500/80 shrink-0" />
                 </div>
-              </>
-            )}
-          </div>
+                <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
+                  {selectedTrip.assetScore != null ? Math.round(selectedTrip.assetScore) : "-"}
+                </div>
+              </div>
+            </>
+          ) : null}
         </div>
       </div>
     );
@@ -573,18 +733,24 @@ export default function TripsHistoryView({
           key="stable-map-panel"
           className={`
             relative bg-base-100/50 overflow-hidden shadow-sm flex flex-col
-            ${
-              isFullscreen
-                ? "flex-grow h-full w-full border-none rounded-none"
-                : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${
-                    isMobileMapActive
-                      ? "flex h-auto lg:h-full lg:min-h-0"
-                      : "hidden"
-                  }`
+            ${isFullscreen
+              ? "flex-grow h-full w-full border-none rounded-none"
+              : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${isMobileMapActive
+                ? "flex h-auto lg:h-full lg:min-h-0"
+                : "hidden"
+              }`
             }
           `}
         >
-          <div className={`z-10 w-full ${isFullscreen ? "absolute inset-0 h-full" : "relative h-[320px] lg:absolute lg:inset-0 lg:h-full"}`}>
+          <div
+            className={`z-10 w-full ${
+              isFullscreen
+                ? "absolute inset-0 h-full"
+                : selectedTripId && routeCoordinates.length > 0 && !isLoadingRoute
+                ? "relative h-[320px] lg:relative lg:flex-grow lg:h-0"
+                : "relative h-[320px] lg:absolute lg:inset-0 lg:h-full"
+            }`}
+          >
             <TripMap
               coordinates={routeCoordinates}
               isOngoing={!selectedTrip?.endTime}
@@ -671,7 +837,7 @@ export default function TripsHistoryView({
             !isLoadingRoute &&
             (isFullscreen
               ? renderStatsOverlay("fullscreen")
-              : renderStatsOverlay("map-float"))}
+              : renderStatsOverlay("panel-flat"))}
 
           {isLoadingRoute && (
             <div className="absolute inset-0 bg-base-100/80 backdrop-blur-sm z-[40] flex flex-col items-center justify-center text-sm text-base-content/50">

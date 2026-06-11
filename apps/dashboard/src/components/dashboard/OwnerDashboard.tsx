@@ -11,6 +11,10 @@ import {
   ChevronDown,
   ChevronUp,
   Info,
+  WifiOff,
+  Power,
+  Gauge,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -114,6 +118,95 @@ export function OwnerDashboard({
       return scoreA - scoreB;
     })
     .slice(0, 5);
+
+  // Alertas críticas de la flota calculadas en tiempo real (Mobile-First)
+  const fleetAlerts = useMemo(() => {
+    const alerts: Array<{
+      id: string;
+      vehicleId: string;
+      vehicleAlias: string;
+      plateNumber: string;
+      type: "unplugged" | "speeding" | "no_driver" | "offline";
+      message: string;
+      severity: "error" | "warning";
+      timestamp: string;
+    }> = [];
+
+    liveVehicles.forEach((v) => {
+      const alias = v.alias || "Sin Alias";
+      const plate = v.plateNumber;
+
+      // 1. Dispositivo desconectado (Error)
+      const isUnplugged = v.status === "UNPLUGGED" || v.liveState?.currentStatus === "UNPLUGGED" || v.liveState?.unplugged === true;
+      if (isUnplugged) {
+        alerts.push({
+          id: `${v.id}-unplugged`,
+          vehicleId: v.id,
+          vehicleAlias: alias,
+          plateNumber: plate,
+          type: "unplugged",
+          message: `Dispositivo desconectado en unidad ${alias} (${plate})`,
+          severity: "error",
+          timestamp: v.liveState?.lastUpdate || new Date().toISOString(),
+        });
+      }
+
+      // 2. Exceso de velocidad en vivo (Error)
+      const speed = (v.liveState?.lastSpeed as number | undefined) ?? 0;
+      if (speed > 110) {
+        alerts.push({
+          id: `${v.id}-speeding-${Date.now()}`,
+          vehicleId: v.id,
+          vehicleAlias: alias,
+          plateNumber: plate,
+          type: "speeding",
+          message: `Exceso de velocidad: ${alias} circula a ${speed} km/h`,
+          severity: "error",
+          timestamp: v.liveState?.lastUpdate || new Date().toISOString(),
+        });
+      }
+
+      // 3. Movimiento sin conductor asignado (Warning)
+      const isMoving = v.liveState?.currentStatus === "MOVING" || speed > 0;
+      const hasDriver = v.assignments && v.assignments.length > 0;
+      if (isMoving && !hasDriver) {
+        alerts.push({
+          id: `${v.id}-no-driver`,
+          vehicleId: v.id,
+          vehicleAlias: alias,
+          plateNumber: plate,
+          type: "no_driver",
+          message: `Movimiento detectado sin conductor asignado en unidad ${alias}`,
+          severity: "warning",
+          timestamp: v.liveState?.lastUpdate || new Date().toISOString(),
+        });
+      }
+
+      // 4. Pérdida de señal / fuera de línea por más de 30 minutos (Warning)
+      if (v.liveState?.lastUpdate) {
+        const lastUpdateMs = new Date(v.liveState.lastUpdate).getTime();
+        const diffMins = (Date.now() - lastUpdateMs) / (1000 * 60);
+        if (diffMins > 30 && !isUnplugged && v.status === "ACTIVE") {
+          alerts.push({
+            id: `${v.id}-offline`,
+            vehicleId: v.id,
+            vehicleAlias: alias,
+            plateNumber: plate,
+            type: "offline",
+            message: `Pérdida de señal hace más de ${Math.round(diffMins)} min en unidad ${alias}`,
+            severity: "warning",
+            timestamp: v.liveState.lastUpdate,
+          });
+        }
+      }
+    });
+
+    return alerts.sort((a, b) => {
+      if (a.severity === "error" && b.severity !== "error") return -1;
+      if (a.severity !== "error" && b.severity === "error") return 1;
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+  }, [liveVehicles]);
 
   const vehicleColumns: TableColumn<DashboardVehicle>[] = [
     {
@@ -299,57 +392,106 @@ export function OwnerDashboard({
       </div>
 
       {/* Driver Risk Alerts & Fleet Health */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Risk Alerts */}
-        <div className="glass-card p-6 space-y-4">
-          <div>
-            <h2 className="text-lg font-bold flex items-center gap-2">
-              <ShieldAlert className="text-error size-5" />
-              Conductores con Mayor Riesgo
-            </h2>
-            <p className="text-xs text-base-content/50">
-              Prioriza capacitación para conductores con puntajes de seguridad
-              bajos.
-            </p>
-          </div>
-          <div className="divide-y divide-base-200">
-            {riskDrivers.map((d) => {
-              const driverScore =
-                d.globalStats?.globalSafetyScore ??
-                d.globalStats?.safetyScore ??
-                null;
-              return (
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left Column: Alerts Feed & Risk Drivers */}
+        <div className="lg:col-span-1 space-y-6 flex flex-col">
+          {/* Critical Alerts Feed */}
+          <div className="glass-card p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <ShieldAlert className="text-error size-5 animate-pulse" />
+                Alertas Críticas de Flota
+              </h2>
+              <p className="text-xs text-base-content/50">
+                Incidentes de telemetría y seguridad en tiempo real.
+              </p>
+            </div>
+            <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+              {fleetAlerts.map((alert) => (
                 <div
-                  key={d.id}
-                  className="py-3.5 flex justify-between items-center text-sm"
+                  key={alert.id}
+                  className={`p-3.5 rounded-xl border flex gap-3 text-xs animate-in fade-in duration-300 ${
+                    alert.severity === "error"
+                      ? "bg-rose-500/5 border-rose-500/20 text-rose-800 dark:text-rose-200"
+                      : "bg-amber-500/5 border-amber-500/20 text-amber-800 dark:text-amber-200"
+                  }`}
                 >
-                  <DriverInfoLabel driver={d} />
-                  <div className="flex items-center gap-3">
-                    {driverScore !== null ? (
-                      <span
-                        className={`badge font-bold px-2.5 py-1 ${getScoreBadgeColor(driverScore)}`}
-                      >
-                        {Math.round(driverScore)} pts
-                      </span>
-                    ) : (
-                      <span className="badge badge-ghost text-base-content/50 border-base-200/80 font-bold px-2.5 py-1">
-                        N/A
-                      </span>
-                    )}
+                  {alert.type === "unplugged" && <Power className="size-4.5 shrink-0 text-rose-500 mt-0.5" />}
+                  {alert.type === "speeding" && <Gauge className="size-4.5 shrink-0 text-rose-500 mt-0.5" />}
+                  {alert.type === "no_driver" && <Users className="size-4.5 shrink-0 text-amber-500 mt-0.5" />}
+                  {alert.type === "offline" && <WifiOff className="size-4.5 shrink-0 text-amber-500 mt-0.5" />}
+                  <div className="space-y-1 flex-1">
+                    <p className="font-semibold leading-snug">{alert.message}</p>
+                    <span className="text-[10px] text-base-content/40 font-mono block">
+                      {new Date(alert.timestamp).toLocaleTimeString("es-ES", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
                   </div>
                 </div>
-              );
-            })}
-            {riskDrivers.length === 0 && (
-              <p className="text-center text-sm text-base-content/40 py-6">
-                No hay datos de conducción registrados.
+              ))}
+              {fleetAlerts.length === 0 && (
+                <div className="text-center py-10 text-xs text-base-content/40 flex flex-col items-center justify-center gap-2">
+                  <ShieldCheck className="size-8 text-success opacity-60" />
+                  <p className="font-semibold">Flota segura y operativa</p>
+                  <p className="text-[10px] text-base-content/30">No hay incidentes de telemetría reportados.</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Risk Alerts */}
+          <div className="glass-card p-6 space-y-4">
+            <div>
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <ShieldAlert className="text-error size-5" />
+                Conductores con Mayor Riesgo
+              </h2>
+              <p className="text-xs text-base-content/50">
+                Prioriza capacitación para conductores con puntajes de seguridad
+                bajos.
               </p>
-            )}
+            </div>
+            <div className="divide-y divide-base-200 max-h-[250px] overflow-y-auto pr-1">
+              {riskDrivers.map((d) => {
+                const driverScore =
+                  d.globalStats?.globalSafetyScore ??
+                  d.globalStats?.safetyScore ??
+                  null;
+                return (
+                  <div
+                    key={d.id}
+                    className="py-3 flex justify-between items-center text-xs"
+                  >
+                    <DriverInfoLabel driver={d} className="mt-0" />
+                    <div className="flex items-center gap-3">
+                      {driverScore !== null ? (
+                        <span
+                          className={`badge font-bold px-2 py-0.5 ${getScoreBadgeColor(driverScore)}`}
+                        >
+                          {Math.round(driverScore)} pts
+                        </span>
+                      ) : (
+                        <span className="badge badge-ghost text-base-content/50 border-base-200/80 font-bold px-2 py-0.5">
+                          N/A
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+              {riskDrivers.length === 0 && (
+                <p className="text-center text-xs text-base-content/40 py-6">
+                  No hay datos de conducción registrados.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Vehicles Operational List (Fleet Health) */}
-        <div className="glass-card p-6 space-y-4">
+        <div className="glass-card p-6 space-y-4 lg:col-span-2">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-lg font-bold flex items-center gap-2">

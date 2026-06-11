@@ -748,7 +748,7 @@ describe('DriversService', () => {
               rulesEngine: null,
             },
           },
-          dailyTelemetryRollups: [],
+          dailyTelemetryRollups: [{ id: 'rollup-1', totalKm: 10 } as any],
         },
       ];
       prismaMock.trip.findMany.mockResolvedValueOnce(mockTrips);

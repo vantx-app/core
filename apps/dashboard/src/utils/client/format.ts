@@ -7,9 +7,9 @@ export const getScoreCircleColor = (score: number | null | undefined): string =>
 
 export const getScoreBadgeColor = (score: number | null | undefined): string => {
   if (score == null) return "badge-ghost text-base-content/50 border-base-200/80";
-  if (score >= 85) return "badge-success text-white";
-  if (score >= 70) return "badge-warning text-white";
-  return "badge-error text-white";
+  if (score >= 85) return "badge-success text-white bg-emerald-500 border-none";
+  if (score >= 70) return "badge-warning text-white bg-amber-500 border-none";
+  return "badge-error text-white bg-rose-500 border-none";
 };
 
 export const getScoreTextColor = (score: number | null | undefined): string => {
@@ -23,10 +23,10 @@ export const getVehicleStatusBadgeClass = (status: string): string => {
   switch (status) {
     case "ONLINE":
     case "ACTIVE":
-      return "badge-success text-white";
+      return "badge-success text-white bg-emerald-500 border-none";
     case "MAINTENANCE":
     case "IN_MAINTENANCE":
-      return "badge-warning text-white";
+      return "badge-warning text-white bg-amber-500 border-none";
     default:
       return "badge-ghost";
   }
@@ -138,11 +138,11 @@ export const getDriverDocStatusText = (status: string): string => {
 export const getMarketplaceAppStatusBadgeClass = (status: string): string => {
   switch (status) {
     case "PENDING":
-      return "badge-warning text-white";
+      return "badge-warning text-white bg-amber-500 border-none";
     case "APPROVED":
-      return "badge-success text-white";
+      return "badge-success text-white bg-emerald-500 border-none";
     case "REJECTED":
-      return "badge-error text-white";
+      return "badge-error text-white bg-rose-500 border-none";
     case "WITHDRAWN":
       return "badge-ghost text-base-content/60";
     default:
@@ -171,11 +171,11 @@ export const getMarketplaceAppStatusText = (status: string): string => {
 export const getListingStatusBadgeClass = (status: string): string => {
   switch (status) {
     case "ACTIVE":
-      return "badge-success text-white";
+      return "badge-success text-white bg-emerald-500 border-none";
     case "FILLED":
-      return "badge-info text-white";
+      return "badge-info text-white bg-blue-500 border-none";
     case "PAUSED":
-      return "badge-warning text-white";
+      return "badge-warning text-white bg-amber-500 border-none";
     case "INACTIVE":
       return "badge-ghost text-base-content/60";
     default:

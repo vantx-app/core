@@ -22,6 +22,9 @@ import {
   Power,
   TrendingDown,
   CornerUpRight,
+  Thermometer,
+  Flame,
+  ShieldAlert,
 } from "lucide-react";
 import {
   DailyTelemetryRollup,
@@ -78,8 +81,94 @@ export function VehicleDetailClient({
 
   const currentDriver = vehicle.assignments?.[0]?.driver;
 
-  // Grouping for telemetry logs on mobile
-  const rollups = vehicle.DailyTelemetryRollup || [];
+  // Grouping and condensing telemetry logs per day
+  const rollups = useMemo(() => {
+    const raw = vehicle.DailyTelemetryRollup || [];
+    const groups: Record<string, DailyTelemetryRollup[]> = {};
+    raw.forEach((r) => {
+      const dateKey = typeof r.date === "string"
+        ? r.date.split("T")[0]
+        : new Date(r.date).toISOString().split("T")[0];
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(r);
+    });
+
+    const condensed: DailyTelemetryRollup[] = Object.entries(groups).map(([dateKey, groupRollups]) => {
+      const first = groupRollups[0];
+      const totalKm = groupRollups.reduce((acc, r) => acc + (r.totalKm || 0), 0);
+      const totalEngineHours = groupRollups.reduce((acc, r) => acc + (r.totalEngineHours || 0), 0);
+      const idlingHours = groupRollups.reduce((acc, r) => acc + (r.idlingHours || 0), 0);
+      const overspeedCount = groupRollups.reduce((acc, r) => acc + (r.overspeedCount || 0), 0);
+      const overspeedSeverity = groupRollups.reduce((acc, r) => acc + (r.overspeedSeverity || 0), 0);
+      const brakingCount = groupRollups.reduce((acc, r) => acc + (r.brakingCount || 0), 0);
+      const brakingSeverity = groupRollups.reduce((acc, r) => acc + (r.brakingSeverity || 0), 0);
+      const corneringCount = groupRollups.reduce((acc, r) => acc + (r.corneringCount || 0), 0);
+      const corneringSeverity = groupRollups.reduce((acc, r) => acc + (r.corneringSeverity || 0), 0);
+      const accelerationCount = groupRollups.reduce((acc, r) => acc + (r.accelerationCount || 0), 0);
+      const accelerationSeverity = groupRollups.reduce((acc, r) => acc + (r.accelerationSeverity || 0), 0);
+      const highRpmCount = groupRollups.reduce((acc, r) => acc + (r.highRpmCount || 0), 0);
+      const highRpmSeverity = groupRollups.reduce((acc, r) => acc + (r.highRpmSeverity || 0), 0);
+      const coldEngineStrainCount = groupRollups.reduce((acc, r) => acc + (r.coldEngineStrainCount || 0), 0);
+      const coastingInNeutralCount = groupRollups.reduce((acc, r) => acc + (r.coastingInNeutralCount || 0), 0);
+      const engineLuggingCount = groupRollups.reduce((acc, r) => acc + (r.engineLuggingCount || 0), 0);
+      const highLoadStrainCount = groupRollups.reduce((acc, r) => acc + (r.highLoadStrainCount || 0), 0);
+      const criticalOverheatingCount = groupRollups.reduce((acc, r) => acc + (r.criticalOverheatingCount || 0), 0);
+      const activeFaultCodesCount = groupRollups.reduce((acc, r) => acc + (r.activeFaultCodesCount || 0), 0);
+      const deviceUnpluggedCount = groupRollups.reduce((acc, r) => acc + (r.deviceUnpluggedCount || 0), 0);
+
+      const uniqueDriversMap: Record<string, NonNullable<DailyTelemetryRollup["driver"]>> = {};
+      groupRollups.forEach((r) => {
+        if (r.driver) {
+          uniqueDriversMap[r.driver.id] = r.driver;
+        }
+      });
+      const uniqueDrivers = Object.values(uniqueDriversMap);
+
+      let driver: DailyTelemetryRollup["driver"] = null;
+      if (uniqueDrivers.length === 1) {
+        driver = uniqueDrivers[0];
+      } else if (uniqueDrivers.length > 1) {
+        driver = {
+          id: "multiple",
+          firstName: "Varios",
+          lastName: "Conductores",
+          nationalId: uniqueDrivers.map((d) => d.nationalId).join(", "),
+        };
+      }
+
+      return {
+        ...first,
+        id: `${first.vehicleId}-${dateKey}`,
+        date: first.date,
+        driver,
+        totalKm,
+        totalEngineHours,
+        idlingHours,
+        overspeedCount,
+        overspeedSeverity,
+        brakingCount,
+        brakingSeverity,
+        corneringCount,
+        corneringSeverity,
+        accelerationCount,
+        accelerationSeverity,
+        highRpmCount,
+        highRpmSeverity,
+        coldEngineStrainCount,
+        coastingInNeutralCount,
+        engineLuggingCount,
+        highLoadStrainCount,
+        criticalOverheatingCount,
+        activeFaultCodesCount,
+        deviceUnpluggedCount,
+      } as DailyTelemetryRollup;
+    });
+
+    return condensed.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [vehicle.DailyTelemetryRollup]);
+
   const showRollupGrouping = rollups.length > 5;
 
   const getMonthYearLabel = (dateStr: string | Date) => {
@@ -159,7 +248,13 @@ export function VehicleDetailClient({
         {day.overspeedCount > 0 ||
         totalHarsh > 0 ||
         (!!day.deviceUnpluggedCount && day.deviceUnpluggedCount > 0) ||
-        day.activeFaultCodesCount > 0 ? (
+        day.activeFaultCodesCount > 0 ||
+        (day.highRpmCount ?? 0) > 0 ||
+        (day.coldEngineStrainCount ?? 0) > 0 ||
+        (day.coastingInNeutralCount ?? 0) > 0 ||
+        (day.engineLuggingCount ?? 0) > 0 ||
+        (day.highLoadStrainCount ?? 0) > 0 ||
+        (day.criticalOverheatingCount ?? 0) > 0 ? (
           <div className="flex flex-wrap gap-2 pt-1">
             {day.overspeedCount > 0 && (
               <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-rose-500/10 text-rose-600 border border-rose-500/20 font-bold font-mono text-[10px] gap-1">
@@ -195,6 +290,42 @@ export function VehicleDetailClient({
               <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-purple-500/10 text-purple-600 border border-purple-500/20 font-bold font-mono text-[10px] gap-1">
                 <AlertCircle className="size-3" />
                 DTC ({day.activeFaultCodesCount})
+              </span>
+            )}
+            {(day.highRpmCount ?? 0) > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 font-bold font-mono text-[10px] gap-1">
+                <Zap className="size-3" />
+                {day.highRpmCount} RPM
+              </span>
+            )}
+            {(day.coldEngineStrainCount ?? 0) > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-bold font-mono text-[10px] gap-1">
+                <Thermometer className="size-3" />
+                Motor Frío ({day.coldEngineStrainCount})
+              </span>
+            )}
+            {(day.coastingInNeutralCount ?? 0) > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-neutral-500/10 text-neutral-600 border border-neutral-500/20 font-bold font-mono text-[10px] gap-1">
+                <Activity className="size-3" />
+                Neutro ({day.coastingInNeutralCount})
+              </span>
+            )}
+            {(day.engineLuggingCount ?? 0) > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-bold font-mono text-[10px] gap-1">
+                <TrendingDown className="size-3" />
+                Lugging ({day.engineLuggingCount})
+              </span>
+            )}
+            {(day.highLoadStrainCount ?? 0) > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold font-mono text-[10px] gap-1">
+                <ShieldAlert className="size-3" />
+                Esfuerzo Carga ({day.highLoadStrainCount})
+              </span>
+            )}
+            {(day.criticalOverheatingCount ?? 0) > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-red-600 text-white border border-red-700 font-bold font-mono text-[10px] gap-1 animate-pulse">
+                <Flame className="size-3" />
+                Calentamiento ({day.criticalOverheatingCount})
               </span>
             )}
           </div>
@@ -344,7 +475,13 @@ export function VehicleDetailClient({
           day.overspeedCount > 0 ||
           totalHarsh > 0 ||
           (!!day.deviceUnpluggedCount && day.deviceUnpluggedCount > 0) ||
-          day.activeFaultCodesCount > 0;
+          day.activeFaultCodesCount > 0 ||
+          (day.highRpmCount ?? 0) > 0 ||
+          (day.coldEngineStrainCount ?? 0) > 0 ||
+          (day.coastingInNeutralCount ?? 0) > 0 ||
+          (day.engineLuggingCount ?? 0) > 0 ||
+          (day.highLoadStrainCount ?? 0) > 0 ||
+          (day.criticalOverheatingCount ?? 0) > 0;
 
         if (!hasEvents) {
           return (
@@ -398,6 +535,72 @@ export function VehicleDetailClient({
                 <span className="inline-flex items-center justify-center p-1.5 rounded-lg bg-purple-500/10 text-purple-600 border border-purple-500/20 font-bold font-mono text-xs gap-1">
                   <AlertCircle className="size-3.5" />
                   {day.activeFaultCodesCount} DTC
+                </span>
+              </div>
+            )}
+            {(day.highRpmCount ?? 0) > 0 && (
+              <div
+                className="tooltip tooltip-bottom"
+                data-tip={`Altas revoluciones: ${day.highRpmCount} eventos`}
+              >
+                <span className="inline-flex items-center justify-center p-1.5 rounded-lg bg-orange-500/10 text-orange-600 border border-orange-500/20 font-bold font-mono text-xs gap-1">
+                  <Zap className="size-3.5" />
+                  {day.highRpmCount} RPM
+                </span>
+              </div>
+            )}
+            {(day.coldEngineStrainCount ?? 0) > 0 && (
+              <div
+                className="tooltip tooltip-bottom"
+                data-tip={`Esfuerzo motor frío: ${day.coldEngineStrainCount} eventos`}
+              >
+                <span className="inline-flex items-center justify-center p-1.5 rounded-lg bg-blue-500/10 text-blue-600 border border-blue-500/20 font-bold font-mono text-xs gap-1">
+                  <Thermometer className="size-3.5" />
+                  {day.coldEngineStrainCount} Frío
+                </span>
+              </div>
+            )}
+            {(day.coastingInNeutralCount ?? 0) > 0 && (
+              <div
+                className="tooltip tooltip-bottom"
+                data-tip={`Conducción en neutro (coasting): ${day.coastingInNeutralCount} eventos`}
+              >
+                <span className="inline-flex items-center justify-center p-1.5 rounded-lg bg-neutral-500/10 text-neutral-600 border border-neutral-500/20 font-bold font-mono text-xs gap-1">
+                  <Activity className="size-3.5" />
+                  {day.coastingInNeutralCount} Neutro
+                </span>
+              </div>
+            )}
+            {(day.engineLuggingCount ?? 0) > 0 && (
+              <div
+                className="tooltip tooltip-bottom"
+                data-tip={`Sobreesfuerzo a bajas RPM (lugging): ${day.engineLuggingCount} eventos`}
+              >
+                <span className="inline-flex items-center justify-center p-1.5 rounded-lg bg-amber-500/10 text-amber-600 border border-amber-500/20 font-bold font-mono text-xs gap-1">
+                  <TrendingDown className="size-3.5" />
+                  {day.engineLuggingCount} Lugging
+                </span>
+              </div>
+            )}
+            {(day.highLoadStrainCount ?? 0) > 0 && (
+              <div
+                className="tooltip tooltip-bottom"
+                data-tip={`Esfuerzo con alta carga: ${day.highLoadStrainCount} eventos`}
+              >
+                <span className="inline-flex items-center justify-center p-1.5 rounded-lg bg-rose-500/10 text-rose-600 border border-rose-500/20 font-bold font-mono text-xs gap-1">
+                  <ShieldAlert className="size-3.5" />
+                  {day.highLoadStrainCount} Carga
+                </span>
+              </div>
+            )}
+            {(day.criticalOverheatingCount ?? 0) > 0 && (
+              <div
+                className="tooltip tooltip-bottom"
+                data-tip={`SOBRECALENTAMIENTO CRÍTICO: ${day.criticalOverheatingCount} eventos`}
+              >
+                <span className="inline-flex items-center justify-center p-1.5 rounded-lg bg-red-600 text-white border border-red-700 font-bold font-mono text-xs gap-1 animate-pulse">
+                  <Flame className="size-3.5" />
+                  {day.criticalOverheatingCount} TEMP
                 </span>
               </div>
             )}
@@ -985,7 +1188,7 @@ export function VehicleDetailClient({
           <div className="hidden md:block">
             <Table
               columns={telemetryColumns}
-              data={vehicle.DailyTelemetryRollup || []}
+              data={rollups}
               keyExtractor={(day) => day.id}
               className="table table-compact w-full text-xs"
               wrapperClassName="overflow-x-auto rounded-xl border border-base-200"
