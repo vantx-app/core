@@ -41,6 +41,12 @@ describe('DriversService', () => {
       driverScoreSnapshot: {
         findUnique: jest.fn(),
       },
+      assignment: {
+        findMany: jest.fn(),
+      },
+      trip: {
+        findMany: jest.fn(),
+      },
     };
 
     usersMock = {
@@ -689,6 +695,118 @@ describe('DriversService', () => {
       );
 
       expect(result).toEqual(mockBreakdown);
+    });
+  });
+
+  describe('findTripsForDriver', () => {
+    const queryingUser = {
+      sub: 'user-1',
+      role: ROLES.DRIVER,
+      orgId: 'org-1',
+    };
+
+    it('debe retornar lista de viajes con la informacion del vehiculo incluida', async () => {
+      // Mock driver resolution, access check, and metadata query
+      prismaMock.driver.findUnique
+        .mockResolvedValueOnce({ id: 'driver-1' })
+        .mockResolvedValueOnce({ userId: 'user-1' })
+        .mockResolvedValueOnce({
+          id: 'driver-1',
+          firstName: 'Juan',
+          lastName: 'Perez',
+          nationalId: '123456',
+        });
+
+      // Mock assignments
+      const mockAssignments = [
+        {
+          id: 'assign-1',
+          driverId: 'driver-1',
+          vehicleId: 'vehicle-1',
+          from: new Date('2026-06-01T00:00:00Z'),
+          to: null,
+        },
+      ];
+      prismaMock.assignment.findMany.mockResolvedValueOnce(mockAssignments);
+
+      // Mock trips
+      const mockTrips = [
+        {
+          id: 'trip-1',
+          vehicleId: 'vehicle-1',
+          startTime: new Date('2026-06-02T10:00:00Z'),
+          endTime: new Date('2026-06-02T11:00:00Z'),
+          vehicle: {
+            id: 'vehicle-1',
+            alias: 'Camioneta 1',
+            plateNumber: 'HP-9999',
+            make: 'Toyota',
+            model: 'Hilux',
+            year: 2023,
+            vin: '1234567890ABCDEF',
+            scoringProfile: {
+              rulesEngine: null,
+            },
+          },
+          dailyTelemetryRollups: [],
+        },
+      ];
+      prismaMock.trip.findMany.mockResolvedValueOnce(mockTrips);
+
+      // Mock rulesEngineService details scoring
+      rulesEngineMock.evaluateAggregatedRollupWithDetails.mockReturnValue({
+        scores: {
+          overallScore: 90,
+          safetyScore: 92,
+          ecoScore: 88,
+          assetScore: 94,
+          totalKm: 10,
+          totalHours: 1,
+          idlingHours: 0.1,
+        },
+        ruleDeductions: [],
+        pillarDeductions: {},
+      });
+
+      const result = await service.findTripsForDriver('me', queryingUser);
+
+      expect(prismaMock.driver.findUnique).toHaveBeenNthCalledWith(1, {
+        where: { userId: 'user-1' },
+        select: { id: true },
+      });
+      expect(prismaMock.assignment.findMany).toHaveBeenCalledWith({
+        where: { driverId: 'driver-1' },
+        orderBy: { from: 'asc' },
+      });
+      expect(prismaMock.trip.findMany).toHaveBeenCalled();
+
+      // Verificar que el conductor y la informacion del vehiculo esten mapeados
+      expect(result).toHaveLength(1);
+      expect(result[0]).toEqual(
+        expect.objectContaining({
+          id: 'trip-1',
+          vehicleId: 'vehicle-1',
+          overallScore: 90,
+          safetyScore: 92,
+          ecoScore: 88,
+          assetScore: 94,
+          driver: {
+            id: 'driver-1',
+            firstName: 'Juan',
+            lastName: 'Perez',
+            nationalId: '123456',
+          },
+          vehicle: {
+            id: 'vehicle-1',
+            alias: 'Camioneta 1',
+            plateNumber: 'HP-9999',
+            make: 'Toyota',
+            model: 'Hilux',
+            year: 2023,
+            vin: '1234567890ABCDEF',
+          },
+        })
+      );
     });
   });
 });

@@ -741,6 +741,17 @@ export class DriversService {
         ...tripWithoutVehicle,
         ...scores,
         driver,
+        vehicle: vehicle
+          ? {
+              id: vehicle.id,
+              alias: vehicle.alias,
+              plateNumber: vehicle.plateNumber,
+              make: vehicle.make,
+              model: vehicle.model,
+              year: vehicle.year,
+              vin: vehicle.vin,
+            }
+          : null,
       };
     });
   }
