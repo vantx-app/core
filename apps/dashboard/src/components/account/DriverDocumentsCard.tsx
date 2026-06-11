@@ -185,7 +185,7 @@ export function DriverDocumentsCard({
 
   if (loading) {
     return (
-      <div className="card bg-base-100/30 backdrop-blur-md border border-base-200 shadow-xl rounded-2xl w-full">
+      <div className="card bg-base-100/30 backdrop-blur-md border border-base-200 shadow-md rounded-2xl w-full">
         <div className="card-body p-6 flex flex-col items-center justify-center min-h-[200px]">
           <Loader2 className="size-8 animate-spin text-primary" />
           <p className="text-xs text-base-content/50 mt-2">
@@ -197,7 +197,7 @@ export function DriverDocumentsCard({
   }
 
   return (
-    <div className="card bg-base-100/30 backdrop-blur-md border border-base-200 shadow-xl rounded-2xl w-full">
+    <div className="card bg-base-100/30 backdrop-blur-md border border-base-200 shadow-md rounded-2xl w-full">
       <div className="card-body p-6 space-y-6">
         <div>
           <h3 className="font-extrabold text-lg text-base-content flex items-center gap-2">

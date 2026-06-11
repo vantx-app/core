@@ -621,11 +621,10 @@ export default function OrganizationsPage() {
                     <div className="font-semibold text-base-content flex items-center gap-2">
                       {u.name || "Sin Nombre"}
                       <span
-                        className={`badge badge-sm text-[10px] text-white font-bold py-1 px-1.5 ${
-                          u.role === "OWNER"
+                        className={`badge badge-sm text-[10px] text-white font-bold py-1 px-1.5 ${u.role === "OWNER"
                             ? "bg-emerald-600 border-emerald-600"
                             : "bg-slate-500 border-slate-500"
-                        }`}
+                          }`}
                       >
                         {u.role}
                       </span>
@@ -744,11 +743,10 @@ export default function OrganizationsPage() {
           <button
             onClick={() => handleCopyLink(inv.token)}
             disabled={isUsed || isExpired}
-            className={`btn btn-sm ${
-              isCopied
+            className={`btn btn-sm ${isCopied
                 ? "btn-success text-white"
                 : "btn-outline border-base-300 text-base-content hover:bg-base-200"
-            } font-semibold transition-all duration-200 rounded-xl`}
+              } font-semibold transition-all duration-200 rounded-xl`}
             title={isCopied ? "¡Copiado!" : "Copiar enlace"}
           >
             {isCopied ? (
@@ -814,7 +812,7 @@ export default function OrganizationsPage() {
     return (
       <div
         key={org.id}
-        className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-xl hover:border-primary/30 transition-all duration-300 group relative flex flex-col justify-between text-left animate-in fade-in zoom-in-95 duration-200"
+        className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-md hover:border-primary/30 transition-all duration-300 group relative flex flex-col justify-between text-left animate-in fade-in zoom-in-95 duration-200"
       >
         <div className="card-body p-6 flex flex-col justify-between">
           <div className="space-y-4">
@@ -993,33 +991,30 @@ export default function OrganizationsPage() {
       <div className="flex bg-base-100/40 border border-base-200/60 backdrop-blur-md p-1 rounded-2xl max-w-md shadow-inner gap-1">
         <button
           onClick={() => setActiveTab("orgs")}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${
-            activeTab === "orgs"
+          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${activeTab === "orgs"
               ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]"
               : "text-base-content/60 hover:text-base-content hover:bg-base-200/50"
-          }`}
+            }`}
         >
           <Building2 className="size-4" />
           Organizaciones
         </button>
         <button
           onClick={() => setActiveTab("invitations")}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${
-            activeTab === "invitations"
+          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${activeTab === "invitations"
               ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]"
               : "text-base-content/60 hover:text-base-content hover:bg-base-200/50"
-          }`}
+            }`}
         >
           <Link2 className="size-4" />
           Invitaciones
         </button>
         <button
           onClick={() => setActiveTab("settings")}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${
-            activeTab === "settings"
+          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${activeTab === "settings"
               ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]"
               : "text-base-content/60 hover:text-base-content hover:bg-base-200/50"
-          }`}
+            }`}
         >
           <Settings className="size-4" />
           Precios
@@ -1166,7 +1161,7 @@ export default function OrganizationsPage() {
               data={invitations}
               keyExtractor={(inv) => inv.id}
               className="table w-full text-left"
-              wrapperClassName="bg-base-100/60 backdrop-blur-md rounded-2xl border border-base-200 overflow-hidden shadow-xl overflow-x-auto w-full"
+              wrapperClassName="bg-base-100/60 backdrop-blur-md rounded-2xl border border-base-200 overflow-hidden shadow-md overflow-x-auto w-full"
               tbodyClassName="divide-y divide-base-200/40"
               rowClassName="hover:bg-base-200/20 transition-colors"
               pagination={true}
@@ -1177,7 +1172,7 @@ export default function OrganizationsPage() {
       )}
 
       {activeTab === "settings" && (
-        <div className="bg-base-100/60 backdrop-blur-md rounded-2xl border border-base-200 overflow-hidden shadow-xl p-8 max-w-2xl mx-auto space-y-6">
+        <div className="bg-base-100/60 backdrop-blur-md rounded-2xl border border-base-200 overflow-hidden shadow-md p-8 max-w-2xl mx-auto space-y-6">
           <div className="flex items-center gap-3 pb-4 border-b border-base-200">
             <div className="p-3 bg-primary/10 rounded-xl">
               <DollarSign className="text-primary size-6" />

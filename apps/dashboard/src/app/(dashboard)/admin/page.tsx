@@ -136,7 +136,7 @@ function BillingTab() {
           };
           throw new Error(
             axiosUploadErr.response?.data?.message ||
-              "Error al subir el comprobante de pago.",
+            "Error al subir el comprobante de pago.",
           );
         } finally {
           setUploadingReceipt(false);
@@ -321,7 +321,7 @@ function BillingTab() {
           </div>
 
           {/* BENEFITS HIGHLIGHT CARD */}
-          <div className="card bg-gradient-to-br from-blue-700 to-indigo-900 text-white shadow-xl">
+          <div className="card bg-gradient-to-br from-blue-700 to-indigo-900 text-white shadow-md">
             <div className="card-body p-6 space-y-4">
               <div className="flex items-center gap-2">
                 <Sparkles className="size-5 text-yellow-300" />
@@ -429,8 +429,8 @@ function BillingTab() {
                           Placa: {vehicle.plateNumber}
                         </span>
                         {vehicle.trialActivated &&
-                        vehicle.trialExpiresAt &&
-                        new Date() < new Date(vehicle.trialExpiresAt) ? (
+                          vehicle.trialExpiresAt &&
+                          new Date() < new Date(vehicle.trialExpiresAt) ? (
                           <span className="badge badge-sm badge-success text-[10px] uppercase font-bold tracking-wider px-2 text-white bg-emerald-500 border-none">
                             Prueba Gratuita (Expira:{" "}
                             {new Date(
@@ -469,7 +469,7 @@ function BillingTab() {
                             };
                             setErrorMsg(
                               axiosErr.response?.data?.message ||
-                                "Error al actualizar plan de vehículo",
+                              "Error al actualizar plan de vehículo",
                             );
                           }
                         }}
@@ -652,19 +652,19 @@ const TABS: {
   icon: React.ElementType;
   roles: string[];
 }[] = [
-  {
-    key: "overview",
-    label: "Panel",
-    icon: Settings,
-    roles: [ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN],
-  },
-  {
-    key: "billing",
-    label: "Facturación",
-    icon: CreditCard,
-    roles: [ROLES.OWNER, ROLES.ADMIN],
-  },
-];
+    {
+      key: "overview",
+      label: "Panel",
+      icon: Settings,
+      roles: [ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN],
+    },
+    {
+      key: "billing",
+      label: "Facturación",
+      icon: CreditCard,
+      roles: [ROLES.OWNER, ROLES.ADMIN],
+    },
+  ];
 
 // ─── Admin Overview (existing cards) ─────────────────────────────────────────
 
@@ -888,11 +888,10 @@ function AdminPageContent() {
                 key={tab.key}
                 id={`admin-tab-${tab.key}`}
                 onClick={() => setTab(tab.key)}
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${
-                  isActive
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all duration-200 cursor-pointer ${isActive
                     ? "bg-base-100 text-base-content shadow-md"
                     : "text-base-content/50 hover:text-base-content hover:bg-base-200/70"
-                }`}
+                  }`}
               >
                 <Icon className={`size-4 ${isActive ? "text-primary" : ""}`} />
                 {tab.label}

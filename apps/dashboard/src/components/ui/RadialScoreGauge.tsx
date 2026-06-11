@@ -124,10 +124,10 @@ export function RadialScoreGauge({
 
   // Choose the card styling based on parent component preferences
   const isDriverPortal =
-    className.includes("shadow-xl") ||
+    className.includes("shadow-md") ||
     className.includes("items-center justify-center");
   const cardClass = isDriverPortal
-    ? "card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl items-center justify-center p-6 text-center"
+    ? "card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md items-center justify-center p-6 text-center"
     : "glass-card p-6 flex flex-col items-center justify-between text-center min-h-[220px] hover:border-primary/25 hover:scale-[1.01] transition-all duration-300";
 
   return (

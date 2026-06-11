@@ -27,7 +27,7 @@ export function Card({
     sm: "shadow-sm",
     md: "shadow-md",
     lg: "shadow-lg",
-    xl: "shadow-xl",
+    xl: "shadow-md",
     "2xl": "shadow-2xl",
   };
 
@@ -35,7 +35,7 @@ export function Card({
 
   // Animaciones al pasar el mouse por encima
   const hoverClass = hoverable
-    ? "hover:shadow-xl hover:border-primary/30 active:scale-[0.99]"
+    ? "hover:shadow-md hover:border-primary/30 active:scale-[0.99]"
     : "";
 
   return (

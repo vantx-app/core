@@ -44,7 +44,7 @@ export function AdminCard({
   return (
     <Link
       href={href}
-      className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-xl hover:shadow-2xl hover:border-primary/30 hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between"
+      className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-2xl hover:border-primary/30 hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between"
     >
       <div className="card-body p-6 space-y-4">
         <div className="flex items-center justify-between">

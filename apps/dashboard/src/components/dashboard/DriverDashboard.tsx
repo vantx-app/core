@@ -144,7 +144,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tarjeta de Puntaje General */}
         <div
-          className={`card bg-base-100/50 backdrop-blur-md border ${cardBorderColor} shadow-xl p-6 lg:col-span-1 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
+          className={`card bg-base-100/50 backdrop-blur-md border ${cardBorderColor} shadow-md p-6 lg:col-span-1 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
         >
           <div className="absolute top-0 right-0 p-3 opacity-[0.03] translate-x-4 translate-y-4 pointer-events-none">
             <Award className="size-36 text-base-content" />
@@ -177,7 +177,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
         {/* Tarjetas de Estadísticas Acumuladas */}
         <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
           {/* Kilómetros Recorridos */}
-          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl p-6 flex flex-row items-center gap-4 transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
+          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-row items-center gap-4 transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-600">
               <MapPin className="size-8" />
             </div>
@@ -199,7 +199,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
           </div>
 
           {/* Horas de Conducción */}
-          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl p-6 flex flex-row items-center gap-4 transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
+          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-row items-center gap-4 transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-600">
               <Clock className="size-8" />
             </div>
@@ -224,7 +224,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
           Detalle por Categoría
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
+          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="flex items-center gap-2 mb-2">
               <ShieldCheck className="size-5 text-emerald-500" />
               <span className="text-base-content/75 text-xs font-bold uppercase tracking-wider">
@@ -243,7 +243,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
             </span>
           </div>
 
-          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
+          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="flex items-center gap-2 mb-2">
               <Leaf className="size-5 text-emerald-500" />
               <span className="text-base-content/75 text-xs font-bold uppercase tracking-wider">
@@ -262,7 +262,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
             </span>
           </div>
 
-          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
+          <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="flex items-center gap-2 mb-2">
               <Activity className="size-5 text-emerald-500" />
               <span className="text-base-content/75 text-xs font-bold uppercase tracking-wider">
@@ -401,11 +401,10 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 return (
                   <div
                     key={index}
-                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${
-                      isExpanded
+                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded
                         ? "border-emerald-500/30 shadow-md"
                         : "border-base-200 hover:border-base-300"
-                    }`}
+                      }`}
                   >
                     {/* Header */}
                     <div

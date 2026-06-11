@@ -240,7 +240,7 @@ export function SuperAdminDashboard({
           }
           label="Organizaciones"
           value={organizations.length}
-          className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl hover:shadow-2xl transition-all duration-300"
+          className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md hover:shadow-2xl transition-all duration-300"
         />
         <DashboardStatCard
           icon={
@@ -250,7 +250,7 @@ export function SuperAdminDashboard({
           }
           label="Vehículos Totales"
           value={liveVehicles.length}
-          className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl hover:shadow-2xl transition-all duration-300"
+          className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md hover:shadow-2xl transition-all duration-300"
         />
         <DashboardStatCard
           icon={
@@ -260,7 +260,7 @@ export function SuperAdminDashboard({
           }
           label="Conductores"
           value={drivers.length}
-          className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl hover:shadow-2xl transition-all duration-300"
+          className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md hover:shadow-2xl transition-all duration-300"
         />
         <DashboardStatCard
           icon={
@@ -270,7 +270,7 @@ export function SuperAdminDashboard({
           }
           label="Recorrido Global"
           value={`${totalKm.toLocaleString()} km`}
-          className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-xl hover:shadow-2xl transition-all duration-300"
+          className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md hover:shadow-2xl transition-all duration-300"
         />
       </div>
 

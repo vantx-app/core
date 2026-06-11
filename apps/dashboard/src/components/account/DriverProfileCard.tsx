@@ -18,7 +18,7 @@ export function DriverProfileCard({ stats }: DriverProfileCardProps) {
       : "bg-base-200 text-base-content/60";
 
   return (
-    <div className="card bg-base-100/30 backdrop-blur-md border border-base-200 shadow-xl rounded-2xl w-full">
+    <div className="card bg-base-100/30 backdrop-blur-md border border-base-200 shadow-md rounded-2xl w-full">
       <div className="card-body p-6 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

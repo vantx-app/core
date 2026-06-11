@@ -322,7 +322,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
 
       {/* Contenedor flotante de la tarjeta de detalles (sólido y ultra-compacto para pantallas móviles) */}
       <div className="absolute top-4 left-4 right-4 md:right-auto md:w-80 z-10 animate-in fade-in slide-in-from-top-4 duration-300">
-        <div className="bg-base-100 border border-base-300/60 shadow-xl rounded-2xl p-4 flex flex-col gap-2.5">
+        <div className="bg-base-100 border border-base-300/60 shadow-md rounded-2xl p-4 flex flex-col gap-2.5">
           {/* Fila superior: Placa del vehículo y Estado del vehículo */}
           <div className="flex items-center justify-between text-xs pb-2">
             <div className="flex items-center gap-1.5 font-bold font-mono text-base-content/85">

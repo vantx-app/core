@@ -157,7 +157,7 @@ function OwnerRegisterStepper() {
         <div className="mb-8 animate-pulse">
           <Logo size="lg" />
         </div>
-        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-xl flex flex-col gap-6">
+        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-md flex flex-col gap-6">
           <div className="h-6 bg-slate-100 rounded-md w-2/3 mx-auto animate-pulse"></div>
           <div className="h-4 bg-slate-100/60 rounded-md w-1/2 mx-auto animate-pulse"></div>
           <div className="flex flex-col gap-4 mt-4">
@@ -175,7 +175,7 @@ function OwnerRegisterStepper() {
         <div className="mb-6">
           <Logo size="lg" />
         </div>
-        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-xl flex flex-col items-center text-center gap-6 relative overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-md flex flex-col items-center text-center gap-6 relative overflow-hidden">
           <div className="absolute -top-12 -left-12 w-32 h-32 bg-red-500/5 rounded-full blur-3xl"></div>
 
           <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center border border-red-100 text-red-500 animate-bounce">
@@ -220,7 +220,7 @@ function OwnerRegisterStepper() {
   if (isSuccess) {
     return (
       <div className="flex flex-col justify-center items-center h-screen px-4 w-full bg-slate-50 text-slate-800">
-        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-xl flex flex-col items-center text-center gap-6">
+        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-md flex flex-col items-center text-center gap-6">
           <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-600">
             <CheckCircle size={32} />
           </div>
@@ -265,7 +265,7 @@ function OwnerRegisterStepper() {
           </p>
 
           {/* Panel decorativo de telemetría mockup */}
-          <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-xl overflow-hidden">
+          <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-md overflow-hidden">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-semibold text-slate-300">
                 Monitoreo de Flota Activa
@@ -350,7 +350,7 @@ function OwnerRegisterStepper() {
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-6 shadow-xl"
+            className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-6 shadow-md"
           >
             {/* PASO 1: INFORMACIÓN DE LA CUENTA */}
             {currentStep === "account" && (

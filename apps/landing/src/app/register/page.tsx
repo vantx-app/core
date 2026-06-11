@@ -121,7 +121,7 @@ function RegisterStepper() {
           </p>
 
           {/* Panel decorativo de telemetría mockup */}
-          <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-xl overflow-hidden">
+          <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-md overflow-hidden">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-semibold text-slate-300">
                 Resumen de Viaje Reciente
@@ -204,7 +204,7 @@ function RegisterStepper() {
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-6 shadow-xl"
+            className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-6 shadow-md"
           >
             {/* VISTA 1: VERIFICACIÓN */}
             <div className={currentStep === "verify" ? "block" : "hidden"}>

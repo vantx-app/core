@@ -289,11 +289,10 @@ function ReportsPageContent() {
 
   return (
     <div
-      className={`p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${
-        activeTab === "daily"
-          ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:space-y-4"
-          : ""
-      }`}
+      className={`p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${activeTab === "daily"
+        ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:space-y-4"
+        : ""
+        }`}
     >
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-base-100/50 backdrop-blur-md p-6 rounded-2xl border border-base-200">
@@ -378,7 +377,7 @@ function ReportsPageContent() {
                     <select
                       value={selectedWeekKey}
                       onChange={(e) => setSelectedWeekKey(e.target.value)}
-                      className="select select-ghost select-xs font-bold text-base-content p-0 focus:bg-transparent h-auto min-h-0 border-none w-full"
+                      className="select select-xs font-bold text-base-content p-0 focus:bg-transparent h-auto min-h-0 border-none w-full"
                     >
                       {driverSnapshots.map((snap, idx) => {
                         const val = `${snap.year}-${snap.weekNumber}`;
@@ -419,7 +418,7 @@ function ReportsPageContent() {
                     {/* Global stats banner */}
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                       {/* Score Card */}
-                      <div className="card bg-base-100/50 border border-base-200 p-6 flex flex-col items-center justify-center text-center shadow-xl">
+                      <div className="card bg-base-100/50 border border-base-200 p-6 flex flex-col items-center justify-center text-center shadow-md">
                         <span className="text-[10px] text-base-content/40 font-bold uppercase tracking-wider mb-2">
                           Puntaje de la Semana
                         </span>

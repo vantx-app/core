@@ -146,7 +146,7 @@ function LoginContent() {
           </p>
 
           {/* Panel decorativo de telemetría mockup */}
-          <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-xl overflow-hidden">
+          <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-md overflow-hidden">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-semibold text-slate-350">
                 Resumen de Viaje Reciente
@@ -224,7 +224,7 @@ function LoginContent() {
 
             <form
               onSubmit={handleSubmit(onSubmit)}
-              className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-4 shadow-xl"
+              className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-4 shadow-md"
             >
               {/* Email Field */}
               <div className="space-y-1">
@@ -236,11 +236,10 @@ function LoginContent() {
                   <input
                     type="email"
                     disabled={isSubmitting}
-                    className={`w-full bg-slate-50 border ${
-                      errors.email
+                    className={`w-full bg-slate-50 border ${errors.email
                         ? "border-red-400 focus:border-red-500"
                         : "border-slate-200 focus:border-slate-400"
-                    } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+                      } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
                     placeholder="ejemplo@vantx.app"
                     {...register("email", {
                       required: "El correo es obligatorio",
@@ -268,11 +267,10 @@ function LoginContent() {
                   <input
                     type={showPassword ? "text" : "password"}
                     disabled={isSubmitting}
-                    className={`w-full bg-slate-50 border ${
-                      errors.password
+                    className={`w-full bg-slate-50 border ${errors.password
                         ? "border-red-400 focus:border-red-500"
                         : "border-slate-200 focus:border-slate-400"
-                    } rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+                      } rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
                     placeholder="••••••••"
                     {...register("password", {
                       required: "La contraseña es obligatoria",

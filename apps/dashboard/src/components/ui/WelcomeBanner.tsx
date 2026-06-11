@@ -12,7 +12,7 @@ export function WelcomeBanner({
 }: WelcomeBannerProps) {
   return (
     <div
-      className={`bg-gradient-to-r ${gradientClass} rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-xl border border-white/5 animate-fade-in`}
+      className={`bg-gradient-to-r ${gradientClass} rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-md border border-white/5 animate-fade-in`}
     >
       {icon && (
         <div className="absolute right-0 bottom-0 opacity-10 translate-x-10 translate-y-10 pointer-events-none">

@@ -75,7 +75,7 @@ const VehicleListItem = memo(
       prev.vehicle.status === next.vehicle.status &&
       prev.vehicle.speed === next.vehicle.speed &&
       prev.vehicle.assignments?.[0]?.driver?.id ===
-        next.vehicle.assignments?.[0]?.driver?.id
+      next.vehicle.assignments?.[0]?.driver?.id
     );
   },
 );
@@ -722,11 +722,10 @@ export default function FleetMap() {
             {/* Botón de seguimiento */}
             <button
               onClick={() => handleToggleFollow(vehicleId as string)}
-              className={`btn btn-sm w-full gap-2 mt-1 transition-all ${
-                followedVehicleId === vehicleId
+              className={`btn btn-sm w-full gap-2 mt-1 transition-all ${followedVehicleId === vehicleId
                   ? "btn-success text-white shadow-md"
                   : "btn-outline border-base-300 hover:bg-base-200"
-              }`}
+                }`}
             >
               <Locate
                 className={`size-4 ${followedVehicleId === vehicleId ? "animate-pulse" : ""}`}
@@ -902,7 +901,7 @@ export default function FleetMap() {
                       ? "bg-rose-400"
                       : "bg-slate-400";
               return (
-                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-2 rounded-full bg-base-100/90 backdrop-blur-md border border-base-300/60 shadow-xl text-sm font-semibold text-base-content pointer-events-auto">
+                <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 px-3.5 py-2 rounded-full bg-base-100/90 backdrop-blur-md border border-base-300/60 shadow-md text-sm font-semibold text-base-content pointer-events-auto">
                   <span
                     className={`size-2 rounded-full ${statusDotClass} animate-pulse shrink-0`}
                   />
