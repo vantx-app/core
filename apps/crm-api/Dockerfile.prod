@@ -33,6 +33,7 @@ COPY --from=builder /app/node_modules/@prisma/client ./node_modules/@prisma/clie
 COPY --from=builder /app/packages/database/dist ./packages/database/dist
 COPY --from=builder /app/packages/auth/dist ./packages/auth/dist
 COPY --from=builder /app/apps/crm-api/dist ./apps/crm-api/dist
+COPY --from=builder /app/apps/crm-api/tools ./apps/crm-api/tools
 COPY --from=builder /app/apps/crm-api/package.json ./apps/crm-api/package.json
 COPY --from=builder /app/packages/database/package.json ./packages/database/package.json
 COPY --from=builder /app/packages/auth/package.json ./packages/auth/package.json
