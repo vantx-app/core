@@ -12,6 +12,7 @@ import {
   X,
   CheckCircle,
   ChevronRight,
+  ArrowDown,
 } from "lucide-react";
 
 function LandingContent() {
@@ -63,20 +64,25 @@ function LandingContent() {
 
       {/* Hero Section */}
       <section className="relative max-w-6xl mx-auto px-6 pt-20 pb-24 text-center z-10">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-600/20 bg-blue-600/5 text-blue-700 text-xs font-semibold mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
-          Telemetría OBD-II Avanzada & Driver Marketplace
+        <div className="flex flex-wrap items-center justify-center gap-3 mb-8">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-blue-600/20 bg-blue-600/5 text-blue-700 text-xs font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping" />
+            Telemetría J1939/J1708 & CAN-bus
+          </div>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-200 bg-white text-slate-700 text-xs font-semibold shadow-sm">
+            Powered by <span className="font-bold text-blue-600">Teltonika</span>
+          </div>
         </div>
         <h1 className="text-5xl md:text-7xl font-black tracking-tight text-slate-900 mb-8 leading-[1.1]">
-          Conectando el transporte del <br />
+          Telemetría CAN-bus y <br />
           <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-600 bg-clip-text text-transparent">
-            futuro en tiempo real
+            Conexión de Flotas Real
           </span>
         </h1>
         <p className="max-w-2xl mx-auto text-base md:text-lg text-slate-600 font-normal leading-relaxed mb-12">
-          VantX unifica el rastreo inteligente de flotas comerciales con
-          telemetría de alta frecuencia OBD-II/CAN-bus y un ecosistema de
-          emparejamiento instantáneo para conductores profesionales.
+          VantX integra hardware Teltonika y adaptadores ECAN02 para certificar el desempeño
+          de tus vehículos. Conectamos estadísticas reales de conducción (Driver Score) para
+          emparejar de forma transparente a conductores profesionales con propietarios de flotas.
         </p>
 
         {/* Hero Split Funnel Actions */}
@@ -94,8 +100,7 @@ function LandingContent() {
                 Soy Propietario de Flota
               </h3>
               <p className="text-slate-650 text-xs leading-relaxed">
-                Monitorea rutas en vivo, analiza consumo de combustible, hábitos
-                de conducción y reduce costos operativos con hardware OBD-II.
+                Monitorea rutas en vivo, comparte enlaces de seguimiento en tiempo real con tus clientes, analiza consumo de combustible y reduce costos operativos.
               </p>
             </div>
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
@@ -154,11 +159,10 @@ function LandingContent() {
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900">
-                    Algoritmo de Penalización Justo
+                    Análisis de Fuerza G y Sensor de Acelerómetro
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Deducción de puntaje proporcional a la severidad del evento
-                    y al kilometraje total recorrido.
+                    Detección automática de aceleración brusca, frenadas severas y giros agresivos reportados a 1Hz por los acelerómetros del hardware.
                   </p>
                 </div>
               </div>
@@ -168,11 +172,10 @@ function LandingContent() {
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-slate-900">
-                    Tres Pilares Clave
+                    Correlación con Consumo del CAN-bus
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Puntajes individuales para Seguridad Vial, Eficiencia de
-                    Combustible e Integridad del Vehículo.
+                    Cruzamos el comportamiento de conducción con el consumo real de combustible, temperatura del motor y tiempos en ralentí (Idle Time).
                   </p>
                 </div>
               </div>
@@ -266,6 +269,130 @@ function LandingContent() {
                 </span>
               </div>
             </div>
+            <div className="text-center mt-4 border-t border-slate-100 pt-3">
+              <span className="text-[9px] text-slate-400 font-mono">
+                * Score calculado semanalmente según norma SAE J1939 y lecturas de telemetría física a 1Hz.
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Section: Marketplace & Matching */}
+      <section
+        id="drivers"
+        className="relative max-w-7xl mx-auto px-6 py-20 z-10 border-t border-slate-200/80"
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          {/* Visual Matching Mockup on the Left */}
+          <div className="order-2 lg:order-1 glass-card p-6 md:p-8 bg-white/90 border-slate-200 relative overflow-hidden">
+            <div className="absolute -top-10 -left-10 w-40 h-40 bg-emerald-600/5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-blue-600/5 rounded-full blur-3xl pointer-events-none" />
+            
+            <h4 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-6 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+              Criterios de Asignación de Viaje
+            </h4>
+
+            {/* Match Status Card */}
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4 mb-6 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-bold text-emerald-800 uppercase tracking-wider block">
+                  Evaluación de Requisitos
+                </span>
+                <span className="text-sm font-bold text-emerald-950">
+                  Licencia Tipo I &amp; Driver Score &gt; 85 Validados
+                </span>
+              </div>
+              <span className="px-2.5 py-1 rounded bg-emerald-500 text-white font-black text-xs uppercase tracking-wider">
+                APTO PARA RUTA
+              </span>
+            </div>
+
+            <div className="space-y-4 relative z-10">
+              {/* Driver Card Mock */}
+              <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-250 flex items-center justify-center font-bold text-slate-700">
+                    CM
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-800">Carlos Mendoza</h5>
+                    <span className="text-[9px] text-slate-400 font-mono block">Licencia: Tipo I (Equipo Pesado)</span>
+                    <span className="text-[9px] text-slate-400 font-mono">Disponibilidad: Inmediata</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase block">Driver Score</span>
+                  <span className="text-sm font-black text-emerald-600">94 / 100</span>
+                </div>
+              </div>
+
+              {/* Matching Line Visual */}
+              <div className="flex justify-center my-2 relative">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-50 border border-slate-200 p-1.5 rounded-full z-10 text-blue-600 shadow-sm flex items-center justify-center">
+                  <ArrowDown className="size-4" />
+                </div>
+                <div className="h-10 w-0.5 border-dashed border-slate-300" />
+              </div>
+
+              {/* Owner/Fleet Card Mock */}
+              <div className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-600/5 border border-blue-600/10 flex items-center justify-center text-blue-600">
+                    <Truck className="size-5" />
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-800">Transportes Gómez S.A.</h5>
+                    <span className="text-[9px] text-slate-400 font-mono block">Ruta: Ciudad de Panamá - Chiriquí</span>
+                    <span className="text-[9px] text-slate-400 font-mono">Carga: Refrigerada (Alimentos)</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="text-[10px] text-slate-400 uppercase block">Tarifa Ofrecida</span>
+                  <span className="text-xs font-extrabold text-slate-850">Competitiva</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Text Content on the Right */}
+          <div className="order-1 lg:order-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
+              Conexión Inteligente y Vetted Marketplace
+            </span>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2 mb-6">
+              El primer marketplace de empleo logístico respaldado por telemetría
+            </h2>
+            <p className="text-slate-600 text-sm leading-relaxed mb-6">
+              VantX elimina la incertidumbre en la contratación de transporte. Los propietarios de flotas acceden a conductores profesionales cuyos hábitos de conducción y seguridad vial han sido auditados directamente por el bus CAN.
+            </p>
+            
+            <div className="space-y-6">
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  Para Propietarios de Flotas (Owners)
+                </h4>
+                <div className="text-xs text-slate-500 mt-1 pl-3.5 space-y-1.5">
+                  <p>
+                    Filtra candidatos por Driver Score verificado, reduciendo la siniestralidad de tus activos y los costos de seguro desde el primer día de contratación.
+                  </p>
+                  <p>
+                    Genera enlaces públicos y temporales de seguimiento para compartir con tus clientes, permitiéndoles rastrear la ubicación del vehículo y el estado del viaje sin darles acceso a tu panel privado.
+                  </p>
+                </div>
+              </div>
+              <div>
+                <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-600" />
+                  Para Conductores Profesionales (Drivers)
+                </h4>
+                <p className="text-xs text-slate-500 mt-1 pl-3.5">
+                  Construye un portafolio de conducción digital y portátil. Tu buen comportamiento al volante se traduce directamente en mejores ofertas salariales y estabilidad laboral.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -284,8 +411,7 @@ function LandingContent() {
                 Teltonika FMC003
               </h4>
               <p className="text-slate-500 text-xs leading-relaxed">
-                Hardware OBD-II plug-and-play con lectura directa de bus CAN y
-                GPS integrado.
+                Rastreador OBD-II plug-and-play LTE Cat M1/NB-IoT. Conexión directa y lectura de parámetros de diagnóstico OBD estándar.
               </p>
             </div>
             <div className="glass-card p-6 bg-white/70 border-slate-200">
@@ -294,17 +420,36 @@ function LandingContent() {
                 Teltonika FMC150
               </h4>
               <p className="text-slate-500 text-xs leading-relaxed">
-                Rastreador avanzado para integración profunda con lecturas de
-                motor y sensores adicionales.
+                Localizador profesional avanzado con interfaz CAN integrada para lectura de datos de motor J1939 y J1708 en flotas pesadas.
               </p>
+            </div>
+            <div className="col-span-2 glass-card p-6 bg-white/70 border-slate-200">
+              <div className="flex items-start gap-4">
+                <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600">
+                  <Cpu className="size-6" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h4 className="text-sm font-bold text-slate-850">
+                      Teltonika ECAN02
+                    </h4>
+                    <span className="badge badge-sm py-0 bg-indigo-100 border border-indigo-200 text-indigo-700 text-[9px] font-bold rounded px-1.5 uppercase">
+                      Lector Sin Contacto
+                    </span>
+                  </div>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    Lector de CAN-bus inductivo que captura datos del bus sin pelar o cortar cables. Ideal para leer consumo de combustible y odómetro de vehículos bajo garantía de fabricante.
+                  </p>
+                </div>
+              </div>
             </div>
             <div className="col-span-2 glass-card p-5 bg-gradient-to-r from-blue-600/5 to-transparent border-slate-200 flex items-center justify-between gap-4">
               <div className="text-left">
                 <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest block">
-                  Lectura OBD-II
+                  LECTURA TOTAL CAN-BUS
                 </span>
                 <span className="text-sm font-bold text-slate-800">
-                  Soporte completo J1939, J1708 y OBDII
+                  Integración directa homologada con ecosistema Teltonika
                 </span>
               </div>
               <CheckCircle className="size-8 text-blue-600 shrink-0" />
@@ -312,34 +457,31 @@ function LandingContent() {
           </div>
 
           <div>
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-2">
+              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold">POWERED BY TELTONIKA</span>
               Hardware & Conectividad IoT
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2 mb-6">
-              Monitoreo inalterable directo del Bus de Datos (CAN)
+              Monitoreo directo del Bus de Datos (CAN) sin invalidar garantías
             </h2>
             <p className="text-slate-600 text-sm leading-relaxed mb-6">
-              Integramos rastreadores OBD-II líderes del mercado para capturar
-              eventos de telemetría directamente del motor. Esto elimina
-              reportes subjetivos o manipulación de datos y brinda total
-              transparencia en auditorías de viaje.
+              Integramos rastreadores y accesorios Teltonika de estándar industrial para leer datos reales del bus CAN. La combinación de rastreadores avanzados y lectores sin contacto asegura total fidelidad de datos sin intervenir físicamente el cableado.
             </p>
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-slate-700">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span>
-                  Códigos de falla en vivo (DTCs) para mantenimiento proactivo.
+                  Lectura inductiva segura con adaptadores Teltonika ECAN02.
                 </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-slate-700">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Monitoreo de odómetro e ignition de alta precisión.</span>
+                <span>Códigos de falla en vivo (DTCs) para mantenimiento proactivo.</span>
               </div>
               <div className="flex items-center gap-2 text-sm text-slate-700">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span>
-                  Alertas inmediatas en caso de desconexión del hardware
-                  (Anti-tamper).
+                  Alertas inmediatas en caso de desconexión del hardware (Anti-tamper).
                 </span>
               </div>
             </div>
