@@ -120,6 +120,7 @@ services:
       - NODE_ENV=production
       - INGESTOR_PORT=9000
       - INGESTOR_HOST=0.0.0.0
+      - API_HOST=vantx_server
     ports:
       - "0.0.0.0:9000:9000"
     depends_on:
