@@ -1,13 +1,22 @@
-export const getScoreCircleColor = (score: number): string => {
+export const getScoreCircleColor = (score: number | null | undefined): string => {
+  if (score == null) return "text-base-content/20 stroke-base-300";
   if (score >= 85) return "text-success stroke-success";
   if (score >= 70) return "text-warning stroke-warning";
   return "text-error stroke-error";
 };
 
-export const getScoreBadgeColor = (score: number): string => {
+export const getScoreBadgeColor = (score: number | null | undefined): string => {
+  if (score == null) return "badge-ghost text-base-content/50 border-base-200/80";
   if (score >= 85) return "badge-success text-white";
   if (score >= 70) return "badge-warning text-white";
   return "badge-error text-white";
+};
+
+export const getScoreTextColor = (score: number | null | undefined): string => {
+  if (score == null) return "text-base-content/40";
+  if (score >= 85) return "text-success";
+  if (score >= 70) return "text-warning";
+  return "text-error";
 };
 
 export const getVehicleStatusBadgeClass = (status: string): string => {
@@ -66,7 +75,7 @@ export const formatHours = (
   return formatDecimalHours(hoursDecimal, false);
 };
 
-export const formatDate = (dateString: string): string => {
+export const formatDate = (dateString: string | Date): string => {
   return baseFormatDate(dateString, {
     day: "2-digit",
     month: "2-digit",

@@ -45,6 +45,8 @@ export interface DashboardDriver {
     assetScore?: number | null;
     totalKm?: number | null;
     totalHours?: number | null;
+    totalSnapshots?: number | null;
+    lastUpdated?: string | Date | null;
   } | null;
   assignments?: {
     vehicle?: {
@@ -118,6 +120,8 @@ export interface DriverStats {
     globalOverallScore?: number | null;
     totalKm?: number | null;
     totalHours?: number | null;
+    totalSnapshots?: number | null;
+    lastUpdated?: string | Date | null;
   } | null;
   assignments?: {
     vehicle: {
@@ -455,6 +459,8 @@ export interface DriversPageDriver {
     safetyScore?: number;
     ecoScore?: number;
     assetScore?: number;
+    lastUpdated?: string | Date;
+    totalSnapshots?: number;
   } | null;
   assignments: Array<{
     id: string;
@@ -694,6 +700,8 @@ export interface DriverSummary {
     safetyScore?: number;
     ecoScore?: number;
     assetScore?: number;
+    lastUpdated?: string | Date;
+    totalSnapshots?: number;
   } | null;
   assignments?: Array<{
     id: string;
@@ -740,7 +748,7 @@ export interface MovementStatusBadgeProps {
 }
 
 export interface ScoreProgressBarProps {
-  score: number;
+  score: number | null | undefined;
   label: string;
 }
 
@@ -750,7 +758,7 @@ export interface DtcBadgeProps {
 }
 
 export interface RadialScoreGaugeProps {
-  score: number;
+  score: number | null | undefined;
   title: string;
   subtitle?: string;
   footerText?: string;
@@ -758,6 +766,7 @@ export interface RadialScoreGaugeProps {
   size?: "md" | "lg" | "xl";
   className?: string;
   noCard?: boolean;
+  lastUpdated?: string | Date | null;
 }
 
 export interface WelcomeBannerProps {

@@ -211,22 +211,21 @@ export function VehicleDetailClient({
   };
 
   // Calculamos promedios o usamos estadísticas globales
-  const avgSafety =
-    vehicle.VehicleGlobalStats?.globalSafetyScore != null
-      ? Math.round(vehicle.VehicleGlobalStats.globalSafetyScore)
-      : 100;
-  const avgEco =
-    vehicle.VehicleGlobalStats?.globalFuelEfficiency != null
-      ? Math.round(vehicle.VehicleGlobalStats.globalFuelEfficiency)
-      : 100;
-  const avgAsset =
-    vehicle.VehicleGlobalStats?.globalMaintenanceScore != null
-      ? Math.round(vehicle.VehicleGlobalStats.globalMaintenanceScore)
-      : 100;
-  const overallScore =
-    vehicle.VehicleGlobalStats?.globalOverallScore != null
-      ? Math.round(vehicle.VehicleGlobalStats.globalOverallScore)
-      : 100;
+  const hasStats = vehicle.VehicleGlobalStats != null &&
+    ((vehicle.VehicleGlobalStats.totalKm ?? 0) > 0 || (vehicle.VehicleGlobalStats.totalEngineHours ?? 0) > 0);
+  const avgSafety = hasStats && vehicle.VehicleGlobalStats!.globalSafetyScore != null
+      ? Math.round(vehicle.VehicleGlobalStats!.globalSafetyScore)
+      : null;
+  const avgEco = hasStats && vehicle.VehicleGlobalStats!.globalFuelEfficiency != null
+      ? Math.round(vehicle.VehicleGlobalStats!.globalFuelEfficiency)
+      : null;
+  const avgAsset = hasStats && vehicle.VehicleGlobalStats!.globalMaintenanceScore != null
+      ? Math.round(vehicle.VehicleGlobalStats!.globalMaintenanceScore)
+      : null;
+  const overallScore = hasStats && vehicle.VehicleGlobalStats!.globalOverallScore != null
+      ? Math.round(vehicle.VehicleGlobalStats!.globalOverallScore)
+      : null;
+  const lastUpdated = vehicle.VehicleGlobalStats?.lastUpdated || null;
 
   const scoreColumns: TableColumn<VehicleScoreSnapshot>[] = [
     {
@@ -811,6 +810,7 @@ export function VehicleDetailClient({
               title="Puntaje Operativo General"
               subtitle="Ponderación de seguridad y economía de la unidad"
               className="min-h-[260px] space-y-4"
+              lastUpdated={lastUpdated}
               footer={
                 <div className="flex gap-2 w-full text-xs">
                   <div className="flex-1 bg-base-200/40 border border-base-200 p-2 rounded-xl">
@@ -851,18 +851,21 @@ export function VehicleDetailClient({
               title="Seguridad Vial"
               subtitle="Excesos de velocidad y eventos bruscos"
               footerText="Seguridad Vial"
+              lastUpdated={lastUpdated}
             />
             <RadialScoreGauge
               score={avgEco}
               title="Eficiencia de Combustible"
               subtitle="Uso excesivo de ralentí y eficiencia"
               footerText="Métrica Eco"
+              lastUpdated={lastUpdated}
             />
             <RadialScoreGauge
               score={avgAsset}
               title="Salud del Activo"
               subtitle="Desgaste mecánico, RPMs y DTCs"
               footerText="Cuidado de Motor"
+              lastUpdated={lastUpdated}
             />
           </div>
 

@@ -262,13 +262,7 @@ export default function TripsHistoryView({
                           </span>
                           {!isOngoing && trip.overallScore !== undefined && (
                             <span
-                              className={`badge badge-xs font-black px-1.5 border ${
-                                trip.overallScore >= 90
-                                  ? "bg-green-500/10 border-green-500/20 text-green-600"
-                                  : trip.overallScore >= 75
-                                    ? "bg-yellow-500/10 border-yellow-500/20 text-yellow-600"
-                                    : "bg-red-500/10 border-red-500/20 text-red-600"
-                              }`}
+                              className={`badge badge-xs font-black px-1.5 ${getScoreBadgeColor(trip.overallScore)}`}
                             >
                               {Math.round(trip.overallScore)} pts
                             </span>

@@ -76,9 +76,10 @@ export function OwnerDashboard({
   let sumAsset = 0;
   let totalKm = 0;
   let countWithStats = 0;
+  let latestUpdate: Date | null = null;
 
   drivers.forEach((d) => {
-    if (d.globalStats) {
+    if (d.globalStats && d.globalStats.totalSnapshots != null && d.globalStats.totalSnapshots > 0) {
       sumSafety +=
         d.globalStats.globalSafetyScore ?? d.globalStats.safetyScore ?? 100;
       sumEco += d.globalStats.globalEcoScore ?? d.globalStats.ecoScore ?? 100;
@@ -86,18 +87,25 @@ export function OwnerDashboard({
         d.globalStats.globalAssetScore ?? d.globalStats.assetScore ?? 100;
       totalKm += d.globalStats.totalKm ?? 0;
       countWithStats++;
+
+      if (d.globalStats.lastUpdated) {
+        const updateDate = new Date(d.globalStats.lastUpdated);
+        if (!latestUpdate || updateDate > latestUpdate) {
+          latestUpdate = updateDate;
+        }
+      }
     }
   });
 
   const avgSafety =
-    countWithStats > 0 ? Math.round(sumSafety / countWithStats) : 100;
-  const avgEco = countWithStats > 0 ? Math.round(sumEco / countWithStats) : 100;
+    countWithStats > 0 ? Math.round(sumSafety / countWithStats) : null;
+  const avgEco = countWithStats > 0 ? Math.round(sumEco / countWithStats) : null;
   const avgAsset =
-    countWithStats > 0 ? Math.round(sumAsset / countWithStats) : 100;
+    countWithStats > 0 ? Math.round(sumAsset / countWithStats) : null;
 
   // Conductores ordenados por puntaje de seguridad (de menor a mayor para destacar riesgos)
   const riskDrivers = [...drivers]
-    .filter((d) => d.globalStats)
+    .filter((d) => d.globalStats && d.globalStats.totalSnapshots != null && d.globalStats.totalSnapshots > 0)
     .sort((a, b) => {
       const scoreA =
         a.globalStats?.globalSafetyScore ?? a.globalStats?.safetyScore ?? 100;
@@ -227,18 +235,21 @@ export function OwnerDashboard({
           title="Seguridad Vial"
           subtitle="Velocidades y frenadas bruscas"
           footerText="Promedio de Conductores"
+          lastUpdated={latestUpdate}
         />
         <RadialScoreGauge
           score={avgEco}
           title="Eficiencia de Combustible"
           subtitle="Ralentí y revoluciones (RPM)"
           footerText="Métrica de Consumo"
+          lastUpdated={latestUpdate}
         />
         <RadialScoreGauge
           score={avgAsset}
           title="Salud del Activo / Vehículo"
           subtitle="Códigos DTC y temperaturas"
           footerText="Cuidado de Mecánica"
+          lastUpdated={latestUpdate}
         />
       </div>
 
@@ -306,7 +317,7 @@ export function OwnerDashboard({
               const driverScore =
                 d.globalStats?.globalSafetyScore ??
                 d.globalStats?.safetyScore ??
-                100;
+                null;
               return (
                 <div
                   key={d.id}
@@ -314,11 +325,17 @@ export function OwnerDashboard({
                 >
                   <DriverInfoLabel driver={d} />
                   <div className="flex items-center gap-3">
-                    <span
-                      className={`badge font-bold px-2.5 py-1 ${getScoreBadgeColor(driverScore)}`}
-                    >
-                      {Math.round(driverScore)} pts
-                    </span>
+                    {driverScore !== null ? (
+                      <span
+                        className={`badge font-bold px-2.5 py-1 ${getScoreBadgeColor(driverScore)}`}
+                      >
+                        {Math.round(driverScore)} pts
+                      </span>
+                    ) : (
+                      <span className="badge badge-ghost text-base-content/50 border-base-200/80 font-bold px-2.5 py-1">
+                        N/A
+                      </span>
+                    )}
                   </div>
                 </div>
               );

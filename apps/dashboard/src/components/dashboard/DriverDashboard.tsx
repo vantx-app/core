@@ -47,29 +47,40 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
   const activeAssignment = stats.assignments?.[0];
   const snapshots = stats.scoreSnapshots || [];
 
-  const safetyScore =
-    globalStats?.globalSafetyScore ?? globalStats?.safetyScore ?? 100;
-  const ecoScore = globalStats?.globalEcoScore ?? globalStats?.ecoScore ?? 100;
-  const assetScore =
-    globalStats?.globalAssetScore ?? globalStats?.assetScore ?? 100;
+  const hasStats = globalStats && globalStats.totalSnapshots != null && globalStats.totalSnapshots > 0;
+  const safetyScore = hasStats
+    ? globalStats.globalSafetyScore ?? globalStats.safetyScore ?? null
+    : null;
+  const ecoScore = hasStats
+    ? globalStats.globalEcoScore ?? globalStats.ecoScore ?? null
+    : null;
+  const assetScore = hasStats
+    ? globalStats.globalAssetScore ?? globalStats.assetScore ?? null
+    : null;
 
   // Calcular puntaje general (overall score)
-  const overallScore =
-    globalStats?.globalOverallScore ??
-    Math.round((safetyScore + ecoScore + assetScore) / 3);
+  const overallScore = hasStats
+    ? globalStats.globalOverallScore ?? null
+    : null;
 
   // Determinar nivel y colores basados en el rendimiento general
-  let rankLabel = "Precaución";
-  let rankColor = "bg-rose-500 text-white shadow-rose-500/20";
-  let cardBorderColor = "border-rose-500/20";
-  if (overallScore >= 85) {
-    rankLabel = "Excelente";
-    rankColor = "bg-emerald-500 text-white shadow-emerald-500/20";
-    cardBorderColor = "border-emerald-500/20";
-  } else if (overallScore >= 70) {
-    rankLabel = "Bueno";
-    rankColor = "bg-amber-500 text-white shadow-amber-500/20";
-    cardBorderColor = "border-amber-500/20";
+  let rankLabel = "Sin Calificación";
+  let rankColor = "bg-slate-500 text-white shadow-slate-500/20";
+  let cardBorderColor = "border-base-200";
+  if (overallScore !== null) {
+    if (overallScore >= 85) {
+      rankLabel = "Excelente";
+      rankColor = "bg-emerald-500 text-white shadow-emerald-500/20";
+      cardBorderColor = "border-emerald-500/20";
+    } else if (overallScore >= 70) {
+      rankLabel = "Bueno";
+      rankColor = "bg-amber-500 text-white shadow-amber-500/20";
+      cardBorderColor = "border-amber-500/20";
+    } else {
+      rankLabel = "Precaución";
+      rankColor = "bg-rose-500 text-white shadow-rose-500/20";
+      cardBorderColor = "border-rose-500/20";
+    }
   }
 
   const columns: TableColumn<DriverScoreSnapshot>[] = [
@@ -142,7 +153,13 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
             Puntaje General
           </span>
 
-          <RadialScoreGauge score={overallScore} title="" noCard size="xl" />
+          <RadialScoreGauge
+            score={overallScore}
+            title=""
+            noCard
+            size="xl"
+            lastUpdated={globalStats?.lastUpdated}
+          />
 
           <div className="space-y-1 mt-2">
             <span
@@ -214,7 +231,13 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 Seguridad Vial
               </span>
             </div>
-            <RadialScoreGauge score={safetyScore} title="" noCard size="lg" />
+            <RadialScoreGauge
+              score={safetyScore}
+              title=""
+              noCard
+              size="lg"
+              lastUpdated={globalStats?.lastUpdated}
+            />
             <span className="text-[10px] font-medium text-base-content/40 mt-3 max-w-xs leading-normal">
               Excesos de velocidad y eventos de frenados bruscos
             </span>
@@ -227,7 +250,13 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 Eficiencia Ecológica
               </span>
             </div>
-            <RadialScoreGauge score={ecoScore} title="" noCard size="lg" />
+            <RadialScoreGauge
+              score={ecoScore}
+              title=""
+              noCard
+              size="lg"
+              lastUpdated={globalStats?.lastUpdated}
+            />
             <span className="text-[10px] font-medium text-base-content/40 mt-3 max-w-xs leading-normal">
               Consumo óptimo, ralentí y revoluciones (RPM)
             </span>
@@ -240,7 +269,13 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 Cuidado del Vehículo
               </span>
             </div>
-            <RadialScoreGauge score={assetScore} title="" noCard size="lg" />
+            <RadialScoreGauge
+              score={assetScore}
+              title=""
+              noCard
+              size="lg"
+              lastUpdated={globalStats?.lastUpdated}
+            />
             <span className="text-[10px] font-medium text-base-content/40 mt-3 max-w-xs leading-normal">
               Temperatura de motor y salud mecánica (DTC)
             </span>

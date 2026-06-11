@@ -7,6 +7,7 @@ const ASSETS_TO_CACHE = [
   "/icons/icon-32x32.png",
   "/icons/icon-192x192.png",
   "/icons/icon-512x512.png",
+  "/icons/icon-maskable.png",
 ];
 
 self.addEventListener("install", (event) => {

@@ -15,6 +15,7 @@ import Link from "next/link";
 import { BackButton } from "@/components/ui/BackButton";
 import { useSearchParams } from "next/navigation";
 import { DriversTableDesktop } from "@/components/DriversTableDesktop";
+import { formatDate } from "@/utils/client";
 
 function DriversPageContent() {
   const searchParams = useSearchParams();
@@ -43,7 +44,8 @@ function DriversPageContent() {
     fetchDrivers();
   }, [fetchDrivers]);
 
-  const getScoreColor = (score: number) => {
+  const getScoreColor = (score: number | null | undefined) => {
+    if (score == null) return "text-base-content/40 border-base-200 bg-base-200/5";
     if (score >= 85) return "text-success border-success/20 bg-success/5";
     if (score >= 70) return "text-warning border-warning/20 bg-warning/5";
     return "text-error border-error/20 bg-error/5";
@@ -96,16 +98,16 @@ function DriversPageContent() {
 
   const renderDriverCard = (driver: DriversPageDriver) => {
     const activeAssignment = driver.assignments?.[0];
-    const safetyScore =
-      driver.globalStats?.globalSafetyScore ??
-      driver.globalStats?.safetyScore ??
-      100;
-    const ecoScore =
-      driver.globalStats?.globalEcoScore ?? driver.globalStats?.ecoScore ?? 100;
-    const assetScore =
-      driver.globalStats?.globalAssetScore ??
-      driver.globalStats?.assetScore ??
-      100;
+    const hasStats = driver.globalStats && driver.globalStats.globalSafetyScore !== null;
+    const safetyScore = hasStats
+      ? driver.globalStats!.globalSafetyScore ?? driver.globalStats!.safetyScore ?? null
+      : null;
+    const ecoScore = hasStats
+      ? driver.globalStats!.globalEcoScore ?? driver.globalStats!.ecoScore ?? null
+      : null;
+    const assetScore = hasStats
+      ? driver.globalStats!.globalAssetScore ?? driver.globalStats!.assetScore ?? null
+      : null;
     const colorClass = getScoreColor(safetyScore);
 
     return (
@@ -154,10 +156,10 @@ function DriversPageContent() {
           {/* Scores Grid */}
           <div className="grid grid-cols-3 gap-2 text-center pt-2">
             <div
-              className={`p-2 rounded-xl border flex flex-col items-center justify-center ${colorClass}`}
+              className={`p-2 rounded-xl border flex flex-col items-center justify-center ${getScoreColor(safetyScore)}`}
             >
               <span className="text-xl font-black">
-                {Math.round(safetyScore)}
+                {safetyScore !== null ? Math.round(safetyScore) : "N/A"}
               </span>
               <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
                 Seguridad
@@ -165,25 +167,33 @@ function DriversPageContent() {
             </div>
 
             <div
-              className={`p-2 rounded-xl border flex flex-col items-center justify-center ${colorClass}`}
+              className={`p-2 rounded-xl border flex flex-col items-center justify-center ${getScoreColor(ecoScore)}`}
             >
-              <span className="text-xl font-black">{Math.round(ecoScore)}</span>
+              <span className="text-xl font-black">
+                {ecoScore !== null ? Math.round(ecoScore) : "N/A"}
+              </span>
               <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
                 Eco-Conduc.
               </span>
             </div>
 
             <div
-              className={`p-2 rounded-xl border flex flex-col items-center justify-center ${colorClass}`}
+              className={`p-2 rounded-xl border flex flex-col items-center justify-center ${getScoreColor(assetScore)}`}
             >
               <span className="text-xl font-black">
-                {Math.round(assetScore)}
+                {assetScore !== null ? Math.round(assetScore) : "N/A"}
               </span>
               <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
                 Cuidado Mot.
               </span>
             </div>
           </div>
+
+          {driver.globalStats?.lastUpdated && hasStats && (
+            <div className="text-[9px] text-base-content/40 text-center font-medium mt-1">
+              Último cálculo: {formatDate(driver.globalStats.lastUpdated)}
+            </div>
+          )}
         </div>
       </div>
     );

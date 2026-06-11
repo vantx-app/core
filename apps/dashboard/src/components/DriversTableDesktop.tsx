@@ -5,7 +5,7 @@ import React from "react";
 import { Table } from "@/components/ui/Table";
 import { DriverAvatar } from "@/components/ui/DriverAvatar";
 import { CreditCard, Car, UserCheck } from "lucide-react";
-import { getScoreBadgeColor } from "@/utils/client";
+import { getScoreBadgeColor, formatDate } from "@/utils/client";
 
 export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
   const getStatusBadge = (status: DriverSummary["status"]) => {
@@ -105,17 +105,31 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
       headerClassName: "text-center",
       className: "text-center",
       render: (driver) => {
-        const score =
-          driver.globalStats?.globalSafetyScore ??
-          driver.globalStats?.safetyScore ??
-          100;
-        return (
+        const hasStats = driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
+        const score = hasStats
+          ? driver.globalStats!.globalSafetyScore ?? driver.globalStats!.safetyScore ?? null
+          : null;
+        const lastUpdated = driver.globalStats?.lastUpdated;
+
+        const badge = (
           <span
             className={`badge font-extrabold text-[10px] px-2.5 py-1 ${getScoreBadgeColor(score)}`}
           >
-            {Math.round(score)} pts
+            {score !== null ? `${Math.round(score)} pts` : "N/A"}
           </span>
         );
+
+        if (score !== null && lastUpdated) {
+          return (
+            <div
+              className="tooltip tooltip-top normal-case font-normal text-xs"
+              data-tip={`Calculado el: ${formatDate(lastUpdated)}`}
+            >
+              {badge}
+            </div>
+          );
+        }
+        return badge;
       },
     },
     {
@@ -124,17 +138,31 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
       headerClassName: "text-center",
       className: "text-center",
       render: (driver) => {
-        const score =
-          driver.globalStats?.globalEcoScore ??
-          driver.globalStats?.ecoScore ??
-          100;
-        return (
+        const hasStats = driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
+        const score = hasStats
+          ? driver.globalStats!.globalEcoScore ?? driver.globalStats!.ecoScore ?? null
+          : null;
+        const lastUpdated = driver.globalStats?.lastUpdated;
+
+        const badge = (
           <span
             className={`badge font-extrabold text-[10px] px-2.5 py-1 ${getScoreBadgeColor(score)}`}
           >
-            {Math.round(score)} pts
+            {score !== null ? `${Math.round(score)} pts` : "N/A"}
           </span>
         );
+
+        if (score !== null && lastUpdated) {
+          return (
+            <div
+              className="tooltip tooltip-top normal-case font-normal text-xs"
+              data-tip={`Calculado el: ${formatDate(lastUpdated)}`}
+            >
+              {badge}
+            </div>
+          );
+        }
+        return badge;
       },
     },
     {
@@ -143,17 +171,31 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
       headerClassName: "text-center",
       className: "text-center",
       render: (driver) => {
-        const score =
-          driver.globalStats?.globalAssetScore ??
-          driver.globalStats?.assetScore ??
-          100;
-        return (
+        const hasStats = driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
+        const score = hasStats
+          ? driver.globalStats!.globalAssetScore ?? driver.globalStats!.assetScore ?? null
+          : null;
+        const lastUpdated = driver.globalStats?.lastUpdated;
+
+        const badge = (
           <span
             className={`badge font-extrabold text-[10px] px-2.5 py-1 ${getScoreBadgeColor(score)}`}
           >
-            {Math.round(score)} pts
+            {score !== null ? `${Math.round(score)} pts` : "N/A"}
           </span>
         );
+
+        if (score !== null && lastUpdated) {
+          return (
+            <div
+              className="tooltip tooltip-top normal-case font-normal text-xs"
+              data-tip={`Calculado el: ${formatDate(lastUpdated)}`}
+            >
+              {badge}
+            </div>
+          );
+        }
+        return badge;
       },
     },
     {

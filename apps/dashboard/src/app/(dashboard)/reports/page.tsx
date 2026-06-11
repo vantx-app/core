@@ -45,6 +45,7 @@ function ReportsPageContent() {
     driverIdParam || "me",
   );
   const [driverSnapshots, setDriverSnapshots] = useState<ScoreSnapshot[]>([]);
+  const [globalStats, setGlobalStats] = useState<any>(null);
 
   // Page layout states
   const [activeTab, setActiveTab] = useState<"breakdown" | "daily">(
@@ -131,6 +132,7 @@ function ReportsPageContent() {
 
       const snaps = data.scoreSnapshots || [];
       setDriverSnapshots(snaps);
+      setGlobalStats(data.globalStats || null);
 
       if (snaps.length > 0) {
         // Pre-select most recent week
@@ -426,6 +428,7 @@ function ReportsPageContent() {
                           title=""
                           noCard
                           size="lg"
+                          lastUpdated={globalStats?.lastUpdated}
                         />
                       </div>
 

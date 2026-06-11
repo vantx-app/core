@@ -67,28 +67,36 @@ export function SuperAdminDashboard({
   let sumEco = 0;
   let sumAsset = 0;
   let countWithStats = 0;
+  let latestUpdate: Date | null = null;
 
   drivers.forEach((d) => {
-    if (d.globalStats) {
+    if (d.globalStats && d.globalStats.totalSnapshots != null && d.globalStats.totalSnapshots > 0) {
       sumSafety +=
         d.globalStats.globalSafetyScore ?? d.globalStats.safetyScore ?? 100;
       sumEco += d.globalStats.globalEcoScore ?? d.globalStats.ecoScore ?? 100;
       sumAsset +=
         d.globalStats.globalAssetScore ?? d.globalStats.assetScore ?? 100;
       countWithStats++;
+
+      if (d.globalStats.lastUpdated) {
+        const updateDate = new Date(d.globalStats.lastUpdated);
+        if (!latestUpdate || updateDate > latestUpdate) {
+          latestUpdate = updateDate;
+        }
+      }
     }
   });
 
   const avgSafety =
-    countWithStats > 0 ? Math.round(sumSafety / countWithStats) : 100;
-  const avgEco = countWithStats > 0 ? Math.round(sumEco / countWithStats) : 100;
+    countWithStats > 0 ? Math.round(sumSafety / countWithStats) : null;
+  const avgEco = countWithStats > 0 ? Math.round(sumEco / countWithStats) : null;
   const avgAsset =
-    countWithStats > 0 ? Math.round(sumAsset / countWithStats) : 100;
+    countWithStats > 0 ? Math.round(sumAsset / countWithStats) : null;
 
   // Pre-calcular promedios de seguridad vial por organización (basado en asignación activa de conductores)
   const orgSafetyScores: Record<string, { sum: number; count: number }> = {};
   drivers.forEach((d) => {
-    if (d.globalStats) {
+    if (d.globalStats && d.globalStats.totalSnapshots != null && d.globalStats.totalSnapshots > 0) {
       const activeAssignment = d.assignments?.[0];
       const orgId = activeAssignment?.vehicle?.orgId;
       if (orgId) {
@@ -200,6 +208,7 @@ export function SuperAdminDashboard({
             title="Seguridad Vial Global"
             subtitle="Exceso de velocidad y maniobras bruscas"
             footerText="Promedio de la Plataforma"
+            lastUpdated={latestUpdate}
             className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center min-h-[220px] hover:border-primary/20 hover:shadow-lg transition-all duration-300"
           />
           <RadialScoreGauge
@@ -207,6 +216,7 @@ export function SuperAdminDashboard({
             title="Eficiencia Combustible Global"
             subtitle="Tiempos en ralentí y revoluciones (RPM)"
             footerText="Eficiencia Consolidada"
+            lastUpdated={latestUpdate}
             className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center min-h-[220px] hover:border-primary/20 hover:shadow-lg transition-all duration-300"
           />
           <RadialScoreGauge
@@ -214,6 +224,7 @@ export function SuperAdminDashboard({
             title="Salud del Activo Global"
             subtitle="Monitoreo de códigos DTC y temperaturas"
             footerText="Cuidado de Unidades"
+            lastUpdated={latestUpdate}
             className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center min-h-[220px] hover:border-primary/20 hover:shadow-lg transition-all duration-300"
           />
         </div>
