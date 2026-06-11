@@ -1,0 +1,171 @@
+@import "tailwindcss";
+@source "../../../../packages/ui/src/**/*.tsx";
+
+@plugin "daisyui" {
+  themes: light, dark;
+}
+
+@theme {
+  --color-primary: #1d4ed8; /* Strong Premium Blue */
+  --color-secondary: #10b981; /* Premium Emerald */
+
+  /* Coherent Fleet CRM Design Tokens */
+  --color-status-moving: #3b82f6;
+  --color-status-idling: #f59e0b;
+  --color-status-excessive: #ef4444;
+  --color-status-stopped: #94a3b8;
+  --color-status-offline: #9ca3af;
+  --color-route-path: #2563eb;
+
+  /* Custom Color Palette Extensions */
+  --color-slate-850: #1e293b;
+
+  /* Spacing and Geometry Defaults */
+  --radius-card: 1.5rem;
+  --radius-button: 0.875rem;
+  --radius-input: 0.75rem;
+}
+
+:root {
+  --color-primary: #1d4ed8;
+  --p: 0.45 0.23 260 !important; /* OKLCH representation of Royal Blue */
+  --pc: 0.98 0.01 260;
+
+  --vantx-wing-start: #475569;
+  --vantx-wing-end: #0f172a;
+}
+
+[data-theme="dark"] {
+  --vantx-wing-start: #94a3b8;
+  --vantx-wing-end: #475569;
+}
+
+/* En DaisyUI v5 / Tailwind v4, los temas se configuran así */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Forzamos que incluso si hay un tema light activo, use nuestro azul */
+[data-theme="light"],
+:root {
+  --p: 0.45 0.23 260 !important;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track, #f1f5f9);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb, #cbd5e1);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover, #94a3b8);
+}
+
+/* Glassmorphic Card Style */
+.glass-card {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur, 16px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 16px));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--glass-shadow);
+  transition: all var(--glass-transition, 0.3s) cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  border-color: var(--glass-border-hover);
+  box-shadow: var(--glass-shadow-hover);
+}
+
+/* Mapbox Vehicle Markers */
+.vehicle-marker {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  filter: drop-shadow(0px 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+.marker-pin-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform-origin: center center;
+  transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.marker-pin-container svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  transition: color 0.3s ease;
+}
+
+.vehicle-marker[data-status="moving"] svg,
+.vehicle-marker[data-status="MOVING"] svg {
+  color: var(--color-status-moving) !important;
+}
+
+.vehicle-marker[data-status="idling"] svg,
+.vehicle-marker[data-status="IDLING"] svg {
+  color: var(--color-status-idling) !important;
+}
+
+.vehicle-marker[data-status="excessive_idling"] svg,
+.vehicle-marker[data-status="EXCESSIVE_IDLING"] svg {
+  color: var(--color-status-excessive) !important;
+}
+
+.vehicle-marker[data-status="stopped"] svg,
+.vehicle-marker[data-status="STOPPED"] svg {
+  color: var(--color-status-stopped) !important;
+}
+
+.vehicle-marker[data-status="offline"] svg,
+.vehicle-marker[data-status="OFFLINE"] svg {
+  color: var(--color-status-offline) !important;
+}
+
+/* Marcadores para TripMap */
+.trip-marker-start {
+  background-color: var(--color-status-moving) !important;
+  color: #ffffff !important;
+}
+
+.trip-marker-end-active {
+  background-color: var(--color-route-path) !important;
+  color: #ffffff !important;
+}
+
+.trip-marker-end-final {
+  background-color: var(--color-status-excessive) !important;
+  color: #ffffff !important;
+}
+
+/* Load Fade animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-in-delayed {
+  animation: fadeIn 0.25s cubic-bezier(0.4, 0, 0.2, 1) 400ms both;
+}
+
+/* Animations for Mobile Bottom Sheet */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}

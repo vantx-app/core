@@ -1,70 +1,15 @@
-@import "tailwindcss";
-
-@plugin "daisyui" {
-  themes: light;
-}
+@import "../../../../packages/ui/src/styles/globals.css";
 
 @theme {
-  --color-primary: #1d4ed8; /* Strong Premium Blue */
-  --color-secondary: #10b981; /* Premium Emerald */
-
-  /* Coherent Fleet CRM Design Tokens */
-  --color-status-moving: #3b82f6;
-  --color-status-idling: #f59e0b;
-  --color-status-excessive: #ef4444;
-  --color-status-stopped: #94a3b8;
-  --color-status-offline: #9ca3af;
-
-  /* Spacing and Geometry */
-  --radius-card: 1.5rem;
-  --radius-button: 0.875rem;
-  --radius-input: 0.75rem;
-
-  /* Glassmorphism Styles */
+  /* Glassmorphism overrides */
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: rgba(0, 0, 0, 0.08);
-}
+  --glass-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --glass-shadow-hover: 0 15px 30px -5px rgba(29, 78, 216, 0.06), 0 10px 15px -6px rgba(29, 78, 216, 0.04);
+  --glass-border-hover: rgba(29, 78, 216, 0.2);
 
-:root {
-  --color-primary: #1d4ed8;
-  --p: 0.45 0.23 260 !important; /* OKLCH representation of Royal Blue */
-  --pc: 0.98 0.01 260;
-
-  --vantx-wing-start: #475569;
-  --vantx-wing-end: #0f172a;
-}
-
-/* Glassmorphic Card Style */
-.glass-card {
-  background-color: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-card);
-  box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.04),
-    0 8px 10px -6px rgba(0, 0, 0, 0.04);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.glass-card:hover {
-  border-color: rgba(29, 78, 216, 0.2);
-  box-shadow:
-    0 15px 30px -5px rgba(29, 78, 216, 0.06),
-    0 10px 15px -6px rgba(29, 78, 216, 0.04);
-}
-
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  /* Scrollbar Customization */
+  --scrollbar-track: #f1f5f9;
+  --scrollbar-thumb: #cbd5e1;
+  --scrollbar-thumb-hover: #94a3b8;
 }
