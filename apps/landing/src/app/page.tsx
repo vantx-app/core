@@ -3,8 +3,8 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Logo } from "@vantx/ui";
-import { LoginForm } from "@/components/LoginForm";
 import { OwnerContactForm } from "@/components/OwnerContactForm";
+import Link from "next/link";
 import {
   Truck,
   UserCheck,
@@ -19,15 +19,12 @@ function LandingContent() {
   const router = useRouter();
 
   // Modals state
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isOwnerContactOpen, setIsOwnerContactOpen] = useState(false);
 
-  // Auto-open login modal if URL has ?login=true
+  // Auto-redirect to login page if URL has ?login=true
   useEffect(() => {
     if (searchParams.get("login") === "true") {
-      setIsLoginOpen(true);
-      // Clean up query param
-      router.replace("/");
+      router.replace("/login");
     }
   }, [searchParams, router]);
 
@@ -55,12 +52,12 @@ function LandingContent() {
           </a>
         </nav>
         <div>
-          <button
-            onClick={() => setIsLoginOpen(true)}
-            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-350 font-bold text-sm text-slate-700 hover:text-slate-900 shadow-sm transition-all duration-300"
+          <Link
+            href="/login"
+            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-350 font-bold text-sm text-slate-700 hover:text-slate-900 shadow-sm transition-all duration-300 inline-block"
           >
             Acceder
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -310,7 +307,7 @@ function LandingContent() {
                   Soporte completo J1939, J1708 y OBDII
                 </span>
               </div>
-              <CheckCircle className="size-8 text-blue-650 shrink-0" />
+              <CheckCircle className="size-8 text-blue-600 shrink-0" />
             </div>
           </div>
 
@@ -361,26 +358,7 @@ function LandingContent() {
         </p>
       </footer>
 
-      {/* SSO LOGIN MODAL */}
-      {isLoginOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            onClick={() => setIsLoginOpen(false)}
-          />
-          {/* Modal Content */}
-          <div className="glass-card w-full max-w-md p-8 bg-white/95 border-slate-200 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-            <button
-              onClick={() => setIsLoginOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-650 transition-colors"
-            >
-              <X className="size-5" />
-            </button>
-            <LoginForm onSuccess={() => setIsLoginOpen(false)} />
-          </div>
-        </div>
-      )}
+      {/* SSO LOGIN MODAL REMOVED (Migrated to central /login route) */}
 
       {/* OWNER CONTACT FORM MODAL */}
       {isOwnerContactOpen && (

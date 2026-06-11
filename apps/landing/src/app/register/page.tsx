@@ -88,8 +88,8 @@ function RegisterStepper() {
 
     try {
       await api.patch("/drivers/onboard", data);
-      // Success: redirect to home or login modal trigger
-      router.replace("/?login=true");
+      // Success: redirect to centralized login page on landing
+      router.replace("/login?registered=true");
     } catch (error) {
       console.error("Error al registrar", error);
       setApiError("Ocurrió un error al procesar tu registro.");
@@ -97,9 +97,9 @@ function RegisterStepper() {
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-12 bg-slate-950 text-slate-100 overflow-x-hidden font-sans">
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-12 bg-slate-50 text-slate-800 overflow-x-hidden font-sans">
       {/* Columna Izquierda: Branding & Decoración Visual */}
-      <div className="hidden md:flex md:col-span-5 relative overflow-hidden bg-slate-900 text-white p-12 flex-col justify-between border-r border-slate-800">
+      <div className="hidden md:flex md:col-span-5 relative overflow-hidden bg-slate-900 text-white p-12 flex-col justify-between">
         {/* Glow */}
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
 
@@ -108,13 +108,13 @@ function RegisterStepper() {
         </div>
 
         <div className="z-10 my-auto flex flex-col gap-6 max-w-md animate-in fade-in slide-in-from-left-6 duration-500">
-          <span className="text-xs px-2.5 py-1 rounded-full border border-blue-500/20 bg-blue-500/5 text-blue-400 font-semibold tracking-wider w-fit">
+          <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
             Portal de Conductores
           </span>
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight text-white">
             Tu camino, tus datos, todo en un solo lugar.
           </h1>
-          <p className="text-slate-400 text-sm leading-relaxed">
+          <p className="text-slate-300 text-sm leading-relaxed">
             Regístrate para conectar con tu flota, reclamar tu historial de
             conducción y telemetría, y visualizar tus estadísticas de seguridad
             y eco-driving en tiempo real.
@@ -126,13 +126,13 @@ function RegisterStepper() {
               <span className="text-xs font-semibold text-slate-300">
                 Resumen de Viaje Reciente
               </span>
-              <span className="badge badge-success text-[10px] py-1 font-mono font-bold text-white bg-emerald-500 border-none rounded-md px-2">
+              <span className="badge badge-success text-[10px] py-1 font-mono font-bold text-white bg-emerald-500 border-none rounded px-2">
                 ECO-EXPERT
               </span>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">
+                <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">
                   Distancia
                 </span>
                 <span className="text-xl font-extrabold text-white">
@@ -140,7 +140,7 @@ function RegisterStepper() {
                 </span>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 block uppercase font-bold tracking-wider">
+                <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">
                   Puntaje Eco
                 </span>
                 <span className="text-xl font-extrabold text-emerald-400">
@@ -148,9 +148,9 @@ function RegisterStepper() {
                 </span>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs text-slate-400">
+            <div className="mt-4 pt-4 border-t border-white/5 flex justify-between items-center text-xs text-slate-300">
               <span>Ruta: Panamá - Colón</span>
-              <span className="text-emerald-400 flex items-center gap-1 font-medium">
+              <span className="text-emerald-400 flex items-center gap-1 font-semibold">
                 ● En Línea
               </span>
             </div>
@@ -164,20 +164,20 @@ function RegisterStepper() {
       </div>
 
       {/* Columna Derecha: Formulario Interactivo */}
-      <div className="col-span-1 md:col-span-7 flex flex-col justify-center items-center p-6 md:p-12 min-h-screen relative bg-slate-950">
-        <div className="w-full max-w-md z-10 flex flex-col gap-6">
+      <div className="col-span-1 md:col-span-7 flex flex-col justify-center items-center p-6 md:p-12 min-h-screen relative bg-slate-50">
+        <div className="w-full max-w-md z-10 flex flex-col gap-8">
           {/* Logo visible solo en mobile */}
           <div className="md:hidden flex justify-center">
             <Logo size="lg" />
           </div>
 
           <div className="text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-white">
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
               {currentStep === "verify"
                 ? "Comencemos tu registro"
                 : "Completa tus datos"}
             </h2>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-sm text-slate-500 mt-1.5">
               {currentStep === "verify"
                 ? "Ingresa tu documento para verificar tu perfil en el sistema."
                 : "Crea tu cuenta de conductor para acceder a tu panel."}
@@ -186,10 +186,10 @@ function RegisterStepper() {
 
           <div className="flex justify-center">
             <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
-              <span className="text-blue-500">Paso 1: Verificación</span>
-              <span className="text-slate-700">|</span>
+              <span className="text-blue-600">Paso 1: Verificación</span>
+              <span className="text-slate-350">|</span>
               <span
-                className={currentStep === "details" ? "text-blue-500" : ""}
+                className={currentStep === "details" ? "text-blue-600" : ""}
               >
                 Paso 2: Registro
               </span>
@@ -197,14 +197,14 @@ function RegisterStepper() {
           </div>
 
           {apiError && (
-            <div className="alert alert-error text-xs border border-red-500/20 bg-red-500/10 text-red-400 p-3.5 rounded-xl animate-in fade-in">
+            <div className="alert alert-error text-xs border border-red-200 bg-red-50 text-red-700 p-3.5 rounded-xl animate-in fade-in">
               {apiError}
             </div>
           )}
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="bg-slate-900/40 border border-slate-800/80 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-4 shadow-2xl backdrop-blur-sm"
+            className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-6 shadow-xl"
           >
             {/* VISTA 1: VERIFICACIÓN */}
             <div className={currentStep === "verify" ? "block" : "hidden"}>
@@ -224,21 +224,21 @@ function RegisterStepper() {
                 )}
               />
 
-              <div className="flex flex-col gap-1 mt-3">
+              <div className="flex flex-col gap-1 mt-5">
                 <label className="label py-0.5">
-                  <span className="label-text font-bold text-xs text-slate-300">
+                  <span className="label-text font-bold text-xs text-slate-700">
                     Correo Electrónico
                   </span>
                 </label>
                 <input
                   type="email"
-                  className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                  className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                   placeholder="ejemplo@vantx.app"
                   disabled={isLoading}
                   {...register("email", { required: "El correo es requerido" })}
                 />
                 {errors.email && (
-                  <span className="text-red-400 text-xs mt-1">
+                  <span className="text-red-500 text-xs mt-1">
                     {errors.email.message}
                   </span>
                 )}
@@ -247,7 +247,7 @@ function RegisterStepper() {
               <button
                 type="button"
                 onClick={handleVerifyId}
-                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition-all mt-6 flex justify-center items-center"
+                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 transition-all mt-6 flex justify-center items-center cursor-pointer"
                 disabled={isLoading}
               >
                 {isVerifying ? (
@@ -260,25 +260,25 @@ function RegisterStepper() {
 
             {/* VISTA 2: DETALLES GENERALES */}
             <div
-              className={`${currentStep === "details" ? "flex" : "hidden"} flex-col gap-4`}
+              className={`${currentStep === "details" ? "flex" : "hidden"} flex-col gap-6`}
             >
               {isShadowProfile && (
-                <div className="alert alert-info text-xs border border-blue-500/20 bg-blue-500/10 text-blue-400 p-3 rounded-xl">
+                <div className="alert alert-info text-xs border border-blue-100 bg-blue-50 text-blue-700 p-3 rounded-xl mb-2">
                   Perfil detectado. Completa tus datos para reclamar tu
                   telemetría histórica.
                 </div>
               )}
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-1">
                   <label className="label py-0.5">
-                    <span className="label-text font-bold text-xs text-slate-300">
+                    <span className="label-text font-bold text-xs text-slate-700">
                       Nombre
                     </span>
                   </label>
                   <input
                     type="text"
-                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                     placeholder="Tu nombre"
                     disabled={isLoading}
                     {...register("firstName", {
@@ -289,13 +289,13 @@ function RegisterStepper() {
 
                 <div className="flex flex-col gap-1">
                   <label className="label py-0.5">
-                    <span className="label-text font-bold text-xs text-slate-300">
+                    <span className="label-text font-bold text-xs text-slate-700">
                       Apellido
                     </span>
                   </label>
                   <input
                     type="text"
-                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                     placeholder="Tu apellido"
                     disabled={isLoading}
                     {...register("lastName", {
@@ -306,13 +306,13 @@ function RegisterStepper() {
 
                 <div className="flex flex-col gap-1">
                   <label className="label py-0.5">
-                    <span className="label-text font-bold text-xs text-slate-300">
+                    <span className="label-text font-bold text-xs text-slate-700">
                       Teléfono
                     </span>
                   </label>
                   <input
                     type="tel"
-                    className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                    className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                     placeholder="Ej. +507 6000-0000"
                     disabled={isLoading}
                     {...register("phone", {
@@ -323,14 +323,14 @@ function RegisterStepper() {
 
                 <div className="flex flex-col gap-1">
                   <label className="label py-0.5">
-                    <span className="label-text font-bold text-xs text-slate-300">
+                    <span className="label-text font-bold text-xs text-slate-700">
                       Contraseña
                     </span>
                   </label>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 pl-3.5 pr-10 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pl-3.5 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                       placeholder="Mínimo 6 caracteres"
                       disabled={isLoading}
                       {...register("password", {
@@ -341,7 +341,7 @@ function RegisterStepper() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                       title={showPassword ? "Ocultar" : "Mostrar"}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -353,7 +353,7 @@ function RegisterStepper() {
               <div className="mt-6 w-full flex justify-between gap-3">
                 <button
                   type="button"
-                  className="w-1/2 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold text-sm transition-all"
+                  className="w-1/2 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-all"
                   disabled={isLoading}
                   onClick={() => router.back()}
                 >
@@ -361,7 +361,7 @@ function RegisterStepper() {
                 </button>
                 <button
                   type="submit"
-                  className="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition-all flex justify-center items-center"
+                  className="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 transition-all flex justify-center items-center cursor-pointer"
                   disabled={isLoading}
                 >
                   {isSubmitting ? (
@@ -385,8 +385,8 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center items-center h-screen bg-slate-950">
-          <span className="loading loading-spinner loading-lg text-blue-500"></span>
+        <div className="flex justify-center items-center h-screen bg-slate-50">
+          <span className="loading loading-spinner loading-lg text-blue-600"></span>
         </div>
       }
     >

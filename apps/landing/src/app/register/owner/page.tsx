@@ -153,16 +153,16 @@ function OwnerRegisterStepper() {
 
   if (validationStatus === "loading") {
     return (
-      <div className="flex flex-col justify-center items-center h-screen px-4 w-full bg-slate-950">
+      <div className="flex flex-col justify-center items-center h-screen px-4 w-full bg-slate-50">
         <div className="mb-8 animate-pulse">
           <Logo size="lg" />
         </div>
-        <div className="bg-slate-900/40 border border-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl flex flex-col gap-6">
-          <div className="h-6 bg-slate-800 rounded-md w-2/3 mx-auto animate-pulse"></div>
-          <div className="h-4 bg-slate-800/60 rounded-md w-1/2 mx-auto animate-pulse"></div>
+        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-xl flex flex-col gap-6">
+          <div className="h-6 bg-slate-100 rounded-md w-2/3 mx-auto animate-pulse"></div>
+          <div className="h-4 bg-slate-100/60 rounded-md w-1/2 mx-auto animate-pulse"></div>
           <div className="flex flex-col gap-4 mt-4">
-            <div className="h-12 bg-slate-800/50 rounded-xl w-full animate-pulse"></div>
-            <div className="h-12 bg-slate-800/50 rounded-xl w-full animate-pulse"></div>
+            <div className="h-12 bg-slate-100/50 rounded-xl w-full animate-pulse"></div>
+            <div className="h-12 bg-slate-100/50 rounded-xl w-full animate-pulse"></div>
           </div>
         </div>
       </div>
@@ -171,31 +171,31 @@ function OwnerRegisterStepper() {
 
   if (validationStatus === "invalid") {
     return (
-      <div className="flex flex-col justify-center items-center h-screen px-4 w-full bg-slate-950 text-slate-100">
+      <div className="flex flex-col justify-center items-center h-screen px-4 w-full bg-slate-50 text-slate-800">
         <div className="mb-6">
           <Logo size="lg" />
         </div>
-        <div className="bg-slate-900/40 border border-slate-800 rounded-3xl w-full max-w-md p-8 shadow-2xl flex flex-col items-center text-center gap-6 relative overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-xl flex flex-col items-center text-center gap-6 relative overflow-hidden">
           <div className="absolute -top-12 -left-12 w-32 h-32 bg-red-500/5 rounded-full blur-3xl"></div>
 
-          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center border border-red-500/20 text-red-500 animate-bounce">
+          <div className="w-16 h-16 rounded-full bg-red-50 flex items-center justify-center border border-red-100 text-red-500 animate-bounce">
             <ShieldAlert size={32} />
           </div>
 
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-extrabold tracking-tight">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
               Acceso Denegado
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-550">
               El enlace de invitación que intentas utilizar no es válido.
             </p>
           </div>
 
-          <div className="alert alert-error text-xs border border-red-500/25 bg-red-500/10 text-red-400 w-full p-4 rounded-2xl flex items-start gap-3">
+          <div className="alert alert-error text-xs border border-red-200 bg-red-50 text-red-700 w-full p-4 rounded-2xl flex items-start gap-3">
             <span className="font-medium text-left">{errorMessage}</span>
           </div>
 
-          <div className="text-slate-500 text-xs text-left w-full border-t border-slate-800/50 pt-4 flex flex-col gap-2">
+          <div className="text-slate-500 text-xs text-left w-full border-t border-slate-100 pt-4 flex flex-col gap-2">
             <div className="flex gap-2 items-center">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500"></span>
               <span>Las invitaciones expiran automáticamente en 24 horas.</span>
@@ -208,7 +208,7 @@ function OwnerRegisterStepper() {
 
           <button
             onClick={() => router.push("/")}
-            className="w-full py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-200 mt-2 font-semibold text-sm transition-all"
+            className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 mt-2 font-semibold text-sm transition-all cursor-pointer"
           >
             Volver al Inicio
           </button>
@@ -219,21 +219,21 @@ function OwnerRegisterStepper() {
 
   if (isSuccess) {
     return (
-      <div className="flex flex-col justify-center items-center h-screen px-4 w-full bg-slate-950 text-slate-100">
-        <div className="bg-slate-900/40 border border-slate-850 rounded-3xl w-full max-w-md p-8 shadow-2xl flex flex-col items-center text-center gap-6">
-          <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20 text-emerald-400">
+      <div className="flex flex-col justify-center items-center h-screen px-4 w-full bg-slate-50 text-slate-800">
+        <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-md p-8 shadow-xl flex flex-col items-center text-center gap-6">
+          <div className="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-600">
             <CheckCircle size={32} />
           </div>
           <div className="flex flex-col gap-2">
-            <h1 className="text-2xl font-extrabold tracking-tight">
+            <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">
               ¡Registro Exitoso!
             </h1>
-            <p className="text-sm text-slate-400">
+            <p className="text-sm text-slate-500">
               Tu organización y cuenta de propietario se han creado
               correctamente.
             </p>
           </div>
-          <div className="text-slate-500 text-xs animate-pulse">
+          <div className="text-slate-400 text-xs animate-pulse">
             Redireccionando al inicio de sesión...
           </div>
         </div>
@@ -242,7 +242,7 @@ function OwnerRegisterStepper() {
   }
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-12 bg-slate-950 text-slate-100 overflow-x-hidden font-sans">
+    <div className="min-h-screen grid grid-cols-1 md:grid-cols-12 bg-slate-50 text-slate-800 overflow-x-hidden font-sans">
       {/* Columna Izquierda: Branding & Decoración Visual */}
       <div className="hidden md:flex md:col-span-5 relative overflow-hidden bg-slate-900 text-white p-12 flex-col justify-between border-r border-slate-800">
         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
@@ -256,7 +256,7 @@ function OwnerRegisterStepper() {
             Portal de Propietarios
           </span>
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight text-white">
-            Lera tu flota al siguiente nivel.
+            Lleva tu flota al siguiente nivel.
           </h1>
           <p className="text-slate-400 text-sm leading-relaxed">
             Completa tu registro como propietario de flota. Podrás gestionar
@@ -308,7 +308,7 @@ function OwnerRegisterStepper() {
       </div>
 
       {/* Columna Derecha: Formulario Interactivo */}
-      <div className="col-span-1 md:col-span-7 flex flex-col justify-center items-center p-6 md:p-12 min-h-screen relative bg-slate-950">
+      <div className="col-span-1 md:col-span-7 flex flex-col justify-center items-center p-6 md:p-12 min-h-screen relative bg-slate-50">
         <div className="w-full max-w-md z-10 flex flex-col gap-6">
           {/* Logo visible solo en mobile */}
           <div className="md:hidden flex justify-center">
@@ -316,12 +316,12 @@ function OwnerRegisterStepper() {
           </div>
 
           <div className="text-center">
-            <h2 className="text-2xl font-extrabold tracking-tight text-white">
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
               {currentStep === "account"
                 ? "Cuenta de Administrador"
                 : "Detalles de tu Organización"}
             </h2>
-            <p className="text-sm text-slate-400 mt-1">
+            <p className="text-sm text-slate-500 mt-1">
               {currentStep === "account"
                 ? "Configura tus credenciales de acceso iniciales."
                 : "Registra el nombre de tu flota empresarial."}
@@ -330,11 +330,11 @@ function OwnerRegisterStepper() {
 
           <div className="flex justify-center">
             <div className="flex items-center gap-4 text-xs font-semibold text-slate-400">
-              <span className="text-blue-500">Paso 1: Datos de Usuario</span>
-              <span className="text-slate-700">|</span>
+              <span className="text-blue-600">Paso 1: Datos de Usuario</span>
+              <span className="text-slate-300">|</span>
               <span
                 className={
-                  currentStep === "organization" ? "text-blue-500" : ""
+                  currentStep === "organization" ? "text-blue-600" : ""
                 }
               >
                 Paso 2: Organización
@@ -343,29 +343,29 @@ function OwnerRegisterStepper() {
           </div>
 
           {apiError && (
-            <div className="alert alert-error text-xs border border-red-500/20 bg-red-500/10 text-red-400 p-3 rounded-xl animate-in fade-in">
+            <div className="alert alert-error text-xs border border-red-200 bg-red-50 text-red-700 p-3.5 rounded-xl animate-in fade-in">
               {apiError}
             </div>
           )}
 
           <form
             onSubmit={handleSubmit(onSubmit)}
-            className="bg-slate-900/40 border border-slate-800/80 rounded-3xl w-full shadow-2xl p-6 md:p-8 flex flex-col gap-4 backdrop-blur-sm"
+            className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-6 shadow-xl"
           >
             {/* PASO 1: INFORMACIÓN DE LA CUENTA */}
             {currentStep === "account" && (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-slate-350">
+                  <label className="text-xs font-bold text-slate-700">
                     Correo Electrónico
                   </label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                       <User size={16} />
                     </span>
                     <input
                       type="email"
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                       placeholder="admin@tuempresa.com"
                       {...register("email", {
                         required: "El correo electrónico es requerido",
@@ -377,23 +377,23 @@ function OwnerRegisterStepper() {
                     />
                   </div>
                   {errors.email && (
-                    <span className="text-red-400 text-xs mt-1">
+                    <span className="text-red-500 text-xs mt-1">
                       {errors.email.message}
                     </span>
                   )}
                 </div>
 
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-slate-350">
+                  <label className="text-xs font-bold text-slate-700">
                     Contraseña
                   </label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                       <KeyRound size={16} />
                     </span>
                     <input
                       type={showPassword ? "text" : "password"}
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-100 placeholder:text-slate-650 focus:outline-none focus:ring-4 transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                       placeholder="••••••••"
                       {...register("password", {
                         required: "La contraseña es requerida",
@@ -407,32 +407,32 @@ function OwnerRegisterStepper() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 cursor-pointer"
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-400 hover:text-slate-600 cursor-pointer"
                       title={showPassword ? "Ocultar" : "Mostrar"}
                     >
                       {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </button>
                   </div>
                   {errors.password && (
-                    <span className="text-red-400 text-xs mt-1">
+                    <span className="text-red-500 text-xs mt-1">
                       {errors.password.message}
                     </span>
                   )}
                 </div>
 
                 {/* Checkbox de Doble Rol */}
-                <div className="border border-slate-800/80 bg-slate-900/20 rounded-2xl p-4 mt-2">
+                <div className="border border-slate-200 bg-slate-50 rounded-2xl p-4 mt-2">
                   <label className="cursor-pointer flex justify-between items-center">
-                    <span className="text-slate-200 text-sm font-bold">
+                    <span className="text-slate-700 text-sm font-bold">
                       Quiero registrarme también como conductor
                     </span>
                     <input
                       type="checkbox"
-                      className="checkbox checkbox-primary rounded-lg border-slate-800 bg-slate-950"
+                      className="checkbox checkbox-primary rounded-lg border-slate-300 bg-white"
                       {...register("isDriver")}
                     />
                   </label>
-                  <p className="text-slate-400 text-xs mt-1">
+                  <p className="text-slate-500 text-xs mt-1">
                     Activa esta opción para vincular automáticamente un perfil
                     de conductor y registrar tu telemetría histórica.
                   </p>
@@ -441,12 +441,12 @@ function OwnerRegisterStepper() {
                 {/* Campos condicionales */}
                 {!isDriver ? (
                   <div className="flex flex-col gap-1 animate-in slide-in-from-top-2 duration-200">
-                    <label className="text-xs font-bold text-slate-350">
+                    <label className="text-xs font-bold text-slate-700">
                       Nombre Completo
                     </label>
                     <input
                       type="text"
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                       placeholder="Ej. Juan Pérez"
                       {...register("name", {
                         required: !isDriver
@@ -455,25 +455,25 @@ function OwnerRegisterStepper() {
                       })}
                     />
                     {errors.name && (
-                      <span className="text-red-400 text-xs mt-1">
+                      <span className="text-red-500 text-xs mt-1">
                         {errors.name.message}
                       </span>
                     )}
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3 animate-in slide-in-from-top-2 duration-200 border-t border-slate-800/50 pt-4 mt-1">
-                    <p className="text-xs font-bold text-blue-500">
+                  <div className="flex flex-col gap-4 animate-in slide-in-from-top-2 duration-200 border-t border-slate-100 pt-4 mt-1">
+                    <p className="text-xs font-bold text-blue-600">
                       Datos del Perfil de Conductor
                     </p>
 
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs font-bold text-slate-350">
+                        <label className="text-xs font-bold text-slate-700">
                           Nombre
                         </label>
                         <input
                           type="text"
-                          className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                           placeholder="Nombre"
                           {...register("firstName", {
                             required: isDriver
@@ -482,18 +482,18 @@ function OwnerRegisterStepper() {
                           })}
                         />
                         {errors.firstName && (
-                          <span className="text-red-400 text-xs">
+                          <span className="text-red-500 text-xs mt-1">
                             {errors.firstName.message}
                           </span>
                         )}
                       </div>
                       <div className="flex flex-col gap-1">
-                        <label className="text-xs font-bold text-slate-350">
+                        <label className="text-xs font-bold text-slate-700">
                           Apellido
                         </label>
                         <input
                           type="text"
-                          className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 px-3.5 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                           placeholder="Apellido"
                           {...register("lastName", {
                             required: isDriver
@@ -502,7 +502,7 @@ function OwnerRegisterStepper() {
                           })}
                         />
                         {errors.lastName && (
-                          <span className="text-red-400 text-xs">
+                          <span className="text-red-500 text-xs mt-1">
                             {errors.lastName.message}
                           </span>
                         )}
@@ -530,16 +530,16 @@ function OwnerRegisterStepper() {
                     />
 
                     <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-slate-350">
+                      <label className="text-xs font-bold text-slate-700">
                         Teléfono
                       </label>
                       <div className="relative">
-                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                           <Phone size={14} />
                         </span>
                         <input
                           type="tel"
-                          className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 pl-9 pr-4 text-xs text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pr-4 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                           placeholder="Teléfono"
                           {...register("phone")}
                         />
@@ -551,7 +551,7 @@ function OwnerRegisterStepper() {
                 <button
                   type="button"
                   onClick={handleNextStep}
-                  className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 mt-4 flex justify-center items-center gap-2"
+                  className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 mt-4 flex justify-center items-center gap-2 cursor-pointer"
                 >
                   Siguiente Paso
                   <ArrowRight size={16} />
@@ -561,18 +561,18 @@ function OwnerRegisterStepper() {
 
             {/* PASO 2: INFORMACIÓN DE LA ORGANIZACIÓN */}
             {currentStep === "organization" && (
-              <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-5">
                 <div className="flex flex-col gap-1">
-                  <label className="text-xs font-bold text-slate-350">
+                  <label className="text-xs font-bold text-slate-700">
                     Nombre de la Empresa / Organización
                   </label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                       <Building2 size={16} />
                     </span>
                     <input
                       type="text"
-                      className="w-full bg-slate-900 border border-slate-800 focus:border-blue-500 focus:ring-blue-500/20 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none focus:ring-4 transition-all"
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                       placeholder="Ej. Logística Continental S.A."
                       {...register("orgName", {
                         required: "El nombre de la organización es requerido",
@@ -580,7 +580,7 @@ function OwnerRegisterStepper() {
                     />
                   </div>
                   {errors.orgName && (
-                    <span className="text-red-400 text-xs mt-1">
+                    <span className="text-red-500 text-xs mt-1">
                       {errors.orgName.message}
                     </span>
                   )}
@@ -589,7 +589,7 @@ function OwnerRegisterStepper() {
                 <div className="mt-6 flex justify-between gap-3">
                   <button
                     type="button"
-                    className="w-1/2 py-2.5 rounded-xl border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold text-sm transition-all flex items-center justify-center gap-2"
+                    className="w-1/2 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
                     onClick={() => setCurrentStep("account")}
                   >
                     <ArrowLeft size={16} />
@@ -598,7 +598,7 @@ function OwnerRegisterStepper() {
 
                   <button
                     type="submit"
-                    className="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/10 hover:shadow-blue-600/20 transition-all flex items-center justify-center gap-2"
+                    className="w-1/2 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
@@ -624,8 +624,8 @@ export default function OwnerRegisterPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex justify-center items-center h-screen bg-slate-950">
-          <span className="loading loading-spinner loading-lg text-blue-500 animate-pulse"></span>
+        <div className="flex justify-center items-center h-screen bg-slate-50">
+          <span className="loading loading-spinner loading-lg text-blue-600 animate-pulse"></span>
         </div>
       }
     >

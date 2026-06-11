@@ -76,11 +76,10 @@ export function OwnerContactForm() {
             <input
               type="text"
               disabled={isSubmitting}
-              className={`w-full bg-slate-50 border ${
-                errors.name
-                  ? "border-red-400 focus:ring-red-400/20"
-                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
-              } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
+              className={`w-full bg-slate-50 border ${errors.name
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-slate-200 focus:border-slate-400"
+                } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="Juan Pérez"
               {...register("name", { required: "El nombre es obligatorio" })}
             />
@@ -102,11 +101,10 @@ export function OwnerContactForm() {
             <input
               type="text"
               disabled={isSubmitting}
-              className={`w-full bg-slate-50 border ${
-                errors.company
-                  ? "border-red-400 focus:ring-red-400/20"
-                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
-              } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
+              className={`w-full bg-slate-50 border ${errors.company
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-slate-200 focus:border-slate-400"
+                } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="Logística S.A."
               {...register("company", {
                 required: "La empresa es obligatoria",
@@ -132,11 +130,10 @@ export function OwnerContactForm() {
             <input
               type="email"
               disabled={isSubmitting}
-              className={`w-full bg-slate-50 border ${
-                errors.email
-                  ? "border-red-400 focus:ring-red-400/20"
-                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
-              } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
+              className={`w-full bg-slate-50 border ${errors.email
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-slate-200 focus:border-slate-400"
+                } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="juan@empresa.com"
               {...register("email", {
                 required: "El correo es obligatorio",
@@ -164,11 +161,10 @@ export function OwnerContactForm() {
             <input
               type="tel"
               disabled={isSubmitting}
-              className={`w-full bg-slate-50 border ${
-                errors.phone
-                  ? "border-red-400 focus:ring-red-400/20"
-                  : "border-slate-200 focus:ring-blue-600/20 focus:border-blue-600"
-              } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all`}
+              className={`w-full bg-slate-50 border ${errors.phone
+                  ? "border-red-400 focus:border-red-500"
+                  : "border-slate-200 focus:border-slate-400"
+                } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="+507 6000-0000"
               {...register("phone", { required: "El teléfono es obligatorio" })}
             />
@@ -184,17 +180,17 @@ export function OwnerContactForm() {
       {/* Fleet Size */}
       <div className="space-y-1">
         <label className="text-xs font-bold text-slate-600 block pl-0.5">
-          Tamaño de la Flota (Camiones)
+          Tamaño de la Flota (vehiculos)
         </label>
         <select
           disabled={isSubmitting}
-          className="w-full bg-slate-50 border border-slate-200 focus:border-blue-600 focus:ring-blue-600/20 rounded-xl py-2.5 px-3 text-sm text-slate-800 focus:outline-none focus:ring-4 transition-all"
+          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3 text-sm text-slate-800 focus:outline-none transition-all"
           {...register("fleetSize")}
         >
-          <option value="1-10">1 a 10 camiones</option>
-          <option value="11-50">11 a 50 camiones</option>
-          <option value="51-200">51 a 200 camiones</option>
-          <option value="200+">Más de 200 camiones</option>
+          <option value="1-10">1 a 10 vehiculos</option>
+          <option value="11-50">11 a 50 vehiculos</option>
+          <option value="51-200">51 a 200 vehiculos</option>
+          <option value="200+">Más de 200 vehiculos</option>
         </select>
       </div>
 
@@ -208,7 +204,7 @@ export function OwnerContactForm() {
           <textarea
             disabled={isSubmitting}
             rows={3}
-            className="w-full bg-slate-50 border border-slate-200 focus:border-blue-600 focus:ring-blue-600/20 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-4 transition-all resize-none"
+            className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all resize-none"
             placeholder="Coméntanos más sobre tus operaciones..."
             {...register("message")}
           />
@@ -219,7 +215,7 @@ export function OwnerContactForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-650 hover:from-blue-500 hover:to-indigo-550 text-white font-bold text-sm shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none mt-2 flex justify-center items-center"
+        className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-600/10 hover:shadow-indigo-600/20 active:scale-[0.98] transition-all disabled:opacity-50 disabled:pointer-events-none mt-2 flex justify-center items-center cursor-pointer"
       >
         {isSubmitting ? (
           <span className="loading loading-spinner loading-sm"></span>

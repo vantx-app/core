@@ -21,6 +21,19 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
+  if (pathname === "/login") {
+    const landingUrl =
+      process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+    const currentUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}/`;
+    const callbackUrl =
+      request.nextUrl.searchParams.get("callbackUrl") || currentUrl;
+    return NextResponse.redirect(
+      new URL(
+        `${landingUrl}/login?callbackUrl=${encodeURIComponent(callbackUrl)}`,
+      ),
+    );
+  }
+
   // Verifica si la ruta exacta está, o si es una subruta de /map
   const protectedRoute = NAV_LINKS.find(
     (route) => pathname === route.href || pathname.startsWith(`${route.href}/`),
@@ -29,9 +42,12 @@ export async function middleware(request: NextRequest) {
   if (!protectedRoute) return NextResponse.next();
 
   if (!refreshToken) {
-    const callbackUrl = encodeURIComponent(`${pathname}${search}`);
+    const landingUrl =
+      process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+    const currentUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}${pathname}${search}`;
+    const callbackUrl = encodeURIComponent(currentUrl);
     return NextResponse.redirect(
-      new URL(`/login?callbackUrl=${callbackUrl}`, request.url),
+      new URL(`${landingUrl}/login?callbackUrl=${callbackUrl}`),
     );
   }
 
@@ -91,7 +107,9 @@ export async function middleware(request: NextRequest) {
     } catch (error) {
       console.error("[Auth] Error crítico en middleware:", error);
 
-      const response = NextResponse.redirect(new URL("/login", request.url));
+      const landingUrl =
+        process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+      const response = NextResponse.redirect(new URL(`${landingUrl}/login`));
       // Limpieza agresiva para evitar bucles de redirección
       const deleteSettings = getCookieSettings(0);
       response.cookies.delete({ name: "access_token", ...deleteSettings });

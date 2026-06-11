@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CreditCard } from "lucide-react";
+import { CreditCard, Info } from "lucide-react";
 
 export interface IdDocumentFieldProps {
   value: string;
@@ -74,31 +74,42 @@ export function IdDocumentField({
     <div className={`space-y-1.5 ${className}`}>
       {label && (
         <label className="label py-0.5">
-          <span className="label-text font-bold text-xs text-base-content/85">
+          <span className="label-text font-bold text-xs text-slate-700 flex items-center gap-1.5">
             {label}
+            <div className="group relative inline-block">
+              <Info className="size-3.5 text-slate-400 hover:text-blue-600 transition-colors cursor-help" />
+              <div className="pointer-events-none absolute bottom-full left-1/2 z-20 mb-2 -translate-x-1/2 whitespace-nowrap rounded-lg bg-white border border-slate-200 px-2.5 py-1.5 text-[10px] font-medium text-slate-700 opacity-0 invisible shadow-md transition-all duration-200 group-hover:opacity-100 group-hover:visible">
+                {current.hint}
+                <div className="absolute top-full left-1/2 h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-white border-b border-r border-slate-200" />
+              </div>
+            </div>
           </span>
         </label>
       )}
-      <div className="flex flex-col sm:flex-row gap-2">
+      <div className="flex flex-col gap-2">
         <select
-          className="select select-bordered select-sm h-10 text-xs shrink-0 w-full sm:w-[140px] md:w-40 focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+          className="select select-bordered bg-slate-50 border-slate-200 text-slate-800 rounded-xl focus:border-slate-400 focus:outline-none transition-all duration-200 h-[42px] min-h-0 py-0 text-sm w-full"
           defaultValue="PA_CITIZEN"
           onChange={(e) => setDocType(e.target.value as DocType)}
           disabled={disabled}
           aria-label="Tipo de documento"
         >
           {DOC_TYPES.map((dt) => (
-            <option key={dt.value} value={dt.value}>
+            <option
+              key={dt.value}
+              value={dt.value}
+              className="bg-white text-slate-800"
+            >
               {dt.label}
             </option>
           ))}
         </select>
 
-        <div className="relative flex-1 min-w-0 w-full">
-          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-base-content/40 pointer-events-none" />
+        <div className="relative w-full">
+          <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-slate-400 pointer-events-none" />
           <input
             type="text"
-            className={`input input-bordered w-full pl-9 font-mono text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 ${error ? "input-error" : ""}`}
+            className={`input input-bordered w-full font-mono text-sm bg-slate-50 border-slate-200 text-slate-800 rounded-xl focus:border-slate-400 focus:outline-none transition-all duration-200 h-[42px] min-h-0 ${error ? "input-error border-red-500 bg-red-50/50 text-red-900" : ""}`}
             placeholder={current.placeholder}
             value={value}
             onChange={(e) => onChange(e.target.value)}
@@ -109,7 +120,6 @@ export function IdDocumentField({
         </div>
       </div>
 
-      <p className="text-[10px] text-base-content/40 pl-0.5">{current.hint}</p>
       {error && <span className="text-error text-xs">{error}</span>}
     </div>
   );
