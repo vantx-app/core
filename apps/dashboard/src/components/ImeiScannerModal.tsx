@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Html5Qrcode, CameraDevice } from "html5-qrcode";
 import { RotateCw, X, Zap, ZapOff, Loader2, AlertCircle } from "lucide-react";
+import { cleanImei } from "@/utils/client";
 
 export default function ImeiScannerModal({
   isOpen,
@@ -23,12 +24,7 @@ export default function ImeiScannerModal({
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isUnmountedRef = useRef(false);
 
-  // Limpiar caracteres no numéricos y buscar una secuencia de exactamente 15 dígitos (formato IMEI de Teltonika)
-  const cleanImei = (text: string): string | null => {
-    const numbersOnly = text.replace(/[^0-9]/g, "");
-    const match = numbersOnly.match(/\d{15}/);
-    return match ? match[0] : null;
-  };
+
 
   const startScanning = async (
     cameraId: string,

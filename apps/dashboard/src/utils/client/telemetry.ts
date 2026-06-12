@@ -145,3 +145,124 @@ export function condenseDailyRollupsByDriver(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 }
+
+/**
+ * Groups daily telemetry reports by vehicle, aggregating values for duplicate dates.
+ * 
+ * @param dailyReports Array of daily telemetry reports.
+ * @returns Array of grouped vehicle reports.
+ */
+export function groupDailyReportsByVehicle(dailyReports: any[]): any[] {
+  const groups: Record<
+    string,
+    {
+      vehicleId: string | null;
+      vehicleAlias: string;
+      vehiclePlate: string;
+      totalKm: number;
+      totalHours: number;
+      reports: any[];
+    }
+  > = {};
+
+  dailyReports.forEach((report) => {
+    const v = report.vehicle;
+    const vId = v?.id || "no-vehicle";
+    if (!groups[vId]) {
+      groups[vId] = {
+        vehicleId: v?.id || null,
+        vehicleAlias: v?.alias || "Sin Vehículo",
+        vehiclePlate: v?.plateNumber || "",
+        totalKm: 0,
+        totalHours: 0,
+        reports: [],
+      };
+    }
+
+    // Calculate UTC date-only string for grouping (YYYY-MM-DD)
+    const d = new Date(report.date);
+    const year = d.getUTCFullYear();
+    const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dayVal = String(d.getUTCDate()).padStart(2, "0");
+    const dateStr = `${year}-${month}-${dayVal}`;
+
+    // Look for an existing report for this date in the vehicle group
+    let existingReport = groups[vId].reports.find((r) => {
+      const rd = new Date(r.date);
+      const rYear = rd.getUTCFullYear();
+      const rMonth = String(rd.getUTCMonth() + 1).padStart(2, "0");
+      const rDay = String(rd.getUTCDate()).padStart(2, "0");
+      return `${rYear}-${rMonth}-${rDay}` === dateStr;
+    });
+
+    if (existingReport) {
+      // Aggregate values
+      existingReport.totalKm += report.totalKm || 0;
+      existingReport.totalEngineHours += report.totalEngineHours || 0;
+      existingReport.idlingHours += report.idlingHours || 0;
+      existingReport.overspeedCount += report.overspeedCount || 0;
+      existingReport.brakingCount += report.brakingCount || 0;
+      existingReport.corneringCount += report.corneringCount || 0;
+      existingReport.accelerationCount += report.accelerationCount || 0;
+      existingReport.deviceUnpluggedCount += report.deviceUnpluggedCount || 0;
+      existingReport.activeFaultCodesCount +=
+        report.activeFaultCodesCount || 0;
+      existingReport.highRpmCount += report.highRpmCount || 0;
+      existingReport.coldEngineStrainCount +=
+        report.coldEngineStrainCount || 0;
+      existingReport.coastingInNeutralCount +=
+        report.coastingInNeutralCount || 0;
+      existingReport.engineLuggingCount += report.engineLuggingCount || 0;
+      existingReport.highLoadStrainCount += report.highLoadStrainCount || 0;
+      existingReport.criticalOverheatingCount +=
+        report.criticalOverheatingCount || 0;
+    } else {
+      // Clone the report object to avoid mutating the original prop data
+      groups[vId].reports.push({
+        ...report,
+      });
+    }
+
+    groups[vId].totalKm += report.totalKm || 0;
+    groups[vId].totalHours += report.totalEngineHours || 0;
+  });
+
+  // Sort reports inside each group by date descending
+  Object.values(groups).forEach((g) => {
+    g.reports.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+  });
+
+  return Object.values(groups);
+}
+
+/**
+ * Groups daily telemetry rollups by month and year in Spanish.
+ * 
+ * @param rollups Array of DailyTelemetryRollup items.
+ * @returns Record mapping month/year label to rollups.
+ */
+export function groupRollupsByMonth(
+  rollups: DailyTelemetryRollup[],
+): Record<string, DailyTelemetryRollup[]> {
+  const getMonthYearLabel = (dateStr: string | Date) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("es-ES", {
+      month: "long",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+  };
+
+  const groupedRollups: Record<string, DailyTelemetryRollup[]> = {};
+  rollups.forEach((day) => {
+    const label = getMonthYearLabel(day.date);
+    if (!groupedRollups[label]) {
+      groupedRollups[label] = [];
+    }
+    groupedRollups[label].push(day);
+  });
+
+  return groupedRollups;
+}

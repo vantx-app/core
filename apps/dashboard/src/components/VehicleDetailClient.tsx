@@ -39,6 +39,7 @@ import {
   getScoreBadgeColor,
   formatHours,
   condenseDailyRollupsByDriver,
+  groupRollupsByMonth,
 } from "@/utils/client";
 import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
 import { MovementStatusBadge } from "@/components/ui/MovementStatusBadge";
@@ -89,23 +90,9 @@ export function VehicleDetailClient({
 
   const showRollupGrouping = rollups.length > 5;
 
-  const getMonthYearLabel = (dateStr: string | Date) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("es-ES", {
-      month: "long",
-      year: "numeric",
-      timeZone: "UTC",
-    });
-  };
-
-  const groupedRollups: Record<string, DailyTelemetryRollup[]> = {};
-  rollups.forEach((day) => {
-    const label = getMonthYearLabel(day.date);
-    if (!groupedRollups[label]) {
-      groupedRollups[label] = [];
-    }
-    groupedRollups[label].push(day);
-  });
+  const groupedRollups = useMemo(() => {
+    return groupRollupsByMonth(rollups);
+  }, [rollups]);
 
   const monthKeys = Object.keys(groupedRollups);
   const firstMonthKey = monthKeys[0] || "";

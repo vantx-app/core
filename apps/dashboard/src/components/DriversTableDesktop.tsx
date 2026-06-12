@@ -5,7 +5,7 @@ import React from "react";
 import { Table } from "@/components/ui/Table";
 import { DriverAvatar } from "@/components/ui/DriverAvatar";
 import { CreditCard, Car, UserCheck } from "lucide-react";
-import { getScoreBadgeColor, formatDate } from "@/utils/client";
+import { getScoreBadgeColor, formatDate, getDriverStatusBadgeClass, getDriverStatusText } from "@/utils/client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -20,30 +20,15 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
   };
 
   const getStatusBadge = (status: DriverSummary["status"]) => {
-    switch (status) {
-      case "ACTIVE":
-        return (
-          <span className="badge badge-success gap-1 text-white text-[10px] font-bold py-1 px-2.5">
-            <UserCheck className="size-3" />
-            Activo
-          </span>
-        );
-      case "INACTIVE":
-        return (
-          <span
-            className="badge badge-neutral gap-1 text-[10px] font-bold py-1 px-2.5"
-            title="Shadow Profile"
-          >
-            Shadow Profile
-          </span>
-        );
-      default:
-        return (
-          <span className="badge badge-error gap-1 text-[10px] font-bold py-1 px-2.5">
-            {status}
-          </span>
-        );
-    }
+    return (
+      <span
+        className={`badge gap-1 ${getDriverStatusBadgeClass(status)}`}
+        title={status === "INACTIVE" ? "Shadow Profile" : undefined}
+      >
+        {status === "ACTIVE" && <UserCheck className="size-3" />}
+        {getDriverStatusText(status)}
+      </span>
+    );
   };
 
   const columns: TableColumn<DriverSummary>[] = [

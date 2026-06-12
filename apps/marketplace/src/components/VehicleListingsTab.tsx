@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import api from "../utils/client/api-client";
+import { getCategoryText, getFuelText } from "../utils/client/format";
 import {
   Car,
   DollarSign,
@@ -92,35 +93,6 @@ export function VehicleListingsTab({
     );
   };
 
-  const getCategoryText = (cat: string) => {
-    switch (cat) {
-      case "HEAVY_DUTY":
-        return "Carga Pesada";
-      case "LIGHT_COMMERCIAL":
-        return "Distribución Ligera";
-      case "PASSENGER":
-        return "Vehículo de Pasajeros";
-      case "MACHINERY":
-        return "Maquinaria Pesada";
-      default:
-        return cat;
-    }
-  };
-
-  const getFuelText = (fuel: string | null) => {
-    switch (fuel) {
-      case "DIESEL":
-        return "Diésel";
-      case "GASOLINE":
-        return "Gasolina";
-      case "ELECTRIC":
-        return "Eléctrico";
-      case "HYBRID":
-        return "Híbrido";
-      default:
-        return fuel || "N/A";
-    }
-  };
 
   if (loading) {
     return (

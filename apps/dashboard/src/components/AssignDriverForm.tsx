@@ -8,6 +8,7 @@ import { UserPlus, Loader2, UserCheck, UserX, Zap } from "lucide-react";
 import { IdDocumentField } from "@/components/ui/IdDocumentField";
 import { Button } from "@/components/ui/Button";
 import { Alert } from "@/components/ui/Alert";
+import { getInitials } from "@/utils/client";
 
 export default function AssignDriverForm({
   vehicleId,
@@ -227,13 +228,7 @@ export default function AssignDriverForm({
     await handleAssign(idToAssign);
   };
 
-  const getInitials = (name: string) =>
-    name
-      ?.split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase() || "?";
+
 
   if (isLoadingDriver) {
     return (

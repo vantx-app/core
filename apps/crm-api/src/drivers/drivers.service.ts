@@ -88,6 +88,32 @@ export class DriversService {
     } as FormattedDriver<T>;
   }
 
+  maskDriverForPublic(driver: any) {
+    const fName = driver.firstName || 'Conductor';
+    const lInitial = driver.lastName ? `${driver.lastName[0]}.` : '';
+    const maskedName = `${fName} ${lInitial}`.trim();
+    return {
+      id: driver.id,
+      name: maskedName,
+      firstName: fName,
+      lastName: lInitial ? `${lInitial}` : null,
+      nationalId: '***-***-***',
+      phone: null,
+      status: driver.status,
+      licenseType: driver.licenseType,
+      globalStats: driver.globalStats
+        ? {
+            globalOverallScore: null,
+            globalSafetyScore: null,
+            globalEcoScore: null,
+            globalAssetScore: null,
+          }
+        : null,
+      scoreSnapshots: [],
+      documents: driver.documents || [],
+    };
+  }
+
   async findAll(onlyAvailable?: boolean) {
     const cacheKey = `drivers:all:${onlyAvailable ? 'available' : 'all'}`;
     let drivers =
@@ -108,6 +134,12 @@ export class DriversService {
         },
         include: {
           globalStats: true,
+          documents: {
+            select: {
+              type: true,
+              status: true,
+            },
+          },
           assignments: {
             where: {
               to: null,
@@ -133,6 +165,12 @@ export class DriversService {
       where: { id },
       include: {
         globalStats: true,
+        documents: {
+          select: {
+            type: true,
+            status: true,
+          },
+        },
         scoreSnapshots: {
           orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }],
           take: 12,
@@ -221,6 +259,12 @@ export class DriversService {
         },
         include: {
           globalStats: true,
+          documents: {
+            select: {
+              type: true,
+              status: true,
+            },
+          },
           assignments: {
             where: {
               vehicle: {

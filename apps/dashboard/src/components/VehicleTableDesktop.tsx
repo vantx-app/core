@@ -9,36 +9,13 @@ import Link from "next/link";
 import { Pencil, UserCog, Route, Eye } from "lucide-react";
 import { DriverInfoLabel } from "@/components/ui/DriverInfoLabel";
 import { Table } from "@/components/ui/Table";
+import { getVehicleStatusBadgeClass, getVehicleStatusLabel } from "@/utils/client";
 
 export function VehicleTableDesktop({
   vehicles,
   targetOrgId,
 }: VehicleTableDesktopProps) {
-  const getStatusBadgeClass = (status: FleetVehicleSummary["status"]) => {
-    switch (status) {
-      case "ACTIVE":
-        return "badge-success text-white";
-      case "IN_MAINTENANCE":
-        return "badge-warning text-white";
-      case "DECOMMISSIONED":
-        return "badge-neutral text-white";
-      default:
-        return "badge-ghost";
-    }
-  };
 
-  const getStatusLabel = (status: FleetVehicleSummary["status"]) => {
-    switch (status) {
-      case "ACTIVE":
-        return "Activo";
-      case "IN_MAINTENANCE":
-        return "Taller";
-      case "DECOMMISSIONED":
-        return "Decomisionado";
-      default:
-        return status;
-    }
-  };
 
   const columns: TableColumn<FleetVehicleSummary>[] = [
     {
@@ -56,9 +33,9 @@ export function VehicleTableDesktop({
       header: "Estado",
       render: (vehicle) => (
         <span
-          className={`badge badge-sm font-semibold ${getStatusBadgeClass(vehicle.status)}`}
+          className={`badge badge-sm font-semibold ${getVehicleStatusBadgeClass(vehicle.status)}`}
         >
-          {getStatusLabel(vehicle.status)}
+          {getVehicleStatusLabel(vehicle.status)}
         </span>
       ),
     },

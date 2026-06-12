@@ -5,6 +5,12 @@ import api from "../utils/client/api-client";
 import { VerificationTab } from "../components/VerificationTab";
 import { VehicleListingsTab } from "../components/VehicleListingsTab";
 import {
+  getInitials,
+  maskDriverName,
+  getDocStatusBadge,
+  getDocStatusText,
+} from "../utils/client/format";
+import {
   Car,
   User,
   ShieldCheck,
@@ -58,6 +64,10 @@ interface MarketplaceDriver {
     globalSafetyScore: number | null;
     globalEcoScore: number | null;
   } | null;
+  documents?: {
+    type: string;
+    status: string;
+  }[];
 }
 
 export default function MarketplaceHome() {
@@ -97,58 +107,35 @@ export default function MarketplaceHome() {
         }
       } else {
         // Para OWNER/ADMIN o SUPER_ADMIN, cargar conductores disponibles
-        fetchAvailableDrivers();
+        fetchAvailableDrivers(data);
       }
     } catch (err) {
       console.log("Usuario no autenticado (acceso público).");
       setUser(null);
-      // Cargar lista con datos simulados/enmascarados
-      fetchAvailableDrivers();
+      // Cargar lista de conductores públicos
+      fetchAvailableDrivers(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchAvailableDrivers = async () => {
+
+
+  const fetchAvailableDrivers = async (currentUser?: UserProfile | null) => {
     try {
       setDriversLoading(true);
-      const { data } = await api.get<MarketplaceDriver[]>(
-        "/drivers?available=true",
-      );
+      const resolvedUser = currentUser !== undefined ? currentUser : user;
+      const isOwner =
+        resolvedUser?.role === "OWNER" ||
+        resolvedUser?.role === "ADMIN" ||
+        resolvedUser?.role === "SUPER_ADMIN";
+
+      const url = isOwner ? "/drivers?available=true" : "/drivers/public";
+      const { data } = await api.get<MarketplaceDriver[]>(url);
       setDrivers(data);
     } catch (err) {
       console.error("Error al cargar conductores disponibles:", err);
-      // Fallback a conductores simulados si falla la API
-      setDrivers([
-        {
-          id: "1",
-          name: "Carlos Mendoza",
-          firstName: "Carlos",
-          lastName: "Mendoza",
-          nationalId: "8-888-888",
-          phone: "+507 6666-6666",
-          status: "ACTIVE",
-          globalStats: {
-            globalOverallScore: 92,
-            globalSafetyScore: 90,
-            globalEcoScore: 95,
-          },
-        },
-        {
-          id: "2",
-          name: "Sofía Rodríguez",
-          firstName: "Sofía",
-          lastName: "Rodríguez",
-          nationalId: "9-999-999",
-          phone: "+507 5555-5555",
-          status: "ACTIVE",
-          globalStats: {
-            globalOverallScore: 88,
-            globalSafetyScore: 85,
-            globalEcoScore: 90,
-          },
-        },
-      ]);
+      setDrivers([]);
     } finally {
       setDriversLoading(false);
     }
@@ -173,30 +160,7 @@ export default function MarketplaceHome() {
     }
   };
 
-  const getInitials = (name: string) => {
-    return (
-      name
-        ?.split(" ")
-        .map((n) => n[0])
-        .slice(0, 2)
-        .join("")
-        .toUpperCase() || "U"
-    );
-  };
 
-  const maskDriverName = (driver: MarketplaceDriver) => {
-    // Si no está autenticado o es chofer, enmascarar los nombres
-    const isOwner =
-      user?.role === "OWNER" ||
-      user?.role === "ADMIN" ||
-      user?.role === "SUPER_ADMIN";
-    if (isOwner) {
-      return driver.name || `${driver.firstName} ${driver.lastName}`;
-    }
-    const fName = driver.firstName || "Conductor";
-    const lInitial = driver.lastName ? `${driver.lastName[0]}.` : "";
-    return `${fName} ${lInitial}`.trim();
-  };
 
   if (loading) {
     return (
@@ -211,6 +175,10 @@ export default function MarketplaceHome() {
 
   const isDriver = user?.role === "DRIVER";
   const isDriverActive = driverStats?.status === "ACTIVE";
+  const isOwner =
+    user?.role === "OWNER" ||
+    user?.role === "ADMIN" ||
+    user?.role === "SUPER_ADMIN";
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased relative">
@@ -228,12 +196,14 @@ export default function MarketplaceHome() {
           </div>
 
           <div className="flex items-center gap-4">
-            <a
-              href={dashboardUrl}
-              className="text-sm font-semibold hover:text-slate-900 text-slate-500 transition-colors"
-            >
-              Volver al Dashboard
-            </a>
+            {user && (
+              <a
+                href={dashboardUrl}
+                className="text-sm font-semibold hover:text-slate-900 text-slate-500 transition-colors"
+              >
+                Volver al Dashboard
+              </a>
+            )}
             {user ? (
               <div className="flex items-center gap-3">
                 <div className="avatar placeholder">
@@ -424,11 +394,31 @@ export default function MarketplaceHome() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="space-y-0.5">
                           <h3 className="text-base font-extrabold text-slate-950">
-                            {maskDriverName(driver)}
+                            {maskDriverName(driver, user?.role)}
                           </h3>
                           <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
                             Licencia: {driver.licenseType || "N/A"}
                           </p>
+                          {isOwner && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              <span
+                                className={`badge text-[8px] font-bold border rounded-full px-1.5 py-0.5 leading-none shrink-0 ${getDocStatusBadge(
+                                  driver,
+                                  "NATIONAL_ID",
+                                )}`}
+                              >
+                                Cédula: {getDocStatusText(driver, "NATIONAL_ID")}
+                              </span>
+                              <span
+                                className={`badge text-[8px] font-bold border rounded-full px-1.5 py-0.5 leading-none shrink-0 ${getDocStatusBadge(
+                                  driver,
+                                  "POLICE_RECORD",
+                                )}`}
+                              >
+                                Historial Policivo: {getDocStatusText(driver, "POLICE_RECORD")}
+                              </span>
+                            </div>
+                          )}
                         </div>
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
                           Disponible

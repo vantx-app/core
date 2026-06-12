@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-enum-comparison */
 import {
   Controller,
   Get,
@@ -28,7 +29,7 @@ export class DriversController {
   constructor(
     private readonly driversService: DriversService,
     private readonly cacheService: CacheService,
-  ) {}
+  ) { }
 
   // @Roles(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN)
   // @Post()
@@ -61,6 +62,13 @@ export class DriversController {
     }
 
     return this.driversService.findAllByOrgId(user.orgId);
+  }
+
+  @Public()
+  @Get('public')
+  async findPublicAvailableDrivers() {
+    const drivers = await this.driversService.findAll(true);
+    return drivers.map((d) => this.driversService.maskDriverForPublic(d));
   }
 
   @Roles(ROLES.DRIVER, ROLES.OWNER, ROLES.ADMIN)

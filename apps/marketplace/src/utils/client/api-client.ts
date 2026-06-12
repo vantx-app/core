@@ -88,10 +88,18 @@ api.interceptors.response.use(
           domain: deleteSettings.domain,
         });
 
-        const landingUrl =
-          process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
-        if (typeof window !== "undefined") {
-          window.location.href = `${landingUrl}/login?expired=true`;
+        // Si es una consulta pública del Marketplace (como verificar perfil o listar conductores),
+        // no forzamos redirección para permitir navegación en modo invitado.
+        const isPublicCheck =
+          originalRequest.url?.includes("/users/me") ||
+          originalRequest.url?.includes("/drivers");
+
+        if (!isPublicCheck) {
+          const landingUrl =
+            process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+          if (typeof window !== "undefined") {
+            window.location.href = `${landingUrl}/login?expired=true`;
+          }
         }
 
         return Promise.reject(refreshError);

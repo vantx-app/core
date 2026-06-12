@@ -32,6 +32,8 @@ export const getVehicleStatusBadgeClass = (status: string): string => {
     case "MAINTENANCE":
     case "IN_MAINTENANCE":
       return "badge-warning text-white bg-amber-500 border-none";
+    case "DECOMMISSIONED":
+      return "badge-neutral text-white";
     default:
       return "badge-ghost";
   }
@@ -252,4 +254,56 @@ export const formatTripDuration = (
   const e = end ? new Date(end).getTime() : Date.now();
   const hoursDecimal = (e - s) / 3600000;
   return formatDecimalHours(hoursDecimal, true);
+};
+
+export const cleanImei = (text: string): string | null => {
+  const numbersOnly = text.replace(/[^0-9]/g, "");
+  const match = numbersOnly.match(/\d{15}/);
+  return match ? match[0] : null;
+};
+
+export const getInitials = (name: string): string => {
+  return (
+    name
+      ?.split(" ")
+      .map((n) => n[0])
+      .slice(0, 2)
+      .join("")
+      .toUpperCase() || "?"
+  );
+};
+
+export const getDriverStatusBadgeClass = (status: string): string => {
+  switch (status) {
+    case "ACTIVE":
+      return "badge-success gap-1 text-white text-[10px] font-bold py-1 px-2.5";
+    case "INACTIVE":
+      return "badge-neutral gap-1 text-[10px] font-bold py-1 px-2.5";
+    default:
+      return "badge-error gap-1 text-[10px] font-bold py-1 px-2.5";
+  }
+};
+
+export const getDriverStatusText = (status: string): string => {
+  switch (status) {
+    case "ACTIVE":
+      return "Activo";
+    case "INACTIVE":
+      return "Shadow Profile";
+    default:
+      return status;
+  }
+};
+
+export const getVehicleStatusLabel = (status: string): string => {
+  switch (status) {
+    case "ACTIVE":
+      return "Activo";
+    case "IN_MAINTENANCE":
+      return "Taller";
+    case "DECOMMISSIONED":
+      return "Decomisionado";
+    default:
+      return status;
+  }
 };

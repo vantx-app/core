@@ -91,7 +91,7 @@ describe('DriversService', () => {
 
       const result = await service.findAll();
 
-      expect(cacheMock.get).toHaveBeenCalledWith('drivers:all');
+      expect(cacheMock.get).toHaveBeenCalledWith('drivers:all:all');
       expect(prismaMock.driver.findMany).not.toHaveBeenCalled();
       expect(result).toEqual(mockDrivers);
     });
@@ -106,7 +106,7 @@ describe('DriversService', () => {
 
       expect(prismaMock.driver.findMany).toHaveBeenCalled();
       expect(cacheMock.set).toHaveBeenCalledWith(
-        'drivers:all',
+        'drivers:all:all',
         expectedDrivers,
         900000,
       );
