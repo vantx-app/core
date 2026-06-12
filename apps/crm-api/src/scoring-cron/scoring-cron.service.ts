@@ -6,6 +6,7 @@ import { HereRoutesClientService } from './here-routes-client.service';
 import { TelemetryRollupService } from './telemetry-rollup.service';
 import { WeeklyScoringService } from './weekly-scoring.service';
 import { TelemetryLog, VehicleCategory } from '@prisma/client';
+import { RouteSpanWithSpeedLimit } from './route-utils';
 
 @Injectable()
 export class ScoringCronService {
@@ -37,17 +38,15 @@ export class ScoringCronService {
     const apiKey = this.configService.get<string>('HERE_API_KEY');
     if (!apiKey) {
       this.logger.warn(
-        'HERE_API_KEY no configurada. Se mantendrán los límites de velocidad fallback calculados por SQL.',
+        'HERE_API_KEY no configurada. Se realizará el post-procesamiento de límites de velocidad utilizando los límites fallback.',
       );
-      return;
+    } else {
+      this.logger.log(
+        `Iniciando post-procesamiento de límites de velocidad HERE para la fecha: ${dateStr}`,
+      );
+      // Reiniciar la suspensión del cliente de HERE antes de empezar
+      this.hereRoutesClient.resetSuspension();
     }
-
-    this.logger.log(
-      `Iniciando post-procesamiento de límites de velocidad HERE para la fecha: ${dateStr}`,
-    );
-
-    // Reiniciar la suspensión del cliente de HERE antes de empezar
-    this.hereRoutesClient.resetSuspension();
 
     // Obtener rollups del día para viajes con conductor
     const rollups = await this.prisma.dailyTelemetryRollup.findMany({
@@ -117,11 +116,13 @@ export class ScoringCronService {
         continue;
       }
 
-      const result = await this.evaluateOverspeedingWithHereRoutes(
-        logs,
-        fallbackThreshold,
-        category,
-      );
+      const result = apiKey
+        ? await this.evaluateOverspeedingWithHereRoutes(
+            logs,
+            fallbackThreshold,
+            category,
+          )
+        : this.fallbackOverspeeding(logs, fallbackThreshold);
 
       await this.prisma.dailyTelemetryRollup.update({
         where: { id: rollup.id },
@@ -160,16 +161,58 @@ export class ScoringCronService {
     fallbackThreshold: number,
   ): { overspeedCount: number; overspeedSeverity: number } {
     let overspeedCount = 0;
-    let overspeedSeverity = 0;
+    let totalDurationSeconds = 0;
+
+    let currentEpisodeStart: Date | null = null;
+    let lastSpeedingTimestamp: Date | null = null;
+    const COOLDOWN_MS = 30 * 1000; // Cooldown de 30 segundos
+
     for (const log of logs) {
-      if (log.speed > fallbackThreshold) {
-        overspeedCount++;
-        overspeedSeverity += log.speed - fallbackThreshold;
+      // Umbral con margen de gracia de 12 km/h para Panamá
+      const isSpeeding = log.speed > fallbackThreshold + 12;
+
+      if (isSpeeding) {
+        if (!currentEpisodeStart) {
+          currentEpisodeStart = log.timestamp;
+        }
+        lastSpeedingTimestamp = log.timestamp;
+      } else {
+        if (currentEpisodeStart && lastSpeedingTimestamp) {
+          const timeSinceLastSpeeding =
+            log.timestamp.getTime() - lastSpeedingTimestamp.getTime();
+          if (timeSinceLastSpeeding >= COOLDOWN_MS) {
+            // Verificar duración mínima de 5 segundos antes de registrar la infracción
+            const actualDuration =
+              (lastSpeedingTimestamp.getTime() -
+                currentEpisodeStart.getTime()) /
+              1000;
+            if (actualDuration >= 5) {
+              const duration = Math.max(10, actualDuration);
+              totalDurationSeconds += duration;
+              overspeedCount++;
+            }
+
+            currentEpisodeStart = null;
+            lastSpeedingTimestamp = null;
+          }
+        }
       }
     }
+
+    if (currentEpisodeStart && lastSpeedingTimestamp) {
+      const actualDuration =
+        (lastSpeedingTimestamp.getTime() - currentEpisodeStart.getTime()) /
+        1000;
+      if (actualDuration >= 5) {
+        const duration = Math.max(10, actualDuration);
+        totalDurationSeconds += duration;
+        overspeedCount++;
+      }
+    }
+
     return {
       overspeedCount,
-      overspeedSeverity: parseFloat(overspeedSeverity.toFixed(3)),
+      overspeedSeverity: parseFloat(totalDurationSeconds.toFixed(3)),
     };
   }
 
@@ -223,7 +266,14 @@ export class ScoringCronService {
 
     const { spans, geometry } = routeResult;
     let totalOverspeedCount = 0;
-    let totalOverspeedSeverity = 0;
+    let totalDurationSeconds = 0;
+
+    let currentEpisodeStart: Date | null = null;
+    let lastSpeedingTimestamp: Date | null = null;
+    const COOLDOWN_MS = 30 * 1000; // Cooldown de 30 segundos
+
+    let lastSpeedLimit: number | null = null;
+    let decelerationGraceWindowEnd = 0; // Marca de tiempo en ms
 
     for (const log of validLogs) {
       const { index: closestIdx, distanceKm: snapDist } =
@@ -231,28 +281,87 @@ export class ScoringCronService {
 
       let limitToUse: number;
 
-      if (snapDist > 0.02) {
-        // 20m
+      if (snapDist > 0.05) {
+        // Fuera de ruta (> 50m), usar límite fallback general
         limitToUse = fallbackOverspeedThreshold;
       } else {
-        const speedLimit = this.getSpeedLimitForGeometryIndex(
-          closestIdx,
-          spans,
-        );
-        limitToUse = speedLimit ?? fallbackOverspeedThreshold;
+        const { speedLimit, functionalClass: fc } =
+          this.getSpeedLimitAndClassForGeometryIndex(closestIdx, spans);
+
+        if (speedLimit !== null) {
+          // Mantener el límite legal real del mapa (no elevar ni truncar hacia arriba)
+          limitToUse = speedLimit;
+        } else {
+          // Smart Fallback Ingestion: Asignar base conservadora basada en Reglamento de Tránsito de Panamá
+          if (fc === 1) {
+            limitToUse = 90; // Autopistas / Corredores
+          } else if (fc === 2) {
+            limitToUse = 60; // Avenidas Urbanas Principales
+          } else if (fc === 3) {
+            limitToUse = 50; // Arterias Secundarias / Conectores
+          } else if (fc === 4 || fc === 5) {
+            limitToUse = 40; // Calles Locales / Residenciales / Industriales
+          } else {
+            limitToUse = fallbackOverspeedThreshold;
+          }
+        }
       }
 
-      const threshold = limitToUse + 10;
+      // Lógica de transición espacial: Ventana de gracia por desaceleración rápida (drop >= 20 km/h)
+      if (lastSpeedLimit !== null && limitToUse <= lastSpeedLimit - 20) {
+        decelerationGraceWindowEnd = log.timestamp.getTime() + 15000; // 15 segundos de suspensión
+      }
+      lastSpeedLimit = limitToUse;
 
-      if (log.speed > threshold) {
+      const inDecelWindow =
+        log.timestamp.getTime() <= decelerationGraceWindowEnd;
+
+      // Umbral de velocidad con margen de gracia de 12 km/h
+      const threshold = limitToUse + 12;
+      const isSpeeding = !inDecelWindow && log.speed > threshold;
+
+      if (isSpeeding) {
+        if (!currentEpisodeStart) {
+          currentEpisodeStart = log.timestamp;
+        }
+        lastSpeedingTimestamp = log.timestamp;
+      } else {
+        if (currentEpisodeStart && lastSpeedingTimestamp) {
+          const timeSinceLastSpeeding =
+            log.timestamp.getTime() - lastSpeedingTimestamp.getTime();
+          if (timeSinceLastSpeeding >= COOLDOWN_MS) {
+            // Verificar duración mínima de 5 segundos antes de registrar la infracción
+            const actualDuration =
+              (lastSpeedingTimestamp.getTime() -
+                currentEpisodeStart.getTime()) /
+              1000;
+            if (actualDuration >= 5) {
+              const duration = Math.max(10, actualDuration);
+              totalDurationSeconds += duration;
+              totalOverspeedCount++;
+            }
+
+            currentEpisodeStart = null;
+            lastSpeedingTimestamp = null;
+          }
+        }
+      }
+    }
+
+    if (currentEpisodeStart && lastSpeedingTimestamp) {
+      const actualDuration =
+        (lastSpeedingTimestamp.getTime() - currentEpisodeStart.getTime()) /
+        1000;
+      if (actualDuration >= 5) {
+        const duration = Math.max(10, actualDuration);
+        totalDurationSeconds += duration;
         totalOverspeedCount++;
-        totalOverspeedSeverity += log.speed - limitToUse;
       }
     }
 
     return {
       overspeedCount: totalOverspeedCount,
-      overspeedSeverity: parseFloat(totalOverspeedSeverity.toFixed(3)),
+      overspeedSeverity: parseFloat(totalDurationSeconds.toFixed(3)),
     };
   }
 
@@ -274,11 +383,11 @@ export class ScoringCronService {
     return { index: closestIdx, distanceKm: minDist };
   }
 
-  private getSpeedLimitForGeometryIndex(
+  private getSpeedLimitAndClassForGeometryIndex(
     geometryIndex: number,
-    spans: any[],
-  ): number | null {
-    if (spans.length === 0) return null;
+    spans: RouteSpanWithSpeedLimit[],
+  ): { speedLimit: number | null; functionalClass: number | null } {
+    if (spans.length === 0) return { speedLimit: null, functionalClass: null };
     let matchedSpan = spans[0];
     for (const span of spans) {
       if (span.geometryOffset <= geometryIndex) {
@@ -287,7 +396,10 @@ export class ScoringCronService {
         break;
       }
     }
-    return matchedSpan.speedLimit;
+    return {
+      speedLimit: matchedSpan.speedLimit,
+      functionalClass: matchedSpan.functionalClass ?? null,
+    };
   }
 
   private getDistance(

@@ -289,7 +289,7 @@ export const getDriverStatusText = (status: string): string => {
     case "ACTIVE":
       return "Activo";
     case "INACTIVE":
-      return "Shadow Profile";
+      return "Sin cuenta vinculada";
     default:
       return status;
   }

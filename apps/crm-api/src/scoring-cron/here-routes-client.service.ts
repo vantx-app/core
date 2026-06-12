@@ -87,6 +87,7 @@ export class HereRoutesClientService {
         allSpans.push({
           geometryOffset: span.geometryOffset + currentOffset,
           speedLimit: span.speedLimit,
+          functionalClass: span.functionalClass ?? null,
         });
       }
 
@@ -121,7 +122,7 @@ export class HereRoutesClientService {
     queryParams.append('origin', `${origin.lat},${origin.lng}`);
     queryParams.append('destination', `${destination.lat},${destination.lng}`);
     queryParams.append('return', 'polyline');
-    queryParams.append('spans', 'maxSpeed');
+    queryParams.append('spans', 'maxSpeed,functionalClass');
     // Forzar modo planeación para desactivar Time-Aware Routing (evita tarifas Advanced Routing y tráfico)
     queryParams.append('departureTime', 'any');
 
@@ -173,6 +174,7 @@ export class HereRoutesClientService {
           spans.push({
             geometryOffset: span.offset ?? 0,
             speedLimit,
+            functionalClass: span.functionalClass ?? null,
           });
         }
       }

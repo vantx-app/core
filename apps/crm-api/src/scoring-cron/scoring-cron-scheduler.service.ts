@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
-import { TelemetryRollupService } from './telemetry-rollup.service';
+import { ScoringCronService } from './scoring-cron.service';
 import { WeeklyScoringService } from './weekly-scoring.service';
 
 @Injectable()
@@ -8,7 +8,7 @@ export class ScoringCronScheduler {
   private readonly logger = new Logger(ScoringCronScheduler.name);
 
   constructor(
-    private readonly telemetryRollupService: TelemetryRollupService,
+    private readonly scoringCronService: ScoringCronService,
     private readonly weeklyScoringService: WeeklyScoringService,
   ) {}
 
@@ -18,7 +18,7 @@ export class ScoringCronScheduler {
   async handleDailyRollup() {
     this.logger.log('Cron Trigger: Daily Telemetry Rollup');
     try {
-      await this.telemetryRollupService.runDailyRollup();
+      await this.scoringCronService.runDailyRollup();
     } catch (error) {
       this.logger.error('Error running daily telemetry rollup cron:', error);
     }

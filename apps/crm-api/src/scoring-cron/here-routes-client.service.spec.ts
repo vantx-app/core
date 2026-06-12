@@ -101,8 +101,8 @@ describe('HereRoutesClientService', () => {
                 polyline:
                   'BGgn6lRjk613E3N3DnkBjN_EU7B3DUjDkN7pB8Q_EwMzFwvB3X0jBnQ8pBnVwHT0K0PzKzPvHU7pBoVge4wBkhBjSkInB0F4D4N0UoG8GsJoB8Q3Dwb3DsTjD7GjwB7GnfvW3wB7GnkBsE3NgF_OkDsE0UoL6T2R',
                 spans: [
-                  { offset: 0, maxSpeed: 11.1111116 }, // ~40 km/h
-                  { offset: 24, maxSpeed: 16.6666679 }, // ~60 km/h
+                  { offset: 0, maxSpeed: 11.1111116, functionalClass: 2 }, // ~40 km/h
+                  { offset: 24, maxSpeed: 16.6666679, functionalClass: 1 }, // ~60 km/h
                 ],
               },
             ],
@@ -123,8 +123,8 @@ describe('HereRoutesClientService', () => {
 
     expect(result).not.toBeNull();
     expect(result!.spans).toEqual([
-      { geometryOffset: 0, speedLimit: 40 },
-      { geometryOffset: 24, speedLimit: 60 },
+      { geometryOffset: 0, speedLimit: 40, functionalClass: 2 },
+      { geometryOffset: 24, speedLimit: 60, functionalClass: 1 },
     ]);
     // El decoder oficial decodifica y el servicio convierte a [lng, lat]
     expect(result!.geometry.length).toBeGreaterThan(0);

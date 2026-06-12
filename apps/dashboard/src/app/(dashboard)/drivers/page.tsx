@@ -65,9 +65,9 @@ function DriversPageContent() {
         return (
           <span
             className="badge badge-neutral gap-1"
-            title="Shadow Profile (Creado por administrador, sin cuenta registrada)"
+            title="Creado por administrador, sin cuenta registrada"
           >
-            Shadow Profile
+            Sin cuenta vinculada
           </span>
         );
       default:
@@ -88,7 +88,7 @@ function DriversPageContent() {
     },
     {
       id: "inactive",
-      name: "Shadow Profiles",
+      name: "Sin cuenta vinculada",
       badge: "bg-neutral-content/40",
       drivers: inactiveDrivers,
     },

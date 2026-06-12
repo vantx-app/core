@@ -23,7 +23,7 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
     return (
       <span
         className={`badge gap-1 ${getDriverStatusBadgeClass(status)}`}
-        title={status === "INACTIVE" ? "Shadow Profile" : undefined}
+        title={status === "INACTIVE" ? "Creado por administrador, sin cuenta registrada" : undefined}
       >
         {status === "ACTIVE" && <UserCheck className="size-3" />}
         {getDriverStatusText(status)}

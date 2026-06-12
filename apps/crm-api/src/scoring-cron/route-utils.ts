@@ -4,6 +4,7 @@ import { TelemetryLog } from '@prisma/client';
 export interface RouteSpanWithSpeedLimit {
   geometryOffset: number;
   speedLimit: number | null; // km/h, null si es Unlimited o no disponible
+  functionalClass?: number | null;
 }
 
 /** Resultado de una llamada exitosa */
