@@ -1,211 +1,494 @@
-import React from "react";
+"use client";
 
-// Mock drivers for demonstration
-const DRIVERS = [
-  {
-    id: "1",
-    name: "Carlos Mendoza",
-    rating: 4.9,
-    trips: 142,
-    status: "Disponible",
-    zone: "Zona Norte",
-    type: "Carga Pesada",
-  },
-  {
-    id: "2",
-    name: "Sofía Rodríguez",
-    rating: 4.8,
-    trips: 98,
-    status: "En Ruta",
-    zone: "Zona Centro",
-    type: "Distribución",
-  },
-  {
-    id: "3",
-    name: "Andrés Castiblanco",
-    rating: 4.7,
-    trips: 230,
-    status: "Disponible",
-    zone: "Zona Sur",
-    type: "Carga Pesada",
-  },
-  {
-    id: "4",
-    name: "Mariana Silva",
-    rating: 4.95,
-    trips: 180,
-    status: "Disponible",
-    zone: "Zona Oeste",
-    type: "Refrigerados",
-  },
-];
+import React, { useState, useEffect } from "react";
+import api from "../utils/client/api-client";
+import { VerificationTab } from "../components/VerificationTab";
+import { VehicleListingsTab } from "../components/VehicleListingsTab";
+import {
+  Car,
+  User,
+  ShieldCheck,
+  Filter,
+  Star,
+  Briefcase,
+  AlertCircle,
+  LogOut,
+  Building2,
+  Lock,
+  Loader2,
+} from "lucide-react";
+import Cookies from "js-cookie";
+
+interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  organization?: {
+    name: string;
+  } | null;
+  driver?: {
+    id: string;
+    nationalId: string;
+    phone?: string | null;
+    status: string;
+  } | null;
+}
+
+interface DriverProfileStats {
+  id: string;
+  firstName: string;
+  lastName: string;
+  nationalId: string;
+  status: string;
+  licenseType: string | null;
+}
+
+interface MarketplaceDriver {
+  id: string;
+  name: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  nationalId: string;
+  phone: string | null;
+  status: "ACTIVE" | "INACTIVE";
+  licenseType?: string | null;
+  globalStats: {
+    globalOverallScore: number | null;
+    globalSafetyScore: number | null;
+    globalEcoScore: number | null;
+  } | null;
+}
 
 export default function MarketplaceHome() {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [driverStats, setDriverStats] = useState<DriverProfileStats | null>(
+    null,
+  );
+  const [drivers, setDrivers] = useState<MarketplaceDriver[]>([]);
+  const [activeTab, setActiveTab] = useState<
+    "drivers" | "documents" | "vehicles"
+  >("drivers");
+  const [loading, setLoading] = useState(true);
+  const [driversLoading, setDriversLoading] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("Todos");
+  const [zoneFilter, setZoneFilter] = useState("Todas");
+
+  const landingUrl =
+    process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+  const dashboardUrl =
+    process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3001";
+
+  const fetchProfileAndState = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get<UserProfile>("/users/me");
+      setUser(data);
+
+      if (data.role === "DRIVER" || data.driver) {
+        try {
+          const statsRes =
+            await api.get<DriverProfileStats>("/drivers/me/stats");
+          setDriverStats(statsRes.data);
+          // Por defecto, redirigir a vehículos o documentos
+          setActiveTab("vehicles");
+        } catch (err) {
+          console.error("Error al cargar estadísticas del conductor:", err);
+        }
+      } else {
+        // Para OWNER/ADMIN o SUPER_ADMIN, cargar conductores disponibles
+        fetchAvailableDrivers();
+      }
+    } catch (err) {
+      console.log("Usuario no autenticado (acceso público).");
+      setUser(null);
+      // Cargar lista con datos simulados/enmascarados
+      fetchAvailableDrivers();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchAvailableDrivers = async () => {
+    try {
+      setDriversLoading(true);
+      const { data } = await api.get<MarketplaceDriver[]>(
+        "/drivers?available=true",
+      );
+      setDrivers(data);
+    } catch (err) {
+      console.error("Error al cargar conductores disponibles:", err);
+      // Fallback a conductores simulados si falla la API
+      setDrivers([
+        {
+          id: "1",
+          name: "Carlos Mendoza",
+          firstName: "Carlos",
+          lastName: "Mendoza",
+          nationalId: "8-888-888",
+          phone: "+507 6666-6666",
+          status: "ACTIVE",
+          globalStats: {
+            globalOverallScore: 92,
+            globalSafetyScore: 90,
+            globalEcoScore: 95,
+          },
+        },
+        {
+          id: "2",
+          name: "Sofía Rodríguez",
+          firstName: "Sofía",
+          lastName: "Rodríguez",
+          nationalId: "9-999-999",
+          phone: "+507 5555-5555",
+          status: "ACTIVE",
+          globalStats: {
+            globalOverallScore: 88,
+            globalSafetyScore: 85,
+            globalEcoScore: 90,
+          },
+        },
+      ]);
+    } finally {
+      setDriversLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfileAndState();
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+      Cookies.remove("access_token");
+      Cookies.remove("refresh_token");
+      window.location.href = `${landingUrl}/login`;
+    } catch (err) {
+      console.error("Logout error:", err);
+    }
+  };
+
+  const getInitials = (name: string) => {
+    return (
+      name
+        ?.split(" ")
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join("")
+        .toUpperCase() || "U"
+    );
+  };
+
+  const maskDriverName = (driver: MarketplaceDriver) => {
+    // Si no está autenticado o es chofer, enmascarar los nombres
+    const isOwner =
+      user?.role === "OWNER" ||
+      user?.role === "ADMIN" ||
+      user?.role === "SUPER_ADMIN";
+    if (isOwner) {
+      return driver.name || `${driver.firstName} ${driver.lastName}`;
+    }
+    const fName = driver.firstName || "Conductor";
+    const lInitial = driver.lastName ? `${driver.lastName[0]}.` : "";
+    return `${fName} ${lInitial}`.trim();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-slate-50">
+        <Loader2 className="size-10 animate-spin text-blue-600" />
+        <p className="text-sm text-slate-500 font-semibold">
+          Cargando Marketplace de VantX...
+        </p>
+      </div>
+    );
+  }
+
+  const isDriver = user?.role === "DRIVER";
+  const isDriverActive = driverStats?.status === "ACTIVE";
+
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased">
+    <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased relative">
       {/* Decorative background gradients */}
-      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none" />
 
       {/* Header */}
-      <header className="relative border-b border-slate-200 bg-white/85 backdrop-blur-md sticky top-0 z-50">
+      <header className="relative border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              VantX Marketplace
-            </span>
-            <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100 font-medium">
-              SSO Activo
+              VantX Drivers Marketplace
             </span>
           </div>
+
           <div className="flex items-center gap-4">
             <a
-              href={
-                process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3001"
-              }
+              href={dashboardUrl}
               className="text-sm font-semibold hover:text-slate-900 text-slate-500 transition-colors"
             >
-              Volver al Panel CRM
+              Volver al Dashboard
             </a>
-            <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-sm font-semibold text-slate-700">
-              U
-            </div>
+            {user ? (
+              <div className="flex items-center gap-3">
+                <div className="avatar placeholder">
+                  <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-full w-8 h-8 font-bold text-xs shadow-sm">
+                    <span>{getInitials(user.name)}</span>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  title="Cerrar Sesión"
+                  className="p-1.5 hover:bg-slate-100 text-slate-500 hover:text-red-500 rounded-lg transition-all"
+                >
+                  <LogOut className="size-4" />
+                </button>
+              </div>
+            ) : (
+              <a
+                href={`${landingUrl}/login`}
+                className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm"
+              >
+                Iniciar Sesión
+              </a>
+            )}
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="relative max-w-7xl mx-auto px-6 py-12">
-        <div className="p-8 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/60 to-slate-100/50 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">
-              Asignaciones en Tiempo Real
+      <section className="relative max-w-7xl mx-auto px-6 py-8">
+        <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-slate-100 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="text-left">
+            <h1 className="text-2xl font-extrabold text-slate-950">
+              Asignaciones de Conductores y Vehículos
             </h1>
-            <p className="text-slate-600 text-sm max-w-xl">
-              Encuentre conductores calificados e inicie contratos de servicio
-              al instante. Todos los perfiles son validados mediante firma
-              digital e historial telemático.
+            <p className="text-slate-600 text-xs max-w-xl mt-1 leading-relaxed">
+              Conectamos conductores profesionales verificados mediante firma
+              digital con flotas comerciales. Explora vehículos disponibles o
+              postúlate a asignaciones.
             </p>
           </div>
-          <div className="flex gap-4">
-            <button className="px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-sm transition-all shadow-lg shadow-blue-600/10">
-              Crear Oferta de Trabajo
-            </button>
-            <button className="px-5 py-3 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 transition-all shadow-sm">
-              Ver Mis Contratos
-            </button>
-          </div>
+          {isDriver && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white shadow-sm shrink-0">
+              <span className="text-xs text-slate-500 font-semibold">
+                Tu Estado:
+              </span>
+              <span
+                className={`badge text-xs font-bold px-2 py-0.5 rounded-full border ${
+                  isDriverActive
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                }`}
+              >
+                {isDriverActive
+                  ? "Activo (Verificado)"
+                  : "Pendiente de Verificación"}
+              </span>
+            </div>
+          )}
         </div>
       </section>
 
-      {/* Grid Content */}
+      {/* Navigation Tabs (Only for DRIVER) */}
+      {isDriver && (
+        <section className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-md">
+            <button
+              onClick={() => setActiveTab("vehicles")}
+              className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                activeTab === "vehicles"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-950"
+              }`}
+            >
+              <Car className="size-4" />
+              Vehículos Disponibles
+            </button>
+            <button
+              onClick={() => setActiveTab("documents")}
+              className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                activeTab === "documents"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-950"
+              }`}
+            >
+              <ShieldCheck className="size-4" />
+              Mis Documentos
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* Main Content Area */}
       <section className="max-w-7xl mx-auto px-6 pb-20">
-        <div className="flex flex-col lg:flex-row gap-8">
-          {/* Sidebar Filters */}
-          <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">
-            <div className="p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm">
-              <h2 className="text-lg font-bold text-slate-900 mb-4">Filtros</h2>
+        {isDriver ? (
+          <div>
+            {activeTab === "vehicles" && (
+              <VehicleListingsTab isDriverActive={isDriverActive} />
+            )}
+            {activeTab === "documents" && (
+              <VerificationTab onSync={fetchProfileAndState} />
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col lg:flex-row gap-8">
+            {/* Sidebar Filters */}
+            <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">
+              <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm text-left">
+                <h2 className="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-1.5">
+                  <Filter className="size-4 text-blue-600" />
+                  Filtrar Conductores
+                </h2>
 
-              <div className="flex flex-col gap-4">
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 block mb-2">
-                    TIPO DE VEHÍCULO
-                  </label>
-                  <select className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors">
-                    <option>Todos</option>
-                    <option>Carga Pesada</option>
-                    <option>Distribución</option>
-                    <option>Refrigerados</option>
-                  </select>
-                </div>
+                <div className="flex flex-col gap-4">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase">
+                      TIPO DE LICENCIA
+                    </label>
+                    <select
+                      value={categoryFilter}
+                      onChange={(e) => setCategoryFilter(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                    >
+                      <option>Todos</option>
+                      <option>D (Comercial/Particular)</option>
+                      <option>E1 (Transporte Selectivo)</option>
+                      <option>E2 (Buses/Colectivo)</option>
+                      <option>F (Equipo Pesado)</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className="text-xs font-semibold text-slate-500 block mb-2">
-                    ZONA GEOGRÁFICA
-                  </label>
-                  <select className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors">
-                    <option>Todas</option>
-                    <option>Zona Norte</option>
-                    <option>Zona Centro</option>
-                    <option>Zona Sur</option>
-                  </select>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase">
+                      ZONA GEOGRÁFICA
+                    </label>
+                    <select
+                      value={zoneFilter}
+                      onChange={(e) => setZoneFilter(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                    >
+                      <option>Todas</option>
+                      <option>Zona Metropolitana</option>
+                      <option>Zona Norte</option>
+                      <option>Zona Centro</option>
+                      <option>Zona Oeste</option>
+                    </select>
+                  </div>
                 </div>
               </div>
-            </div>
-          </aside>
+            </aside>
 
-          {/* Drivers List */}
-          <div className="flex-1 flex flex-col gap-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900">
-                Conductores Disponibles
-              </h2>
-              <span className="text-sm text-slate-500">
-                {DRIVERS.length} conductores encontrados
-              </span>
-            </div>
+            {/* Drivers List (For Owners & Public Guests) */}
+            <div className="flex-1 flex flex-col gap-6 text-left">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-extrabold text-slate-950">
+                  Conductores Profesionales Disponibles
+                </h2>
+                <span className="text-xs text-slate-500 font-semibold">
+                  {drivers.length} conductores encontrados
+                </span>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {DRIVERS.map((driver) => (
-                <div
-                  key={driver.id}
-                  className="p-6 rounded-2xl bg-white border border-slate-200/80 hover:border-slate-300 hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-6 shadow-sm"
-                >
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-900 mb-1">
-                        {driver.name}
-                      </h3>
-                      <span className="text-xs text-slate-500">
-                        {driver.type} &bull; {driver.zone}
-                      </span>
-                    </div>
-                    <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-                        driver.status === "Disponible"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-amber-50 text-amber-700 border-amber-200"
-                      }`}
-                    >
-                      {driver.status}
-                    </span>
-                  </div>
-
-                  {/* Card Body */}
-                  <div className="grid grid-cols-2 gap-4 border-y border-slate-100 py-4">
-                    <div>
-                      <span className="text-[10px] font-semibold text-slate-400 block uppercase">
-                        CALIFICACIÓN
-                      </span>
-                      <span className="text-sm font-semibold text-slate-700">
-                        ⭐ {driver.rating}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] font-semibold text-slate-400 block uppercase">
-                        VIAJES COMPLETADOS
-                      </span>
-                      <span className="text-sm font-semibold text-slate-700">
-                        {driver.trips} viajes
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Card Actions */}
-                  <div className="flex items-center gap-3">
-                    <button className="flex-1 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs border border-slate-200 transition-all">
-                      Ver Perfil
-                    </button>
-                    <button className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-all shadow-md shadow-blue-600/5">
-                      Proponer Contrato
-                    </button>
-                  </div>
+              {driversLoading ? (
+                <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white border border-slate-200 rounded-2xl">
+                  <Loader2 className="size-8 animate-spin text-blue-600" />
+                  <p className="text-xs text-slate-500">
+                    Cargando lista de conductores...
+                  </p>
                 </div>
-              ))}
+              ) : drivers.length === 0 ? (
+                <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 py-16">
+                  <User className="size-14 text-slate-300 mb-3" />
+                  <h3 className="text-sm font-bold text-slate-700">
+                    No hay conductores
+                  </h3>
+                  <p className="text-xs text-slate-400 max-w-sm mt-1">
+                    No hay conductores disponibles actualmente para
+                    reclutamiento en este momento.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {drivers.map((driver) => (
+                    <div
+                      key={driver.id}
+                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-5 shadow-sm"
+                    >
+                      {/* Header */}
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-0.5">
+                          <h3 className="text-base font-extrabold text-slate-950">
+                            {maskDriverName(driver)}
+                          </h3>
+                          <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                            Licencia: {driver.licenseType || "N/A"}
+                          </p>
+                        </div>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                          Disponible
+                        </span>
+                      </div>
+
+                      {/* Body stats */}
+                      <div className="grid grid-cols-2 gap-4 border-y border-slate-100 py-3 text-xs">
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
+                            Puntaje Histórico
+                          </span>
+                          <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
+                            <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                            {driver.globalStats?.globalOverallScore != null
+                              ? `${driver.globalStats.globalOverallScore} pts`
+                              : "N/A (Privado)"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
+                            Conducción Segura
+                          </span>
+                          <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
+                            <ShieldCheck className="size-3.5 text-blue-600" />
+                            {driver.globalStats?.globalSafetyScore != null
+                              ? `${driver.globalStats.globalSafetyScore}%`
+                              : "N/A (Privado)"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="flex items-center gap-3">
+                        {!user ? (
+                          <a
+                            href={`${landingUrl}/login`}
+                            className="w-full text-center py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1.5"
+                          >
+                            <Lock className="size-3.5" />
+                            Iniciar Sesión para Contactar
+                          </a>
+                        ) : (
+                          <>
+                            <button className="flex-1 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 transition-all active:scale-95">
+                              Ver Perfil
+                            </button>
+                            <button className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10">
+                              Proponer Contrato
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Footer */}

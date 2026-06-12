@@ -189,7 +189,7 @@ export class DiditVerificationService {
       }
 
       // Extraer fecha de vencimiento y tipo de licencia si está aprobado
-      // let expirationDate: string | null = null;
+      let expirationDate: string | null = null;
       let licenseType: string | null = null;
 
       if (
@@ -199,7 +199,7 @@ export class DiditVerificationService {
       ) {
         const verification = decision.id_verifications[0];
         if (verification) {
-          // expirationDate = verification.expiration_date || null;
+          expirationDate = verification.expiration_date || null;
           if (doc.type === DriverDocumentType.DRIVERS_LICENSE) {
             licenseType =
               verification.extra_fields?.dl_categories ||
@@ -211,28 +211,45 @@ export class DiditVerificationService {
 
       const updatedExtractedData: DriverDocumentExtractedData = {
         ...extractedDataObj,
-        // No guardamos la decisión ni los datos extraídos de Didit en la base de datos por ahora
+        diditDecision: decision,
+        expirationDate: expirationDate || undefined,
       };
+
+      const mappedLicenseType = mapToPanamaLicenseType(licenseType);
+
+      // Si es licencia de conducir y está aprobada por Didit, pero no se pudo mapear la categoría de Panamá,
+      // enviamos a PENDING_MANUAL_REVIEW en lugar de aprobar automáticamente.
+      let finalDocStatus = dbStatus;
+      if (
+        dbStatus === DriverDocumentStatus.APPROVED &&
+        doc.type === DriverDocumentType.DRIVERS_LICENSE &&
+        !mappedLicenseType
+      ) {
+        finalDocStatus = DriverDocumentStatus.PENDING_MANUAL_REVIEW;
+        updatedExtractedData.verificationFailureReason =
+          'No se pudo extraer automáticamente el tipo de licencia de Panamá. Requiere revisión manual.';
+      }
 
       await this.prisma.driverDocument.update({
         where: { id: documentId },
         data: {
-          status: dbStatus,
+          status: finalDocStatus,
           extractedData:
             updatedExtractedData as unknown as Prisma.InputJsonValue,
         },
       });
 
-      const mappedLicenseType = mapToPanamaLicenseType(licenseType);
-
       if (
-        dbStatus === DriverDocumentStatus.APPROVED &&
+        finalDocStatus === DriverDocumentStatus.APPROVED &&
         doc.type === DriverDocumentType.DRIVERS_LICENSE &&
         mappedLicenseType
       ) {
         await this.prisma.driver.update({
           where: { id: doc.driverId },
-          data: { licenseType: mappedLicenseType },
+          data: {
+            licenseType: mappedLicenseType,
+            status: 'ACTIVE',
+          },
         });
       }
 

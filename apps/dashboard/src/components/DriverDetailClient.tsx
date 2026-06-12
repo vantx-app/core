@@ -69,21 +69,23 @@ export function DriverDetailClient({
   targetOrgId,
 }: DriverDetailClientProps) {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "scores" | "trips" | "rollups">(
-    "overview"
-  );
-  
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "scores" | "trips" | "rollups"
+  >("overview");
+
   // Selection and state for vehicle assignment
   const [selectedVehicleId, setSelectedVehicleId] = useState("");
   const [isAssigning, setIsAssigning] = useState(false);
   const [isUnassigning, setIsUnassigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
-  
+
   // Mobile accordion state for score snapshots
   const [expandedWeek, setExpandedWeek] = useState<number | null>(0);
 
   // Accordion state for vehicle daily reports grouping
-  const [expandedVehicles, setExpandedVehicles] = useState<Record<string, boolean>>({});
+  const [expandedVehicles, setExpandedVehicles] = useState<
+    Record<string, boolean>
+  >({});
 
   const displayName =
     driver.name ||
@@ -92,20 +94,28 @@ export function DriverDetailClient({
       : driver.nationalId);
 
   const activeAssignment = driver.assignments?.find((a: any) => a.to === null);
-  const historicalAssignments = driver.assignments?.filter((a: any) => a.to !== null) || [];
+  const historicalAssignments =
+    driver.assignments?.filter((a: any) => a.to !== null) || [];
 
-  const hasStats = driver.globalStats && driver.globalStats.totalSnapshots != null && driver.globalStats.totalSnapshots > 0;
+  const hasStats =
+    driver.globalStats &&
+    driver.globalStats.totalSnapshots != null &&
+    driver.globalStats.totalSnapshots > 0;
   const safetyScore = hasStats
-    ? driver.globalStats.globalSafetyScore ?? driver.globalStats.safetyScore ?? null
+    ? (driver.globalStats.globalSafetyScore ??
+      driver.globalStats.safetyScore ??
+      null)
     : null;
   const ecoScore = hasStats
-    ? driver.globalStats.globalEcoScore ?? driver.globalStats.ecoScore ?? null
+    ? (driver.globalStats.globalEcoScore ?? driver.globalStats.ecoScore ?? null)
     : null;
   const assetScore = hasStats
-    ? driver.globalStats.globalAssetScore ?? driver.globalStats.assetScore ?? null
+    ? (driver.globalStats.globalAssetScore ??
+      driver.globalStats.assetScore ??
+      null)
     : null;
   const overallScore = hasStats
-    ? driver.globalStats.globalOverallScore ?? null
+    ? (driver.globalStats.globalOverallScore ?? null)
     : null;
 
   // Determine rank labels and colors
@@ -148,14 +158,20 @@ export function DriverDetailClient({
       router.refresh();
     } catch (err: any) {
       console.error("Error al asignar vehículo:", err);
-      setAssignError(err.response?.data?.message || "Error al asignar vehículo");
+      setAssignError(
+        err.response?.data?.message || "Error al asignar vehículo",
+      );
     } finally {
       setIsAssigning(false);
     }
   };
 
   const handleUnassign = async (vId: string) => {
-    if (!confirm("¿Estás seguro de que deseas desvincular este vehículo de este conductor?")) {
+    if (
+      !confirm(
+        "¿Estás seguro de que deseas desvincular este vehículo de este conductor?",
+      )
+    ) {
       return;
     }
     setIsUnassigning(true);
@@ -183,7 +199,9 @@ export function DriverDetailClient({
       header: "Puntaje General",
       className: "font-semibold",
       render: (snap) => (
-        <span className={`badge badge-sm font-bold ${getScoreBadgeColor(snap.overallScore)}`}>
+        <span
+          className={`badge badge-sm font-bold ${getScoreBadgeColor(snap.overallScore)}`}
+        >
           {Math.round(snap.overallScore)} pts
         </span>
       ),
@@ -246,16 +264,16 @@ export function DriverDetailClient({
       // Calculate UTC date-only string for grouping (YYYY-MM-DD)
       const d = new Date(report.date);
       const year = d.getUTCFullYear();
-      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const dayVal = String(d.getUTCDate()).padStart(2, '0');
+      const month = String(d.getUTCMonth() + 1).padStart(2, "0");
+      const dayVal = String(d.getUTCDate()).padStart(2, "0");
       const dateStr = `${year}-${month}-${dayVal}`;
 
       // Look for an existing report for this date in the vehicle group
       let existingReport = groups[vId].reports.find((r) => {
         const rd = new Date(r.date);
         const rYear = rd.getUTCFullYear();
-        const rMonth = String(rd.getUTCMonth() + 1).padStart(2, '0');
-        const rDay = String(rd.getUTCDate()).padStart(2, '0');
+        const rMonth = String(rd.getUTCMonth() + 1).padStart(2, "0");
+        const rDay = String(rd.getUTCDate()).padStart(2, "0");
         return `${rYear}-${rMonth}-${rDay}` === dateStr;
       });
 
@@ -269,13 +287,17 @@ export function DriverDetailClient({
         existingReport.corneringCount += report.corneringCount || 0;
         existingReport.accelerationCount += report.accelerationCount || 0;
         existingReport.deviceUnpluggedCount += report.deviceUnpluggedCount || 0;
-        existingReport.activeFaultCodesCount += report.activeFaultCodesCount || 0;
+        existingReport.activeFaultCodesCount +=
+          report.activeFaultCodesCount || 0;
         existingReport.highRpmCount += report.highRpmCount || 0;
-        existingReport.coldEngineStrainCount += report.coldEngineStrainCount || 0;
-        existingReport.coastingInNeutralCount += report.coastingInNeutralCount || 0;
+        existingReport.coldEngineStrainCount +=
+          report.coldEngineStrainCount || 0;
+        existingReport.coastingInNeutralCount +=
+          report.coastingInNeutralCount || 0;
         existingReport.engineLuggingCount += report.engineLuggingCount || 0;
         existingReport.highLoadStrainCount += report.highLoadStrainCount || 0;
-        existingReport.criticalOverheatingCount += report.criticalOverheatingCount || 0;
+        existingReport.criticalOverheatingCount +=
+          report.criticalOverheatingCount || 0;
       } else {
         // Clone the report object to avoid mutating the original prop data
         groups[vId].reports.push({
@@ -290,7 +312,7 @@ export function DriverDetailClient({
     // Sort reports inside each group by date descending
     Object.values(groups).forEach((g) => {
       g.reports.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
       );
     });
 
@@ -305,7 +327,8 @@ export function DriverDetailClient({
   };
 
   const renderDailyReportCardNoVehicle = (day: any) => {
-    const totalHarsh = day.brakingCount + day.corneringCount + day.accelerationCount;
+    const totalHarsh =
+      day.brakingCount + day.corneringCount + day.accelerationCount;
     return (
       <div
         key={day.id}
@@ -319,19 +342,25 @@ export function DriverDetailClient({
 
         <div className="grid grid-cols-3 gap-2 text-xs">
           <div>
-            <p className="text-[10px] text-base-content/40 uppercase font-bold">Km</p>
+            <p className="text-[10px] text-base-content/40 uppercase font-bold">
+              Km
+            </p>
             <p className="font-semibold font-mono text-base-content/85 mt-0.5">
               {day.totalKm.toFixed(1)} km
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-base-content/40 uppercase font-bold">Motor</p>
+            <p className="text-[10px] text-base-content/40 uppercase font-bold">
+              Motor
+            </p>
             <p className="font-semibold font-mono text-base-content/85 mt-0.5">
               {formatHours(day.totalEngineHours)}
             </p>
           </div>
           <div>
-            <p className="text-[10px] text-base-content/40 uppercase font-bold">Ralentí</p>
+            <p className="text-[10px] text-base-content/40 uppercase font-bold">
+              Ralentí
+            </p>
             <p className="font-semibold font-mono text-base-content/85 mt-0.5">
               {formatHours(day.idlingHours)}
             </p>
@@ -421,7 +450,8 @@ export function DriverDetailClient({
       key: "behavior",
       header: "Comportamiento",
       render: (day) => {
-        const totalHarsh = day.brakingCount + day.corneringCount + day.accelerationCount;
+        const totalHarsh =
+          day.brakingCount + day.corneringCount + day.accelerationCount;
         const hasEvents =
           day.overspeedCount > 0 ||
           totalHarsh > 0 ||
@@ -475,7 +505,9 @@ export function DriverDetailClient({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <Link
-            href={targetOrgId ? `/drivers?targetOrgId=${targetOrgId}` : "/drivers"}
+            href={
+              targetOrgId ? `/drivers?targetOrgId=${targetOrgId}` : "/drivers"
+            }
             className="btn btn-sm btn-ghost btn-square rounded-xl"
           >
             <ArrowLeft className="size-5" />
@@ -492,7 +524,9 @@ export function DriverDetailClient({
                 <h1 className="text-2xl font-extrabold tracking-tight text-base-content">
                   {displayName}
                 </h1>
-                <span className={`badge ${driver.status === "ACTIVE" ? "badge-success text-white" : "badge-neutral"} badge-sm font-bold`}>
+                <span
+                  className={`badge ${driver.status === "ACTIVE" ? "badge-success text-white" : "badge-neutral"} badge-sm font-bold`}
+                >
                   {driver.status === "ACTIVE" ? "Activo" : "Shadow Profile"}
                 </span>
               </div>
@@ -507,7 +541,9 @@ export function DriverDetailClient({
       {/* Radial Scores Panel */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Main average Scorecard */}
-        <div className={`card bg-base-100/50 backdrop-blur-md border ${cardBorderColor} shadow-md p-6 md:col-span-1 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300`}>
+        <div
+          className={`card bg-base-100/50 backdrop-blur-md border ${cardBorderColor} shadow-md p-6 md:col-span-1 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300`}
+        >
           <div className="absolute top-0 right-0 p-3 opacity-[0.03] translate-x-4 translate-y-4 pointer-events-none">
             <Award className="size-36 text-base-content" />
           </div>
@@ -522,7 +558,9 @@ export function DriverDetailClient({
             lastUpdated={driver.globalStats?.lastUpdated}
           />
           <div className="space-y-1 mt-2">
-            <span className={`badge ${rankColor} font-bold text-xs px-3 py-1.5 shadow-lg border-none`}>
+            <span
+              className={`badge ${rankColor} font-bold text-xs px-3 py-1.5 shadow-lg border-none`}
+            >
               Calidad: {rankLabel}
             </span>
             <p className="text-[11px] text-base-content/40 mt-1.5 max-w-[200px]">
@@ -637,15 +675,21 @@ export function DriverDetailClient({
               </div>
               <div className="flex justify-between border-b border-base-200/40 pb-1.5">
                 <span className="text-base-content/50">Celular</span>
-                <span className="font-semibold">{driver.phone || "No Registrado"}</span>
+                <span className="font-semibold">
+                  {driver.phone || "No Registrado"}
+                </span>
               </div>
               <div className="flex justify-between border-b border-base-200/40 pb-1.5">
                 <span className="text-base-content/50">Tipo de Licencia</span>
-                <span className="badge badge-outline badge-sm font-semibold">{driver.licenseType || "No Declarada"}</span>
+                <span className="badge badge-outline badge-sm font-semibold">
+                  {driver.licenseType || "No Declarada"}
+                </span>
               </div>
               <div className="flex justify-between border-b border-base-200/40 pb-1.5">
                 <span className="text-base-content/50">Fecha Creación</span>
-                <span className="font-medium text-base-content/75">{new Date(driver.createdAt).toLocaleDateString("es-ES")}</span>
+                <span className="font-medium text-base-content/75">
+                  {new Date(driver.createdAt).toLocaleDateString("es-ES")}
+                </span>
               </div>
               <div className="flex justify-between border-b border-base-200/40 pb-1.5">
                 <span className="text-base-content/50">Cuenta Vinculada</span>
@@ -656,7 +700,9 @@ export function DriverDetailClient({
                       Vinculada (ID: {driver.userId.slice(0, 8)}...)
                     </span>
                   ) : (
-                    <span className="text-base-content/40 italic">Shadow Profile</span>
+                    <span className="text-base-content/40 italic">
+                      Shadow Profile
+                    </span>
                   )}
                 </span>
               </div>
@@ -669,7 +715,7 @@ export function DriverDetailClient({
               <Car className="text-primary size-5" />
               Historial de Vehículos Operados
             </h2>
-            
+
             {activeAssignment == null && historicalAssignments.length === 0 ? (
               <div className="space-y-4">
                 {/* Available Assignment Form */}
@@ -678,11 +724,16 @@ export function DriverDetailClient({
                     <div className="flex items-center gap-2">
                       <Truck className="size-5 text-base-content/45" />
                       <div>
-                        <span className="text-xs font-bold text-base-content/85 block">Sin Vehículo Asignado</span>
-                        <span className="text-[10px] text-base-content/50 mt-0.5 block">Asigna una unidad libre de la flota para comenzar a registrar viajes.</span>
+                        <span className="text-xs font-bold text-base-content/85 block">
+                          Sin Vehículo Asignado
+                        </span>
+                        <span className="text-[10px] text-base-content/50 mt-0.5 block">
+                          Asigna una unidad libre de la flota para comenzar a
+                          registrar viajes.
+                        </span>
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-2 mt-1">
                       <select
                         value={selectedVehicleId}
@@ -690,7 +741,9 @@ export function DriverDetailClient({
                         disabled={isAssigning}
                         className="select select-sm select-bordered rounded-xl bg-base-100 focus:outline-none flex-1 text-xs"
                       >
-                        <option value="">Seleccionar vehículo disponible...</option>
+                        <option value="">
+                          Seleccionar vehículo disponible...
+                        </option>
                         {availableVehicles.map((v) => (
                           <option key={v.id} value={v.id}>
                             {v.alias || "Sin Alias"} ({v.plateNumber})
@@ -702,19 +755,29 @@ export function DriverDetailClient({
                         disabled={isAssigning || !selectedVehicleId}
                         className="btn btn-sm btn-primary rounded-xl text-white font-bold"
                       >
-                        {isAssigning ? <Loader2 className="size-4 animate-spin" /> : "Asignar Vehículo"}
+                        {isAssigning ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          "Asignar Vehículo"
+                        )}
                       </button>
                     </div>
                     {assignError && (
-                      <span className="text-xs text-error font-medium block mt-1">{assignError}</span>
+                      <span className="text-xs text-error font-medium block mt-1">
+                        {assignError}
+                      </span>
                     )}
                   </div>
                 )}
-                
+
                 <div className="py-8 flex flex-col items-center justify-center text-center text-base-content/40 border border-dashed border-base-300 rounded-xl bg-base-100/20">
                   <Car className="size-12 opacity-35 mb-2" />
-                  <span className="text-sm font-bold">Sin historial de vehículos</span>
-                  <span className="text-xs max-w-[200px] mt-1">Este conductor no ha operado ningún vehículo en la flota.</span>
+                  <span className="text-sm font-bold">
+                    Sin historial de vehículos
+                  </span>
+                  <span className="text-xs max-w-[200px] mt-1">
+                    Este conductor no ha operado ningún vehículo en la flota.
+                  </span>
                 </div>
               </div>
             ) : (
@@ -726,12 +789,18 @@ export function DriverDetailClient({
                         <Truck className="size-6" />
                       </div>
                       <div>
-                        <span className="badge badge-success badge-xs text-white font-bold mb-1">ASIGNACIÓN ACTIVA</span>
+                        <span className="badge badge-success badge-xs text-white font-bold mb-1">
+                          ASIGNACIÓN ACTIVA
+                        </span>
                         <h4 className="font-bold text-sm text-base-content">
-                          {activeAssignment.vehicle.alias || "Sin Alias"} ({activeAssignment.vehicle.plateNumber})
+                          {activeAssignment.vehicle.alias || "Sin Alias"} (
+                          {activeAssignment.vehicle.plateNumber})
                         </h4>
                         <p className="text-[10px] text-base-content/55 font-medium mt-0.5">
-                          Desde el: {new Date(activeAssignment.from).toLocaleString("es-ES")}
+                          Desde el:{" "}
+                          {new Date(activeAssignment.from).toLocaleString(
+                            "es-ES",
+                          )}
                         </p>
                       </div>
                     </div>
@@ -740,7 +809,11 @@ export function DriverDetailClient({
                       disabled={isUnassigning}
                       className="btn btn-sm btn-error btn-outline rounded-xl w-full sm:w-auto shrink-0"
                     >
-                      {isUnassigning ? <Loader2 className="size-4 animate-spin" /> : "Desvincular Vehículo"}
+                      {isUnassigning ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        "Desvincular Vehículo"
+                      )}
                     </button>
                   </div>
                 )}
@@ -750,11 +823,16 @@ export function DriverDetailClient({
                     <div className="flex items-center gap-2">
                       <Truck className="size-5 text-base-content/45" />
                       <div>
-                        <span className="text-xs font-bold text-base-content/85 block">Sin Vehículo Asignado</span>
-                        <span className="text-[10px] text-base-content/50 mt-0.5 block">Asigna una unidad libre de la flota para comenzar a registrar viajes.</span>
+                        <span className="text-xs font-bold text-base-content/85 block">
+                          Sin Vehículo Asignado
+                        </span>
+                        <span className="text-[10px] text-base-content/50 mt-0.5 block">
+                          Asigna una unidad libre de la flota para comenzar a
+                          registrar viajes.
+                        </span>
                       </div>
                     </div>
-                    
+
                     <div className="flex flex-col sm:flex-row gap-2 mt-1">
                       <select
                         value={selectedVehicleId}
@@ -762,7 +840,9 @@ export function DriverDetailClient({
                         disabled={isAssigning}
                         className="select select-sm select-bordered rounded-xl bg-base-100 focus:outline-none flex-1 text-xs"
                       >
-                        <option value="">Seleccionar vehículo disponible...</option>
+                        <option value="">
+                          Seleccionar vehículo disponible...
+                        </option>
                         {availableVehicles.map((v) => (
                           <option key={v.id} value={v.id}>
                             {v.alias || "Sin Alias"} ({v.plateNumber})
@@ -774,18 +854,26 @@ export function DriverDetailClient({
                         disabled={isAssigning || !selectedVehicleId}
                         className="btn btn-sm btn-primary rounded-xl text-white font-bold"
                       >
-                        {isAssigning ? <Loader2 className="size-4 animate-spin" /> : "Asignar Vehículo"}
+                        {isAssigning ? (
+                          <Loader2 className="size-4 animate-spin" />
+                        ) : (
+                          "Asignar Vehículo"
+                        )}
                       </button>
                     </div>
                     {assignError && (
-                      <span className="text-xs text-error font-medium block mt-1">{assignError}</span>
+                      <span className="text-xs text-error font-medium block mt-1">
+                        {assignError}
+                      </span>
                     )}
                   </div>
                 )}
 
                 {historicalAssignments.length > 0 && (
                   <div className="space-y-3 pt-2">
-                    <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-wider pl-0.5">Historial Pasado</h3>
+                    <h3 className="text-xs font-bold text-base-content/50 uppercase tracking-wider pl-0.5">
+                      Historial Pasado
+                    </h3>
                     {historicalAssignments.map((a: any) => (
                       <div
                         key={a.id}
@@ -796,11 +884,18 @@ export function DriverDetailClient({
                         </div>
                         <div className="flex-1 min-w-0">
                           <h4 className="font-bold text-sm text-base-content truncate">
-                            {a.vehicle.alias || "Sin Alias"} ({a.vehicle.plateNumber})
+                            {a.vehicle.alias || "Sin Alias"} (
+                            {a.vehicle.plateNumber})
                           </h4>
                           <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] text-base-content/50 font-medium mt-1">
-                            <span>Desde: {new Date(a.from).toLocaleDateString("es-ES")}</span>
-                            <span>Hasta: {new Date(a.to).toLocaleDateString("es-ES")}</span>
+                            <span>
+                              Desde:{" "}
+                              {new Date(a.from).toLocaleDateString("es-ES")}
+                            </span>
+                            <span>
+                              Hasta:{" "}
+                              {new Date(a.to).toLocaleDateString("es-ES")}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -831,7 +926,8 @@ export function DriverDetailClient({
               wrapperClassName="overflow-x-auto"
               emptyState={
                 <span className="text-base-content/40 py-6 block text-center italic text-xs">
-                  Aún no se han acumulado snapshots semanales para este conductor.
+                  Aún no se han acumulado snapshots semanales para este
+                  conductor.
                 </span>
               }
             />
@@ -849,7 +945,9 @@ export function DriverDetailClient({
                   <div
                     key={index}
                     className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${
-                      isExpanded ? "border-primary/30 shadow-md" : "border-base-200 hover:border-base-300"
+                      isExpanded
+                        ? "border-primary/30 shadow-md"
+                        : "border-base-200 hover:border-base-300"
                     }`}
                   >
                     <div
@@ -865,7 +963,9 @@ export function DriverDetailClient({
                         </span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className={`badge badge-sm font-extrabold ${getScoreBadgeColor(snap.overallScore)}`}>
+                        <span
+                          className={`badge badge-sm font-extrabold ${getScoreBadgeColor(snap.overallScore)}`}
+                        >
                           {formattedOverall} pts
                         </span>
                         {isExpanded ? (
@@ -898,9 +998,18 @@ export function DriverDetailClient({
                         </div>
 
                         <div className="space-y-3 pt-1">
-                          <ScoreProgressBar score={snap.safetyScore} label="Seguridad Vial" />
-                          <ScoreProgressBar score={snap.ecoScore} label="Eficiencia Ecológica" />
-                          <ScoreProgressBar score={snap.assetScore} label="Cuidado del Vehículo" />
+                          <ScoreProgressBar
+                            score={snap.safetyScore}
+                            label="Seguridad Vial"
+                          />
+                          <ScoreProgressBar
+                            score={snap.ecoScore}
+                            label="Eficiencia Ecológica"
+                          />
+                          <ScoreProgressBar
+                            score={snap.assetScore}
+                            label="Cuidado del Vehículo"
+                          />
                         </div>
                       </div>
                     )}
@@ -925,7 +1034,7 @@ export function DriverDetailClient({
               Explorador de Viajes del Conductor
             </h2>
           </div>
-          
+
           <div className="h-[600px] lg:h-[650px]">
             <TripsHistoryView
               initialTrips={trips}
@@ -947,9 +1056,12 @@ export function DriverDetailClient({
           {dailyReports.length === 0 ? (
             <div className="py-12 flex flex-col items-center justify-center text-center text-base-content/40">
               <Activity className="size-12 opacity-35 mb-2" />
-              <span className="text-sm font-bold">Sin actividad registrada</span>
+              <span className="text-sm font-bold">
+                Sin actividad registrada
+              </span>
               <span className="text-xs max-w-[200px] mt-1">
-                La actividad diaria aparecerá una vez que se reciban tramos de telemetría.
+                La actividad diaria aparecerá una vez que se reciban tramos de
+                telemetría.
               </span>
             </div>
           ) : (

@@ -5,7 +5,7 @@ model Driver {
   lastName              String?
   nationalId            String                 @unique
   phone                 String?
-  status                DriverStatus           @default(ACTIVE)
+  status                DriverStatus           @default(INACTIVE)
   licenseType           String?
   shareScoresPublicly   Boolean                @default(false)
   createdAt             DateTime               @default(now())

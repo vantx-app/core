@@ -88,12 +88,24 @@ export class DriversService {
     } as FormattedDriver<T>;
   }
 
-  async findAll() {
-    const cacheKey = 'drivers:all';
+  async findAll(onlyAvailable?: boolean) {
+    const cacheKey = `drivers:all:${onlyAvailable ? 'available' : 'all'}`;
     let drivers =
       this.cacheService.get<FormattedDriver<DriverWithGlobalStats>[]>(cacheKey);
     if (!drivers) {
       const dbDrivers = await this.prismaService.driver.findMany({
+        where: {
+          status: 'ACTIVE',
+          ...(onlyAvailable
+            ? {
+                assignments: {
+                  none: {
+                    to: null,
+                  },
+                },
+              }
+            : {}),
+        },
         include: {
           globalStats: true,
           assignments: {

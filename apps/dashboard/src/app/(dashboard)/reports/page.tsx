@@ -289,10 +289,11 @@ function ReportsPageContent() {
 
   return (
     <div
-      className={`p-4 sm:p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${activeTab === "daily"
-        ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:space-y-4"
-        : ""
-        }`}
+      className={`p-4 sm:p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${
+        activeTab === "daily"
+          ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:space-y-4"
+          : ""
+      }`}
     >
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-base-100/50 backdrop-blur-md p-6 rounded-2xl border border-base-200">

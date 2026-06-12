@@ -323,10 +323,13 @@ export class DriverDocumentsService {
       if (mappedLicenseType) {
         await this.prisma.driver.update({
           where: { id: doc.driverId },
-          data: { licenseType: mappedLicenseType },
+          data: {
+            licenseType: mappedLicenseType,
+            status: 'ACTIVE',
+          },
         });
         this.logger.log(
-          `Tipo de licencia "${mappedLicenseType}" asignado automáticamente al conductor ${doc.driverId} tras aprobación manual (original: "${licenseType}").`,
+          `Tipo de licencia "${mappedLicenseType}" asignado automáticamente al conductor ${doc.driverId} tras aprobación manual y activado (original: "${licenseType}").`,
         );
       }
     }

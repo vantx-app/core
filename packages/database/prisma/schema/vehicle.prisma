@@ -16,6 +16,10 @@ model Vehicle {
   scoringProfileId      String?                @db.Uuid
   category              VehicleCategory        @default(PASSENGER)
   fuelType              FuelType?
+  isListed              Boolean                @default(false)
+  listingPrice          Float?
+  listingDescription    String?
+  hasOptionToBuy        Boolean                @default(false)
 
   createdAt             DateTime               @default(now())
   deviceProfile         String                 @default("TELTONIKA_STANDARD")

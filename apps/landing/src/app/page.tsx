@@ -80,9 +80,10 @@ function LandingContent() {
           </div>
         </div>
         <p className="max-w-2xl mx-auto text-base md:text-lg text-slate-600 font-normal leading-relaxed mb-12">
-          VantX integra hardware Teltonika y adaptadores ECAN02 para certificar el desempeño
-          de tus vehículos. Conectamos estadísticas reales de conducción (Driver Score) para
-          emparejar de forma transparente a conductores profesionales con propietarios de flotas.
+          VantX integra hardware Teltonika y adaptadores ECAN02 para certificar
+          el desempeño de tus vehículos. Conectamos estadísticas reales de
+          conducción (Driver Score) para emparejar de forma transparente a
+          conductores profesionales con propietarios de flotas.
         </p>
 
         {/* Hero Split Funnel Actions */}
@@ -100,7 +101,9 @@ function LandingContent() {
                 Soy Propietario de Flota
               </h3>
               <p className="text-slate-650 text-xs leading-relaxed">
-                Monitorea rutas en vivo, comparte enlaces de seguimiento en tiempo real con tus clientes, analiza consumo de combustible y reduce costos operativos.
+                Monitorea rutas en vivo, comparte enlaces de seguimiento en
+                tiempo real con tus clientes, analiza consumo de combustible y
+                reduce costos operativos.
               </p>
             </div>
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
@@ -162,7 +165,9 @@ function LandingContent() {
                     Análisis de Fuerza G y Sensor de Acelerómetro
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Detección automática de aceleración brusca, frenadas severas y giros agresivos reportados a 1Hz por los acelerómetros del hardware.
+                    Detección automática de aceleración brusca, frenadas severas
+                    y giros agresivos reportados a 1Hz por los acelerómetros del
+                    hardware.
                   </p>
                 </div>
               </div>
@@ -175,7 +180,9 @@ function LandingContent() {
                     Correlación con Consumo del CAN-bus
                   </h4>
                   <p className="text-xs text-slate-500">
-                    Cruzamos el comportamiento de conducción con el consumo real de combustible, temperatura del motor y tiempos en ralentí (Idle Time).
+                    Cruzamos el comportamiento de conducción con el consumo real
+                    de combustible, temperatura del motor y tiempos en ralentí
+                    (Idle Time).
                   </p>
                 </div>
               </div>
@@ -271,7 +278,8 @@ function LandingContent() {
             </div>
             <div className="text-center mt-4 border-t border-slate-100 pt-3">
               <span className="text-[9px] text-slate-400 font-mono">
-                * Score calculado semanalmente según norma SAE J1939 y lecturas de telemetría física a 1Hz.
+                * Score calculado semanalmente según norma SAE J1939 y lecturas
+                de telemetría física a 1Hz.
               </span>
             </div>
           </div>
@@ -317,14 +325,24 @@ function LandingContent() {
                     CM
                   </div>
                   <div>
-                    <h5 className="text-xs font-bold text-slate-800">Carlos Mendoza</h5>
-                    <span className="text-[9px] text-slate-400 font-mono block">Licencia: Tipo I (Equipo Pesado)</span>
-                    <span className="text-[9px] text-slate-400 font-mono">Disponibilidad: Inmediata</span>
+                    <h5 className="text-xs font-bold text-slate-800">
+                      Carlos Mendoza
+                    </h5>
+                    <span className="text-[9px] text-slate-400 font-mono block">
+                      Licencia: Tipo I (Equipo Pesado)
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-mono">
+                      Disponibilidad: Inmediata
+                    </span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase block">Driver Score</span>
-                  <span className="text-sm font-black text-emerald-600">94 / 100</span>
+                  <span className="text-[10px] text-slate-400 uppercase block">
+                    Driver Score
+                  </span>
+                  <span className="text-sm font-black text-emerald-600">
+                    94 / 100
+                  </span>
                 </div>
               </div>
 
@@ -343,14 +361,24 @@ function LandingContent() {
                     <Truck className="size-5" />
                   </div>
                   <div>
-                    <h5 className="text-xs font-bold text-slate-800">Transportes Gómez S.A.</h5>
-                    <span className="text-[9px] text-slate-400 font-mono block">Ruta: Ciudad de Panamá - Chiriquí</span>
-                    <span className="text-[9px] text-slate-400 font-mono">Carga: Refrigerada (Alimentos)</span>
+                    <h5 className="text-xs font-bold text-slate-800">
+                      Transportes Gómez S.A.
+                    </h5>
+                    <span className="text-[9px] text-slate-400 font-mono block">
+                      Ruta: Ciudad de Panamá - Chiriquí
+                    </span>
+                    <span className="text-[9px] text-slate-400 font-mono">
+                      Carga: Refrigerada (Alimentos)
+                    </span>
                   </div>
                 </div>
                 <div className="text-right">
-                  <span className="text-[10px] text-slate-400 uppercase block">Tarifa Ofrecida</span>
-                  <span className="text-xs font-extrabold text-slate-850">Competitiva</span>
+                  <span className="text-[10px] text-slate-400 uppercase block">
+                    Tarifa Ofrecida
+                  </span>
+                  <span className="text-xs font-extrabold text-slate-850">
+                    Competitiva
+                  </span>
                 </div>
               </div>
             </div>
@@ -362,10 +390,14 @@ function LandingContent() {
               Conexión Inteligente y Vetted Marketplace
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2 mb-6">
-              El primer marketplace de empleo logístico respaldado por telemetría
+              El primer marketplace de empleo logístico respaldado por
+              telemetría
             </h2>
             <p className="text-slate-600 text-sm leading-relaxed mb-6">
-              VantX elimina la incertidumbre en la contratación de transporte. Los propietarios de flotas acceden a conductores profesionales cuyos hábitos de conducción y seguridad vial han sido auditados directamente por el bus CAN.
+              VantX elimina la incertidumbre en la contratación de transporte.
+              Los propietarios de flotas acceden a conductores profesionales
+              cuyos hábitos de conducción y seguridad vial han sido auditados
+              directamente por el bus CAN.
             </p>
 
             <div className="space-y-6">
@@ -376,10 +408,15 @@ function LandingContent() {
                 </h4>
                 <div className="text-xs text-slate-500 mt-1 pl-3.5 space-y-1.5">
                   <p>
-                    Filtra candidatos por Driver Score verificado, reduciendo la siniestralidad de tus activos y los costos de seguro desde el primer día de contratación.
+                    Filtra candidatos por Driver Score verificado, reduciendo la
+                    siniestralidad de tus activos y los costos de seguro desde
+                    el primer día de contratación.
                   </p>
                   <p>
-                    Genera enlaces públicos y temporales de seguimiento para compartir con tus clientes, permitiéndoles rastrear la ubicación del vehículo y el estado del viaje sin darles acceso a tu panel privado.
+                    Genera enlaces públicos y temporales de seguimiento para
+                    compartir con tus clientes, permitiéndoles rastrear la
+                    ubicación del vehículo y el estado del viaje sin darles
+                    acceso a tu panel privado.
                   </p>
                 </div>
               </div>
@@ -389,7 +426,9 @@ function LandingContent() {
                   Para Conductores Profesionales (Drivers)
                 </h4>
                 <p className="text-xs text-slate-500 mt-1 pl-3.5">
-                  Construye un portafolio de conducción digital y portátil. Tu buen comportamiento al volante se traduce directamente en mejores ofertas salariales y estabilidad laboral.
+                  Construye un portafolio de conducción digital y portátil. Tu
+                  buen comportamiento al volante se traduce directamente en
+                  mejores ofertas salariales y estabilidad laboral.
                 </p>
               </div>
             </div>
@@ -411,7 +450,8 @@ function LandingContent() {
                 Teltonika FMC003
               </h4>
               <p className="text-slate-500 text-xs leading-relaxed">
-                Rastreador OBD-II plug-and-play LTE Cat M1/NB-IoT. Conexión directa y lectura de parámetros de diagnóstico OBD estándar.
+                Rastreador OBD-II plug-and-play LTE Cat M1/NB-IoT. Conexión
+                directa y lectura de parámetros de diagnóstico OBD estándar.
               </p>
             </div>
             <div className="glass-card p-6 bg-white/70 border-slate-200">
@@ -420,7 +460,8 @@ function LandingContent() {
                 Teltonika FMC150
               </h4>
               <p className="text-slate-500 text-xs leading-relaxed">
-                Localizador profesional avanzado con interfaz CAN integrada para lectura de datos de motor J1939 y J1708 en flotas pesadas.
+                Localizador profesional avanzado con interfaz CAN integrada para
+                lectura de datos de motor J1939 y J1708 en flotas pesadas.
               </p>
             </div>
             <div className="col-span-2 glass-card p-6 bg-white/70 border-slate-200">
@@ -438,7 +479,10 @@ function LandingContent() {
                     </span>
                   </div>
                   <p className="text-slate-500 text-xs leading-relaxed">
-                    Lector de CAN-bus inductivo que captura datos del bus sin pelar o cortar cables. Ideal para leer consumo de combustible y odómetro de vehículos bajo garantía de fabricante.
+                    Lector de CAN-bus inductivo que captura datos del bus sin
+                    pelar o cortar cables. Ideal para leer consumo de
+                    combustible y odómetro de vehículos bajo garantía de
+                    fabricante.
                   </p>
                 </div>
               </div>
@@ -458,14 +502,19 @@ function LandingContent() {
 
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 flex items-center gap-2">
-              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold">POWERED BY TELTONIKA</span>
+              <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold">
+                POWERED BY TELTONIKA
+              </span>
               Hardware & Conectividad IoT
             </span>
             <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-2 mb-6">
               Monitoreo directo del Bus de Datos (CAN) sin invalidar garantías
             </h2>
             <p className="text-slate-600 text-sm leading-relaxed mb-6">
-              Integramos rastreadores y accesorios Teltonika de estándar industrial para leer datos reales del bus CAN. La combinación de rastreadores avanzados y lectores sin contacto asegura total fidelidad de datos sin intervenir físicamente el cableado.
+              Integramos rastreadores y accesorios Teltonika de estándar
+              industrial para leer datos reales del bus CAN. La combinación de
+              rastreadores avanzados y lectores sin contacto asegura total
+              fidelidad de datos sin intervenir físicamente el cableado.
             </p>
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm text-slate-700">
@@ -476,12 +525,15 @@ function LandingContent() {
               </div>
               <div className="flex items-center gap-2 text-sm text-slate-700">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span>Códigos de falla en vivo (DTCs) para mantenimiento proactivo.</span>
+                <span>
+                  Códigos de falla en vivo (DTCs) para mantenimiento proactivo.
+                </span>
               </div>
               <div className="flex items-center gap-2 text-sm text-slate-700">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                 <span>
-                  Alertas inmediatas en caso de desconexión del hardware (Anti-tamper).
+                  Alertas inmediatas en caso de desconexión del hardware
+                  (Anti-tamper).
                 </span>
               </div>
             </div>

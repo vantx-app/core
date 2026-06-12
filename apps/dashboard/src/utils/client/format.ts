@@ -1,12 +1,17 @@
-export const getScoreCircleColor = (score: number | null | undefined): string => {
+export const getScoreCircleColor = (
+  score: number | null | undefined,
+): string => {
   if (score == null) return "text-base-content/20 stroke-base-300";
   if (score >= 85) return "text-success stroke-success";
   if (score >= 70) return "text-warning stroke-warning";
   return "text-error stroke-error";
 };
 
-export const getScoreBadgeColor = (score: number | null | undefined): string => {
-  if (score == null) return "badge-ghost text-base-content/50 border-base-200/80";
+export const getScoreBadgeColor = (
+  score: number | null | undefined,
+): string => {
+  if (score == null)
+    return "badge-ghost text-base-content/50 border-base-200/80";
   if (score >= 85) return "badge-success text-white bg-emerald-500 border-none";
   if (score >= 70) return "badge-warning text-white bg-amber-500 border-none";
   return "badge-error text-white bg-rose-500 border-none";

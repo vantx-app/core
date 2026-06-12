@@ -47,20 +47,23 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
   const activeAssignment = stats.assignments?.[0];
   const snapshots = stats.scoreSnapshots || [];
 
-  const hasStats = globalStats && globalStats.totalSnapshots != null && globalStats.totalSnapshots > 0;
+  const hasStats =
+    globalStats &&
+    globalStats.totalSnapshots != null &&
+    globalStats.totalSnapshots > 0;
   const safetyScore = hasStats
-    ? globalStats.globalSafetyScore ?? globalStats.safetyScore ?? null
+    ? (globalStats.globalSafetyScore ?? globalStats.safetyScore ?? null)
     : null;
   const ecoScore = hasStats
-    ? globalStats.globalEcoScore ?? globalStats.ecoScore ?? null
+    ? (globalStats.globalEcoScore ?? globalStats.ecoScore ?? null)
     : null;
   const assetScore = hasStats
-    ? globalStats.globalAssetScore ?? globalStats.assetScore ?? null
+    ? (globalStats.globalAssetScore ?? globalStats.assetScore ?? null)
     : null;
 
   // Calcular puntaje general (overall score)
   const overallScore = hasStats
-    ? globalStats.globalOverallScore ?? null
+    ? (globalStats.globalOverallScore ?? null)
     : null;
 
   // Determinar nivel y colores basados en el rendimiento general
@@ -401,10 +404,11 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 return (
                   <div
                     key={index}
-                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded
+                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${
+                      isExpanded
                         ? "border-emerald-500/30 shadow-md"
                         : "border-base-200 hover:border-base-300"
-                      }`}
+                    }`}
                   >
                     {/* Header */}
                     <div

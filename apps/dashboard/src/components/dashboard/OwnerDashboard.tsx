@@ -83,7 +83,11 @@ export function OwnerDashboard({
   let latestUpdate: Date | null = null;
 
   drivers.forEach((d) => {
-    if (d.globalStats && d.globalStats.totalSnapshots != null && d.globalStats.totalSnapshots > 0) {
+    if (
+      d.globalStats &&
+      d.globalStats.totalSnapshots != null &&
+      d.globalStats.totalSnapshots > 0
+    ) {
       sumSafety +=
         d.globalStats.globalSafetyScore ?? d.globalStats.safetyScore ?? 100;
       sumEco += d.globalStats.globalEcoScore ?? d.globalStats.ecoScore ?? 100;
@@ -103,13 +107,19 @@ export function OwnerDashboard({
 
   const avgSafety =
     countWithStats > 0 ? Math.round(sumSafety / countWithStats) : null;
-  const avgEco = countWithStats > 0 ? Math.round(sumEco / countWithStats) : null;
+  const avgEco =
+    countWithStats > 0 ? Math.round(sumEco / countWithStats) : null;
   const avgAsset =
     countWithStats > 0 ? Math.round(sumAsset / countWithStats) : null;
 
   // Conductores ordenados por puntaje de seguridad (de menor a mayor para destacar riesgos)
   const riskDrivers = [...drivers]
-    .filter((d) => d.globalStats && d.globalStats.totalSnapshots != null && d.globalStats.totalSnapshots > 0)
+    .filter(
+      (d) =>
+        d.globalStats &&
+        d.globalStats.totalSnapshots != null &&
+        d.globalStats.totalSnapshots > 0,
+    )
     .sort((a, b) => {
       const scoreA =
         a.globalStats?.globalSafetyScore ?? a.globalStats?.safetyScore ?? 100;
@@ -137,7 +147,10 @@ export function OwnerDashboard({
       const plate = v.plateNumber;
 
       // 1. Dispositivo desconectado (Error)
-      const isUnplugged = v.status === "UNPLUGGED" || v.liveState?.currentStatus === "UNPLUGGED" || v.liveState?.unplugged === true;
+      const isUnplugged =
+        v.status === "UNPLUGGED" ||
+        v.liveState?.currentStatus === "UNPLUGGED" ||
+        v.liveState?.unplugged === true;
       if (isUnplugged) {
         alerts.push({
           id: `${v.id}-unplugged`,
@@ -416,12 +429,22 @@ export function OwnerDashboard({
                       : "bg-amber-500/5 border-amber-500/20 text-amber-800 dark:text-amber-200"
                   }`}
                 >
-                  {alert.type === "unplugged" && <Power className="size-4.5 shrink-0 text-rose-500 mt-0.5" />}
-                  {alert.type === "speeding" && <Gauge className="size-4.5 shrink-0 text-rose-500 mt-0.5" />}
-                  {alert.type === "no_driver" && <Users className="size-4.5 shrink-0 text-amber-500 mt-0.5" />}
-                  {alert.type === "offline" && <WifiOff className="size-4.5 shrink-0 text-amber-500 mt-0.5" />}
+                  {alert.type === "unplugged" && (
+                    <Power className="size-4.5 shrink-0 text-rose-500 mt-0.5" />
+                  )}
+                  {alert.type === "speeding" && (
+                    <Gauge className="size-4.5 shrink-0 text-rose-500 mt-0.5" />
+                  )}
+                  {alert.type === "no_driver" && (
+                    <Users className="size-4.5 shrink-0 text-amber-500 mt-0.5" />
+                  )}
+                  {alert.type === "offline" && (
+                    <WifiOff className="size-4.5 shrink-0 text-amber-500 mt-0.5" />
+                  )}
                   <div className="space-y-1 flex-1">
-                    <p className="font-semibold leading-snug">{alert.message}</p>
+                    <p className="font-semibold leading-snug">
+                      {alert.message}
+                    </p>
                     <span className="text-[10px] text-base-content/40 font-mono block">
                       {new Date(alert.timestamp).toLocaleTimeString("es-ES", {
                         hour: "2-digit",
@@ -435,7 +458,9 @@ export function OwnerDashboard({
                 <div className="text-center py-10 text-xs text-base-content/40 flex flex-col items-center justify-center gap-2">
                   <ShieldCheck className="size-8 text-success opacity-60" />
                   <p className="font-semibold">Flota segura y operativa</p>
-                  <p className="text-[10px] text-base-content/30">No hay incidentes de telemetría reportados.</p>
+                  <p className="text-[10px] text-base-content/30">
+                    No hay incidentes de telemetría reportados.
+                  </p>
                 </div>
               )}
             </div>

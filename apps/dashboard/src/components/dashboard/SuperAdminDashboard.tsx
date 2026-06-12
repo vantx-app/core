@@ -70,7 +70,11 @@ export function SuperAdminDashboard({
   let latestUpdate: Date | null = null;
 
   drivers.forEach((d) => {
-    if (d.globalStats && d.globalStats.totalSnapshots != null && d.globalStats.totalSnapshots > 0) {
+    if (
+      d.globalStats &&
+      d.globalStats.totalSnapshots != null &&
+      d.globalStats.totalSnapshots > 0
+    ) {
       sumSafety +=
         d.globalStats.globalSafetyScore ?? d.globalStats.safetyScore ?? 100;
       sumEco += d.globalStats.globalEcoScore ?? d.globalStats.ecoScore ?? 100;
@@ -89,14 +93,19 @@ export function SuperAdminDashboard({
 
   const avgSafety =
     countWithStats > 0 ? Math.round(sumSafety / countWithStats) : null;
-  const avgEco = countWithStats > 0 ? Math.round(sumEco / countWithStats) : null;
+  const avgEco =
+    countWithStats > 0 ? Math.round(sumEco / countWithStats) : null;
   const avgAsset =
     countWithStats > 0 ? Math.round(sumAsset / countWithStats) : null;
 
   // Pre-calcular promedios de seguridad vial por organización (basado en asignación activa de conductores)
   const orgSafetyScores: Record<string, { sum: number; count: number }> = {};
   drivers.forEach((d) => {
-    if (d.globalStats && d.globalStats.totalSnapshots != null && d.globalStats.totalSnapshots > 0) {
+    if (
+      d.globalStats &&
+      d.globalStats.totalSnapshots != null &&
+      d.globalStats.totalSnapshots > 0
+    ) {
       const activeAssignment = d.assignments?.[0];
       const orgId = activeAssignment?.vehicle?.orgId;
       if (orgId) {

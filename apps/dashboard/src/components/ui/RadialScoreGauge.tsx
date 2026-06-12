@@ -2,7 +2,11 @@
 
 import { RadialScoreGaugeProps } from "@/types";
 import React from "react";
-import { getScoreCircleColor, formatDate, getScoreTextColor } from "@/utils/client";
+import {
+  getScoreCircleColor,
+  formatDate,
+  getScoreTextColor,
+} from "@/utils/client";
 import { Info } from "lucide-react";
 
 export function RadialScoreGauge({

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
+import "dotenv/config";
 import * as net from "net";
 import { processTelemetry } from "./utils/processTelemetry";
 import { Logger } from "@vantx/telemetry-parser";

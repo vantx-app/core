@@ -119,9 +119,12 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
       headerClassName: "text-center",
       className: "text-center",
       render: (driver) => {
-        const hasStats = driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
+        const hasStats =
+          driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
         const score = hasStats
-          ? driver.globalStats!.globalSafetyScore ?? driver.globalStats!.safetyScore ?? null
+          ? (driver.globalStats!.globalSafetyScore ??
+            driver.globalStats!.safetyScore ??
+            null)
           : null;
         const lastUpdated = driver.globalStats?.lastUpdated;
 
@@ -152,9 +155,12 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
       headerClassName: "text-center",
       className: "text-center",
       render: (driver) => {
-        const hasStats = driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
+        const hasStats =
+          driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
         const score = hasStats
-          ? driver.globalStats!.globalEcoScore ?? driver.globalStats!.ecoScore ?? null
+          ? (driver.globalStats!.globalEcoScore ??
+            driver.globalStats!.ecoScore ??
+            null)
           : null;
         const lastUpdated = driver.globalStats?.lastUpdated;
 
@@ -185,9 +191,12 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
       headerClassName: "text-center",
       className: "text-center",
       render: (driver) => {
-        const hasStats = driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
+        const hasStats =
+          driver.globalStats && (driver.globalStats.totalSnapshots ?? 0) > 0;
         const score = hasStats
-          ? driver.globalStats!.globalAssetScore ?? driver.globalStats!.assetScore ?? null
+          ? (driver.globalStats!.globalAssetScore ??
+            driver.globalStats!.assetScore ??
+            null)
           : null;
         const lastUpdated = driver.globalStats?.lastUpdated;
 

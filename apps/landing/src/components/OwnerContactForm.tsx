@@ -61,7 +61,8 @@ export function OwnerContactForm() {
         </h3>
         <p className="text-slate-500 text-xs mt-1">
           Completa tus datos y un especialista te guiará para seleccionar el
-          hardware Teltonika y el adaptador sin contacto ECAN02 ideal para tu flota.
+          hardware Teltonika y el adaptador sin contacto ECAN02 ideal para tu
+          flota.
         </p>
       </div>
 

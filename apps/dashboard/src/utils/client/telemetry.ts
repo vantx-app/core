@@ -13,9 +13,10 @@ export function condenseDailyRollupsByDriver(
   const groups: Record<string, DailyTelemetryRollup[]> = {};
 
   raw.forEach((r) => {
-    const dateKey = typeof r.date === "string"
-      ? r.date.split("T")[0]
-      : new Date(r.date).toISOString().split("T")[0];
+    const dateKey =
+      typeof r.date === "string"
+        ? r.date.split("T")[0]
+        : new Date(r.date).toISOString().split("T")[0];
     const driverId = r.driver?.id || "unassigned";
     const key = `${dateKey}_${driverId}`;
 
@@ -28,7 +29,10 @@ export function condenseDailyRollupsByDriver(
   const condensed: DailyTelemetryRollup[] = Object.entries(groups).map(
     ([groupKey, groupRollups]) => {
       const first = groupRollups[0];
-      const totalKm = groupRollups.reduce((acc, r) => acc + (r.totalKm || 0), 0);
+      const totalKm = groupRollups.reduce(
+        (acc, r) => acc + (r.totalKm || 0),
+        0,
+      );
       const totalEngineHours = groupRollups.reduce(
         (acc, r) => acc + (r.totalEngineHours || 0),
         0,

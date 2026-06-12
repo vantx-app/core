@@ -220,8 +220,11 @@ export default function TripsHistoryView({
     return (
       <div className="pt-4 pb-2 px-1 flex flex-col items-center gap-3 border-t border-base-200/40 mt-4">
         <div className="text-[11px] text-base-content/50 font-medium">
-          Mostrando <span className="font-bold text-base-content/75">{visibleCount}</span> de{" "}
-          <span className="font-bold text-base-content/75">{trips.length}</span> viajes
+          Mostrando{" "}
+          <span className="font-bold text-base-content/75">{visibleCount}</span>{" "}
+          de{" "}
+          <span className="font-bold text-base-content/75">{trips.length}</span>{" "}
+          viajes
         </div>
         <div className="w-full bg-base-200/45 dark:bg-base-800/30 h-1 rounded-full overflow-hidden">
           <div
@@ -230,7 +233,9 @@ export default function TripsHistoryView({
           />
         </div>
         <button
-          onClick={() => setVisibleCount((prev) => Math.min(prev + 10, trips.length))}
+          onClick={() =>
+            setVisibleCount((prev) => Math.min(prev + 10, trips.length))
+          }
           className="btn btn-sm btn-outline border-base-300 hover:bg-base-200 rounded-xl text-xs font-bold text-base-content/85 px-4 w-full"
         >
           Cargar más viajes
@@ -277,18 +282,20 @@ export default function TripsHistoryView({
                     <button
                       key={trip.id}
                       onClick={() => handleTripSelection(trip.id)}
-                      className={`w-full text-left p-2.5 lg:p-3 rounded-xl border transition-all duration-200 flex flex-col gap-1.5 lg:gap-2 ${isSelected
-                        ? "bg-primary/10 border-primary shadow-sm"
-                        : "bg-base-100/60 border-base-200/80 dark:bg-base-900/10 hover:border-base-300 text-base-content"
-                        }`}
+                      className={`w-full text-left p-2.5 lg:p-3 rounded-xl border transition-all duration-200 flex flex-col gap-1.5 lg:gap-2 ${
+                        isSelected
+                          ? "bg-primary/10 border-primary shadow-sm"
+                          : "bg-base-100/60 border-base-200/80 dark:bg-base-900/10 hover:border-base-300 text-base-content"
+                      }`}
                     >
                       <div className="flex items-center justify-between w-full text-[10px]">
                         <div className="flex items-center gap-1.5">
                           <span
-                            className={`badge badge-xs font-black px-1.5 border ${isOngoing
-                              ? "bg-blue-500/10 border-blue-500/20 text-blue-600 animate-pulse"
-                              : "bg-base-200 border-base-300 text-base-content/70"
-                              }`}
+                            className={`badge badge-xs font-black px-1.5 border ${
+                              isOngoing
+                                ? "bg-blue-500/10 border-blue-500/20 text-blue-600 animate-pulse"
+                                : "bg-base-200 border-base-300 text-base-content/70"
+                            }`}
                           >
                             {isOngoing ? "En Curso" : "Completado"}
                           </span>
@@ -320,12 +327,13 @@ export default function TripsHistoryView({
                           <div className="flex items-center gap-1 min-w-0">
                             <Truck className="size-3 text-base-content/40 shrink-0" />
                             {isManagementRole &&
-                              (trip.vehicleId || trip.vehicle?.id) ? (
+                            (trip.vehicleId || trip.vehicle?.id) ? (
                               <Link
-                                href={`/vehicle/${trip.vehicleId || trip.vehicle?.id}/view${targetOrgId
-                                  ? `?targetOrgId=${targetOrgId}`
-                                  : ""
-                                  }`}
+                                href={`/vehicle/${trip.vehicleId || trip.vehicle?.id}/view${
+                                  targetOrgId
+                                    ? `?targetOrgId=${targetOrgId}`
+                                    : ""
+                                }`}
                                 className="truncate font-semibold text-primary hover:underline"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -344,10 +352,11 @@ export default function TripsHistoryView({
                             <User className="size-3 text-base-content/40 shrink-0" />
                             {isManagementRole && trip.driver?.id ? (
                               <Link
-                                href={`/reports?driverId=${trip.driver.id}&tab=daily${targetOrgId
-                                  ? `&targetOrgId=${targetOrgId}`
-                                  : ""
-                                  }`}
+                                href={`/reports?driverId=${trip.driver.id}&tab=daily${
+                                  targetOrgId
+                                    ? `&targetOrgId=${targetOrgId}`
+                                    : ""
+                                }`}
                                 className="flex flex-col text-left group hover:underline text-primary"
                                 onClick={(e) => e.stopPropagation()}
                               >
@@ -408,10 +417,11 @@ export default function TripsHistoryView({
                     <>
                       <Truck className="size-3.5 text-primary shrink-0" />
                       {isManagementRole &&
-                        (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
+                      (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
                         <Link
-                          href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
-                            }`}
+                          href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${
+                            targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                          }`}
                           className="truncate text-primary hover:underline font-semibold"
                         >
                           {selectedTrip.vehicle?.alias || "Sin Alias"} (
@@ -429,12 +439,13 @@ export default function TripsHistoryView({
                       <User className="size-3.5 text-primary shrink-0" />
                       {isManagementRole && selectedTrip.driver?.id ? (
                         <Link
-                          href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
-                            }`}
+                          href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${
+                            targetOrgId ? `?targetOrgId=${targetOrgId}` : ""
+                          }`}
                           className="truncate text-primary hover:underline font-semibold"
                         >
                           {selectedTrip.driver.firstName &&
-                            selectedTrip.driver.lastName
+                          selectedTrip.driver.lastName
                             ? `${selectedTrip.driver.firstName} ${selectedTrip.driver.lastName}`
                             : selectedTrip.driver.nationalId}
                         </Link>
@@ -517,7 +528,9 @@ export default function TripsHistoryView({
                       Seguridad
                     </span>
                     <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
-                      {selectedTrip.safetyScore != null ? Math.round(selectedTrip.safetyScore) : "-"}
+                      {selectedTrip.safetyScore != null
+                        ? Math.round(selectedTrip.safetyScore)
+                        : "-"}
                     </span>
                   </div>
 
@@ -527,7 +540,9 @@ export default function TripsHistoryView({
                       Eco
                     </span>
                     <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
-                      {selectedTrip.ecoScore != null ? Math.round(selectedTrip.ecoScore) : "-"}
+                      {selectedTrip.ecoScore != null
+                        ? Math.round(selectedTrip.ecoScore)
+                        : "-"}
                     </span>
                   </div>
 
@@ -537,7 +552,9 @@ export default function TripsHistoryView({
                       Cuidado
                     </span>
                     <span className="font-bold text-xs text-base-content/90 font-mono block mt-0.5">
-                      {selectedTrip.assetScore != null ? Math.round(selectedTrip.assetScore) : "-"}
+                      {selectedTrip.assetScore != null
+                        ? Math.round(selectedTrip.assetScore)
+                        : "-"}
                     </span>
                   </div>
                 </>
@@ -568,16 +585,19 @@ export default function TripsHistoryView({
               {isDriverCentric ? (
                 <>
                   <Truck className="size-4 text-primary shrink-0" />
-                  {isManagementRole && (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
+                  {isManagementRole &&
+                  (selectedTrip.vehicleId || selectedTrip.vehicle?.id) ? (
                     <Link
                       href={`/vehicle/${selectedTrip.vehicleId || selectedTrip.vehicle?.id}/view${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""}`}
                       className="truncate text-primary hover:underline font-bold text-sm"
                     >
-                      {selectedTrip.vehicle?.alias || "Sin Alias"} ({selectedTrip.vehicle?.plateNumber})
+                      {selectedTrip.vehicle?.alias || "Sin Alias"} (
+                      {selectedTrip.vehicle?.plateNumber})
                     </Link>
                   ) : (
                     <span className="truncate text-sm">
-                      {selectedTrip.vehicle?.alias || "Sin Alias"} ({selectedTrip.vehicle?.plateNumber})
+                      {selectedTrip.vehicle?.alias || "Sin Alias"} (
+                      {selectedTrip.vehicle?.plateNumber})
                     </span>
                   )}
                 </>
@@ -589,7 +609,8 @@ export default function TripsHistoryView({
                       href={`/reports?driverId=${selectedTrip.driver.id}&tab=daily${targetOrgId ? `?targetOrgId=${targetOrgId}` : ""}`}
                       className="truncate text-primary hover:underline font-bold text-sm"
                     >
-                      {selectedTrip.driver.firstName && selectedTrip.driver.lastName
+                      {selectedTrip.driver.firstName &&
+                      selectedTrip.driver.lastName
                         ? `${selectedTrip.driver.firstName} ${selectedTrip.driver.lastName}`
                         : selectedTrip.driver.nationalId}
                     </Link>
@@ -649,7 +670,8 @@ export default function TripsHistoryView({
               <Gauge className="size-4 text-sky-500/80 shrink-0" />
             </div>
             <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
-              {tripMetrics.avgSpeed} <span className="text-xs font-normal font-sans">km/h</span>
+              {tripMetrics.avgSpeed}{" "}
+              <span className="text-xs font-normal font-sans">km/h</span>
             </div>
           </div>
 
@@ -662,7 +684,10 @@ export default function TripsHistoryView({
               <Zap className="size-4 text-rose-500/80 shrink-0" />
             </div>
             <div className="mt-3 font-bold text-base text-rose-500 dark:text-rose-450 font-mono">
-              {tripMetrics.maxSpeed} <span className="text-xs font-normal text-rose-500/70 font-sans">km/h</span>
+              {tripMetrics.maxSpeed}{" "}
+              <span className="text-xs font-normal text-rose-500/70 font-sans">
+                km/h
+              </span>
             </div>
           </div>
 
@@ -677,7 +702,9 @@ export default function TripsHistoryView({
                   <Shield className="size-4 text-emerald-500/80 shrink-0" />
                 </div>
                 <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
-                  {selectedTrip.safetyScore != null ? Math.round(selectedTrip.safetyScore) : "-"}
+                  {selectedTrip.safetyScore != null
+                    ? Math.round(selectedTrip.safetyScore)
+                    : "-"}
                 </div>
               </div>
 
@@ -690,7 +717,9 @@ export default function TripsHistoryView({
                   <Leaf className="size-4 text-green-500/80 shrink-0" />
                 </div>
                 <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
-                  {selectedTrip.ecoScore != null ? Math.round(selectedTrip.ecoScore) : "-"}
+                  {selectedTrip.ecoScore != null
+                    ? Math.round(selectedTrip.ecoScore)
+                    : "-"}
                 </div>
               </div>
 
@@ -703,7 +732,9 @@ export default function TripsHistoryView({
                   <Wrench className="size-4 text-violet-500/80 shrink-0" />
                 </div>
                 <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
-                  {selectedTrip.assetScore != null ? Math.round(selectedTrip.assetScore) : "-"}
+                  {selectedTrip.assetScore != null
+                    ? Math.round(selectedTrip.assetScore)
+                    : "-"}
                 </div>
               </div>
             </>
@@ -766,12 +797,14 @@ export default function TripsHistoryView({
           key="stable-map-panel"
           className={`
             relative bg-base-100/50 overflow-hidden shadow-sm flex flex-col
-            ${isFullscreen
-              ? "flex-grow h-full w-full border-none rounded-none"
-              : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${isMobileMapActive
-                ? "flex h-auto lg:h-full lg:min-h-0"
-                : "hidden"
-              }`
+            ${
+              isFullscreen
+                ? "flex-grow h-full w-full border-none rounded-none"
+                : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${
+                    isMobileMapActive
+                      ? "flex h-auto lg:h-full lg:min-h-0"
+                      : "hidden"
+                  }`
             }
           `}
         >
@@ -779,9 +812,11 @@ export default function TripsHistoryView({
             className={`z-10 w-full ${
               isFullscreen
                 ? "absolute inset-0 h-full"
-                : selectedTripId && routeCoordinates.length > 0 && !isLoadingRoute
-                ? "relative h-[320px] lg:relative lg:flex-grow lg:h-0"
-                : "relative h-[320px] lg:absolute lg:inset-0 lg:h-full"
+                : selectedTripId &&
+                    routeCoordinates.length > 0 &&
+                    !isLoadingRoute
+                  ? "relative h-[320px] lg:relative lg:flex-grow lg:h-0"
+                  : "relative h-[320px] lg:absolute lg:inset-0 lg:h-full"
             }`}
           >
             <TripMap

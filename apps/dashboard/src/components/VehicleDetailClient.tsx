@@ -260,18 +260,24 @@ export function VehicleDetailClient({
   };
 
   // Calculamos promedios o usamos estadísticas globales
-  const hasStats = vehicle.VehicleGlobalStats != null &&
-    ((vehicle.VehicleGlobalStats.totalKm ?? 0) > 0 || (vehicle.VehicleGlobalStats.totalEngineHours ?? 0) > 0);
-  const avgSafety = hasStats && vehicle.VehicleGlobalStats!.globalSafetyScore != null
+  const hasStats =
+    vehicle.VehicleGlobalStats != null &&
+    ((vehicle.VehicleGlobalStats.totalKm ?? 0) > 0 ||
+      (vehicle.VehicleGlobalStats.totalEngineHours ?? 0) > 0);
+  const avgSafety =
+    hasStats && vehicle.VehicleGlobalStats!.globalSafetyScore != null
       ? Math.round(vehicle.VehicleGlobalStats!.globalSafetyScore)
       : null;
-  const avgEco = hasStats && vehicle.VehicleGlobalStats!.globalFuelEfficiency != null
+  const avgEco =
+    hasStats && vehicle.VehicleGlobalStats!.globalFuelEfficiency != null
       ? Math.round(vehicle.VehicleGlobalStats!.globalFuelEfficiency)
       : null;
-  const avgAsset = hasStats && vehicle.VehicleGlobalStats!.globalMaintenanceScore != null
+  const avgAsset =
+    hasStats && vehicle.VehicleGlobalStats!.globalMaintenanceScore != null
       ? Math.round(vehicle.VehicleGlobalStats!.globalMaintenanceScore)
       : null;
-  const overallScore = hasStats && vehicle.VehicleGlobalStats!.globalOverallScore != null
+  const overallScore =
+    hasStats && vehicle.VehicleGlobalStats!.globalOverallScore != null
       ? Math.round(vehicle.VehicleGlobalStats!.globalOverallScore)
       : null;
   const lastUpdated = vehicle.VehicleGlobalStats?.lastUpdated || null;

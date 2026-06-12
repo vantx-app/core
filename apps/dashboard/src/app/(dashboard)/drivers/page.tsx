@@ -45,7 +45,8 @@ function DriversPageContent() {
   }, [fetchDrivers]);
 
   const getScoreColor = (score: number | null | undefined) => {
-    if (score == null) return "text-base-content/40 border-base-200 bg-base-200/5";
+    if (score == null)
+      return "text-base-content/40 border-base-200 bg-base-200/5";
     if (score >= 85) return "text-success border-success/20 bg-success/5";
     if (score >= 70) return "text-warning border-warning/20 bg-warning/5";
     return "text-error border-error/20 bg-error/5";
@@ -104,15 +105,22 @@ function DriversPageContent() {
 
   const renderDriverCard = (driver: DriversPageDriver) => {
     const activeAssignment = driver.assignments?.[0];
-    const hasStats = driver.globalStats && driver.globalStats.globalSafetyScore !== null;
+    const hasStats =
+      driver.globalStats && driver.globalStats.globalSafetyScore !== null;
     const safetyScore = hasStats
-      ? driver.globalStats!.globalSafetyScore ?? driver.globalStats!.safetyScore ?? null
+      ? (driver.globalStats!.globalSafetyScore ??
+        driver.globalStats!.safetyScore ??
+        null)
       : null;
     const ecoScore = hasStats
-      ? driver.globalStats!.globalEcoScore ?? driver.globalStats!.ecoScore ?? null
+      ? (driver.globalStats!.globalEcoScore ??
+        driver.globalStats!.ecoScore ??
+        null)
       : null;
     const assetScore = hasStats
-      ? driver.globalStats!.globalAssetScore ?? driver.globalStats!.assetScore ?? null
+      ? (driver.globalStats!.globalAssetScore ??
+        driver.globalStats!.assetScore ??
+        null)
       : null;
     const colorClass = getScoreColor(safetyScore);
     return (

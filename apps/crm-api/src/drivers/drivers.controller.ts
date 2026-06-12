@@ -44,14 +44,22 @@ export class DriversController {
   async findAll(
     @Req() req: Request & { user: AccessTokenPayload },
     @Query('targetOrgId') targetOrgId?: string,
+    @Query('available') availableStr?: string,
   ) {
     const user = req.user;
+    const onlyAvailable = availableStr === 'true';
+
     if (user.role === ROLES.SUPER_ADMIN) {
       if (targetOrgId) {
         return this.driversService.findAllByOrgId(targetOrgId);
       }
-      return this.driversService.findAll();
+      return this.driversService.findAll(onlyAvailable);
     }
+
+    if (onlyAvailable) {
+      return this.driversService.findAll(true);
+    }
+
     return this.driversService.findAllByOrgId(user.orgId);
   }
 

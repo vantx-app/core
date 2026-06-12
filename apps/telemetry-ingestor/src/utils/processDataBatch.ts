@@ -242,7 +242,10 @@ export async function processDataBatch(records: any[], imei: string) {
       const lastClosed = lastClosedTripCache.get(vehicle.id);
       const recTimeMs = (rec.timestamp as Date).getTime();
 
-      if (lastClosed && recTimeMs - lastClosed.closeTime < POST_CLOSE_DEBOUNCE_MS) {
+      if (
+        lastClosed &&
+        recTimeMs - lastClosed.closeTime < POST_CLOSE_DEBOUNCE_MS
+      ) {
         const reopenedTripId = lastClosed.id;
         currentTrip = { id: reopenedTripId, startTime: lastClosed.startTime };
         activeTripsCache.set(vehicle.id, currentTrip);
@@ -258,7 +261,10 @@ export async function processDataBatch(records: any[], imei: string) {
           });
         } else {
           // Si ya existía en la DB, limpiamos su endTime
-          tripsToUpdate.set(reopenedTripId, { id: reopenedTripId, endTime: null });
+          tripsToUpdate.set(reopenedTripId, {
+            id: reopenedTripId,
+            endTime: null,
+          });
         }
 
         // Remover del caché de cierre ya que vuelve a estar activo

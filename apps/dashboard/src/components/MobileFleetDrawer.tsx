@@ -37,7 +37,7 @@ export const MobileFleetDrawer = ({
   return (
     <MobileDrawer
       open={true}
-      onOpenChange={() => { }}
+      onOpenChange={() => {}}
       title={vehicleId ? "Detalles del Vehículo" : "Mi Flota"}
       onBack={vehicleId ? () => handleVehicleSelection() : undefined}
       snapPoints={snapPoints}

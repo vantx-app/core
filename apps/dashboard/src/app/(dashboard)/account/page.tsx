@@ -16,7 +16,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { DriverProfileCard } from "@/components/account/DriverProfileCard";
-import { DriverDocumentsCard } from "@/components/account/DriverDocumentsCard";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -320,10 +319,6 @@ export default function AccountPage() {
       {driverStats && (
         <>
           <DriverProfileCard stats={driverStats} />
-          <DriverDocumentsCard
-            driverStats={driverStats}
-            onSync={fetchProfile}
-          />
         </>
       )}
     </div>
