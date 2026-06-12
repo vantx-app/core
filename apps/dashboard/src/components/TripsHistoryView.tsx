@@ -58,6 +58,7 @@ export default function TripsHistoryView({
   isDriverCentric = false,
 }: TripsHistoryViewProps) {
   const [trips] = useState<VehicleTripsTrip[]>(initialTrips);
+  const [visibleCount, setVisibleCount] = useState(10);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
   const [routeCoordinates, setRouteCoordinates] = useState<Coordinate[]>([]);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
@@ -74,9 +75,13 @@ export default function TripsHistoryView({
     userRole === ROLES.ADMIN ||
     userRole === ROLES.SUPER_ADMIN;
 
+  const visibleTrips = useMemo(() => {
+    return trips.slice(0, visibleCount);
+  }, [trips, visibleCount]);
+
   const groupedTrips = useMemo(() => {
     const groups: Record<string, VehicleTripsTrip[]> = {};
-    trips.forEach((trip) => {
+    visibleTrips.forEach((trip) => {
       const label = getLocalDateOnlyLabel(trip.startTime);
       if (!groups[label]) {
         groups[label] = [];
@@ -84,7 +89,7 @@ export default function TripsHistoryView({
       groups[label].push(trip);
     });
     return groups;
-  }, [trips]);
+  }, [visibleTrips]);
 
   const setFullscreenAnimated = (value: boolean) => {
     if (typeof document !== "undefined" && "startViewTransition" in document) {
@@ -210,6 +215,30 @@ export default function TripsHistoryView({
     // Ya no colapsamos la lista automáticamente al seleccionar para mejorar la navegación
   };
 
+  const renderPaginationControls = () => {
+    if (trips.length <= visibleCount) return null;
+    return (
+      <div className="pt-4 pb-2 px-1 flex flex-col items-center gap-3 border-t border-base-200/40 mt-4">
+        <div className="text-[11px] text-base-content/50 font-medium">
+          Mostrando <span className="font-bold text-base-content/75">{visibleCount}</span> de{" "}
+          <span className="font-bold text-base-content/75">{trips.length}</span> viajes
+        </div>
+        <div className="w-full bg-base-200/45 dark:bg-base-800/30 h-1 rounded-full overflow-hidden">
+          <div
+            className="bg-primary h-full transition-all duration-300"
+            style={{ width: `${(visibleCount / trips.length) * 100}%` }}
+          />
+        </div>
+        <button
+          onClick={() => setVisibleCount((prev) => Math.min(prev + 10, trips.length))}
+          className="btn btn-sm btn-outline border-base-300 hover:bg-base-200 rounded-xl text-xs font-bold text-base-content/85 px-4 w-full"
+        >
+          Cargar más viajes
+        </button>
+      </div>
+    );
+  };
+
   const renderTripList = () => (
     <>
       {trips.length === 0 ? (
@@ -226,7 +255,7 @@ export default function TripsHistoryView({
           return (
             <div
               key={dateLabel}
-              className="collapse collapse-arrow bg-base-200/20 border border-base-200/50 rounded-xl overflow-hidden shadow-sm transition-all"
+              className="collapse collapse-arrow bg-transparent border-b border-base-200/60 rounded-none shadow-none lg:bg-base-200/20 lg:border lg:border-base-200/50 lg:rounded-xl lg:shadow-sm lg:overflow-hidden transition-all"
             >
               <input
                 type="checkbox"
@@ -234,13 +263,13 @@ export default function TripsHistoryView({
                 className="peer"
                 aria-label={`Mostrar viajes de ${dateLabel}`}
               />
-              <div className="collapse-title text-xs font-black flex items-center justify-between pr-10 text-base-content/85 bg-base-200/35 py-3">
+              <div className="collapse-title text-xs font-black flex items-center justify-between pr-10 text-base-content/85 bg-transparent lg:bg-base-200/35 py-3 px-1 lg:px-4">
                 <span className="truncate">{dateLabel}</span>
                 <span className="badge badge-sm badge-neutral font-bold font-mono ml-2 border-none">
                   {dayTrips.length}
                 </span>
               </div>
-              <div className="collapse-content p-2.5 bg-base-100/5 space-y-2.5">
+              <div className="collapse-content p-1 lg:p-2.5 bg-transparent lg:bg-base-100/5 space-y-2 lg:space-y-2.5">
                 {dayTrips.map((trip) => {
                   const isSelected = trip.id === selectedTripId;
                   const isOngoing = !trip.endTime;
@@ -248,9 +277,9 @@ export default function TripsHistoryView({
                     <button
                       key={trip.id}
                       onClick={() => handleTripSelection(trip.id)}
-                      className={`w-full text-left p-3 rounded-xl border transition-all duration-200 flex flex-col gap-2 ${isSelected
+                      className={`w-full text-left p-2.5 lg:p-3 rounded-xl border transition-all duration-200 flex flex-col gap-1.5 lg:gap-2 ${isSelected
                         ? "bg-primary/10 border-primary shadow-sm"
-                        : "bg-base-100/50 border-base-200 hover:border-base-300 text-base-content"
+                        : "bg-base-100/60 border-base-200/80 dark:bg-base-900/10 hover:border-base-300 text-base-content"
                         }`}
                     >
                       <div className="flex items-center justify-between w-full text-[10px]">
@@ -707,6 +736,7 @@ export default function TripsHistoryView({
           </div>
           <div className="flex-grow overflow-y-auto p-4 space-y-3">
             {renderTripList()}
+            {renderPaginationControls()}
           </div>
         </div>
 
@@ -714,10 +744,10 @@ export default function TripsHistoryView({
         <div
           className={`
           ${isFullscreen || isMobileMapActive ? "hidden" : "lg:hidden"} 
-          flex flex-col bg-base-100/50 border border-base-200 rounded-2xl overflow-hidden shadow-sm p-4 space-y-3
+          flex flex-col space-y-3
         `}
         >
-          <div className="shrink-0 pb-2 border-b border-base-200">
+          <div className="shrink-0 pb-2 border-b border-base-200 px-1">
             <h2 className="font-bold text-sm text-base-content/80">
               {isDriverCentric ? "Tus Recorridos" : "Lista de Recorridos"}
             </h2>
@@ -725,7 +755,10 @@ export default function TripsHistoryView({
               Selecciona un viaje para ver su reconstrucción de ruta.
             </p>
           </div>
-          <div className="space-y-2.5">{renderTripList()}</div>
+          <div className="space-y-2.5">
+            {renderTripList()}
+            {renderPaginationControls()}
+          </div>
         </div>
 
         {/* Panel del Mapa */}

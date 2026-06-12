@@ -115,12 +115,10 @@ function DriversPageContent() {
       ? driver.globalStats!.globalAssetScore ?? driver.globalStats!.assetScore ?? null
       : null;
     const colorClass = getScoreColor(safetyScore);
-
     return (
-      <Link
+      <div
         key={driver.id}
-        href={getDetailLink(driver.id)}
-        className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-lg hover:border-primary/30 transition-all duration-300 flex flex-col justify-between text-left cursor-pointer"
+        className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col justify-between text-left"
       >
         <div className="card-body p-6 space-y-4">
           {/* Top Bar: Status and Badge */}
@@ -201,8 +199,18 @@ function DriversPageContent() {
               Último cálculo: {formatDate(driver.globalStats.lastUpdated)}
             </div>
           )}
+
+          {/* View Details Button */}
+          <div className="card-actions justify-end pt-2">
+            <Link
+              href={getDetailLink(driver.id)}
+              className="btn btn-primary btn-sm rounded-xl text-white font-bold"
+            >
+              Ver Detalle
+            </Link>
+          </div>
         </div>
-      </Link>
+      </div>
     );
   };
 

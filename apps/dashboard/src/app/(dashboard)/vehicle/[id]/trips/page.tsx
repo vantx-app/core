@@ -29,7 +29,7 @@ export default async function VehicleTripsPage({
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:flex lg:flex-col">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:flex lg:flex-col">
       <VehicleTripsClient vehicle={vehicle} initialTrips={trips || []} />
     </div>
   );

@@ -242,7 +242,47 @@ export function DriverDetailClient({
           reports: [],
         };
       }
-      groups[vId].reports.push(report);
+
+      // Calculate UTC date-only string for grouping (YYYY-MM-DD)
+      const d = new Date(report.date);
+      const year = d.getUTCFullYear();
+      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+      const dayVal = String(d.getUTCDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${dayVal}`;
+
+      // Look for an existing report for this date in the vehicle group
+      let existingReport = groups[vId].reports.find((r) => {
+        const rd = new Date(r.date);
+        const rYear = rd.getUTCFullYear();
+        const rMonth = String(rd.getUTCMonth() + 1).padStart(2, '0');
+        const rDay = String(rd.getUTCDate()).padStart(2, '0');
+        return `${rYear}-${rMonth}-${rDay}` === dateStr;
+      });
+
+      if (existingReport) {
+        // Aggregate values
+        existingReport.totalKm += report.totalKm || 0;
+        existingReport.totalEngineHours += report.totalEngineHours || 0;
+        existingReport.idlingHours += report.idlingHours || 0;
+        existingReport.overspeedCount += report.overspeedCount || 0;
+        existingReport.brakingCount += report.brakingCount || 0;
+        existingReport.corneringCount += report.corneringCount || 0;
+        existingReport.accelerationCount += report.accelerationCount || 0;
+        existingReport.deviceUnpluggedCount += report.deviceUnpluggedCount || 0;
+        existingReport.activeFaultCodesCount += report.activeFaultCodesCount || 0;
+        existingReport.highRpmCount += report.highRpmCount || 0;
+        existingReport.coldEngineStrainCount += report.coldEngineStrainCount || 0;
+        existingReport.coastingInNeutralCount += report.coastingInNeutralCount || 0;
+        existingReport.engineLuggingCount += report.engineLuggingCount || 0;
+        existingReport.highLoadStrainCount += report.highLoadStrainCount || 0;
+        existingReport.criticalOverheatingCount += report.criticalOverheatingCount || 0;
+      } else {
+        // Clone the report object to avoid mutating the original prop data
+        groups[vId].reports.push({
+          ...report,
+        });
+      }
+
       groups[vId].totalKm += report.totalKm || 0;
       groups[vId].totalHours += report.totalEngineHours || 0;
     });
@@ -878,7 +918,7 @@ export function DriverDetailClient({
 
       {/* TAB: TRIPS EXPLORER */}
       {activeTab === "trips" && (
-        <div className="card bg-base-100/60 backdrop-blur-sm border border-base-200 p-4 space-y-4">
+        <div className="card bg-transparent sm:bg-base-100/60 backdrop-blur-none sm:backdrop-blur-sm border-none sm:border border-base-200 p-0 sm:p-4 space-y-4 shadow-none sm:shadow-md">
           <div className="flex items-center gap-2 border-b border-base-200 pb-2 text-left px-2">
             <Route className="text-primary size-5" />
             <h2 className="text-base font-bold text-base-content">

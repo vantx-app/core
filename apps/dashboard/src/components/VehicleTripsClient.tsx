@@ -12,7 +12,7 @@ export default function VehicleTripsClient({
   return (
     <div className="flex flex-col lg:h-full lg:overflow-hidden space-y-4 flex-grow min-h-0">
       {/* Header & Back Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-base-100/50 backdrop-blur-md rounded-2xl border border-base-200 shadow-sm shrink-0">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 bg-base-100/40 sm:bg-base-100/50 backdrop-blur-md rounded-xl sm:rounded-2xl border border-base-200 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
           <BackButton
             fallbackHref="/vehicle"

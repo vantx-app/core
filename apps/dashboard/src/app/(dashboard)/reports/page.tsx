@@ -289,7 +289,7 @@ function ReportsPageContent() {
 
   return (
     <div
-      className={`p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${activeTab === "daily"
+      className={`p-4 sm:p-6 max-w-7xl mx-auto flex flex-col space-y-6 ${activeTab === "daily"
         ? "lg:h-[calc(100vh-48px)] lg:overflow-hidden lg:space-y-4"
         : ""
         }`}
