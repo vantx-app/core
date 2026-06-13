@@ -101,7 +101,7 @@ export function MarketplaceClientView({
   const landingUrl =
     process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
   const dashboardUrl =
-    process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3001";
+    process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3001/dashboard";
 
   // Re-fetch profile & stats when required (e.g. sync callbacks)
   const syncProfileAndState = async () => {

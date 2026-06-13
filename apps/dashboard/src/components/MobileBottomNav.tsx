@@ -49,8 +49,10 @@ export function MobileBottomNav() {
           ? `${baseHref}${baseHref.includes("?") ? "&" : "?"}view=driver`
           : baseHref;
 
+        const LinkComponent = link.isExternal ? "a" : Link;
+
         return (
-          <Link
+          <LinkComponent
             key={link.href}
             href={href}
             className={`relative flex flex-col items-center justify-center flex-1 h-full transition-colors ${
@@ -71,7 +73,7 @@ export function MobileBottomNav() {
             <span className="text-[10px] font-bold mt-1 tracking-tight">
               {t(link.key || link.label)}
             </span>
-          </Link>
+          </LinkComponent>
         );
       })}
     </div>

@@ -82,6 +82,7 @@ export const NAV_LINKS: NavLink[] = [
     icon: Briefcase,
     allowedRoles: [ROLES.DRIVER, ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
     hideInMobileBottomNavForRoles: [ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    isExternal: true,
   },
   {
     href: "/account",

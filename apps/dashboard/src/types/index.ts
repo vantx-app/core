@@ -1264,4 +1264,5 @@ export interface NavLink {
   hidden?: boolean;
   overrideClassNames?: string;
   hideInMobileBottomNavForRoles?: ROLES[];
+  isExternal?: boolean;
 }

@@ -44,12 +44,14 @@ export function NavigationMenu() {
             ? `${baseHref}${baseHref.includes("?") ? "&" : "?"}view=driver`
             : baseHref;
 
+          const LinkComponent = link.isExternal ? "a" : Link;
+
           return (
             <li
               key={link.href}
               className={`w-full ${link.overrideClassNames ? link.overrideClassNames : ""}`}
             >
-              <Link
+              <LinkComponent
                 href={href}
                 className={`flex items-center justify-between w-full p-3 transition-colors rounded-lg ${
                   isActive
@@ -61,7 +63,7 @@ export function NavigationMenu() {
                 <Icon
                   className={`size-5 ${isActive ? "text-primary" : "text-base-content/70"}`}
                 />
-              </Link>
+              </LinkComponent>
             </li>
           );
         })}
