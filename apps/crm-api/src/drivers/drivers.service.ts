@@ -392,6 +392,26 @@ export class DriversService {
     return `This action updates a #${id} driver`;
   }
 
+  async updateShareSettings(userId: string, shareScoresPublicly: boolean) {
+    const driver = await this.prismaService.driver.findUnique({
+      where: { userId },
+    });
+    if (!driver) {
+      throw new NotFoundException('Perfil de conductor no encontrado.');
+    }
+
+    const updated = await this.prismaService.driver.update({
+      where: { id: driver.id },
+      data: { shareScoresPublicly },
+    });
+
+    // Invalidate caches
+    this.cacheService.del(`drivers:user:${userId}`);
+    this.cacheService.delByPattern('drivers:all:');
+
+    return updated;
+  }
+
   remove(id: string) {
     return `This action removes a #${id} driver`;
   }

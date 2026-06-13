@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import Link from "next/link";
 import api from "../utils/client/api-client";
 import { VerificationTab } from "./VerificationTab";
 import { VehicleListingsTab } from "./VehicleListingsTab";
+import { AdminDocumentsReviewTab } from "./AdminDocumentsReviewTab";
 import {
   getInitials,
   maskDriverName,
@@ -85,8 +87,12 @@ export function MarketplaceClientView({
   );
   const [drivers, setDrivers] = useState<MarketplaceDriver[]>(initialDrivers);
   const [activeTab, setActiveTab] = useState<
-    "drivers" | "documents" | "vehicles"
-  >(initialUser?.role === "DRIVER" || initialUser?.driver ? "vehicles" : "drivers");
+    "drivers" | "documents" | "vehicles" | "validation"
+  >(
+    initialUser?.role === "DRIVER" || initialUser?.driver
+      ? "vehicles"
+      : "drivers",
+  );
 
   const [driversLoading, setDriversLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("Todos");
@@ -179,7 +185,8 @@ export function MarketplaceClientView({
   const filteredDrivers = drivers.filter((driver) => {
     const matchesCategory =
       categoryFilter === "Todos" ||
-      (driver.licenseType && driver.licenseType.startsWith(categoryFilter.split(" ")[0]));
+      (driver.licenseType &&
+        driver.licenseType.startsWith(categoryFilter.split(" ")[0]));
     // (If geographical zone is added in driver profile schema later, we filter. For now it passes)
     return matchesCategory;
   });
@@ -264,7 +271,6 @@ export function MarketplaceClientView({
           )}
         </div>
       </section>
-
       {/* Navigation Tabs (Only for DRIVER) */}
       {isDriver && (
         <section className="max-w-7xl mx-auto px-6 mb-6">
@@ -295,6 +301,36 @@ export function MarketplaceClientView({
         </section>
       )}
 
+      {/* Navigation Tabs (Only for SUPER_ADMIN) */}
+      {user?.role === "SUPER_ADMIN" && (
+        <section className="max-w-7xl mx-auto px-6 mb-6">
+          <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-md">
+            <button
+              onClick={() => setActiveTab("drivers")}
+              className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                activeTab === "drivers"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-950"
+              }`}
+            >
+              <User className="size-4" />
+              Conductores Disponibles
+            </button>
+            <button
+              onClick={() => setActiveTab("validation")}
+              className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                activeTab === "validation"
+                  ? "bg-white text-blue-600 shadow-sm"
+                  : "text-slate-500 hover:text-slate-950"
+              }`}
+            >
+              <ShieldCheck className="size-4" />
+              Revisar Documentos
+            </button>
+          </div>
+        </section>
+      )}
+
       {/* Main Content Area */}
       <section className="max-w-7xl mx-auto px-6 pb-20">
         {isDriver ? (
@@ -306,6 +342,8 @@ export function MarketplaceClientView({
               <VerificationTab onSync={syncProfileAndState} />
             )}
           </div>
+        ) : activeTab === "validation" && user?.role === "SUPER_ADMIN" ? (
+          <AdminDocumentsReviewTab />
         ) : (
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Sidebar Filters */}
@@ -407,7 +445,8 @@ export function MarketplaceClientView({
                                   "NATIONAL_ID",
                                 )}`}
                               >
-                                Cédula: {getDocStatusText(driver, "NATIONAL_ID")}
+                                Cédula:{" "}
+                                {getDocStatusText(driver, "NATIONAL_ID")}
                               </span>
                               <span
                                 className={`badge text-[8px] font-bold border rounded-full px-1.5 py-0.5 leading-none shrink-0 ${getDocStatusBadge(
@@ -415,7 +454,8 @@ export function MarketplaceClientView({
                                   "POLICE_RECORD",
                                 )}`}
                               >
-                                Historial Policivo: {getDocStatusText(driver, "POLICE_RECORD")}
+                                Historial Policivo:{" "}
+                                {getDocStatusText(driver, "POLICE_RECORD")}
                               </span>
                             </div>
                           )}
@@ -463,9 +503,12 @@ export function MarketplaceClientView({
                           </a>
                         ) : (
                           <>
-                            <button className="flex-1 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 transition-all active:scale-95">
+                            <Link
+                              href={`/drivers/${driver.id}`}
+                              className="flex-1 text-center py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 transition-all active:scale-95"
+                            >
                               Ver Perfil
-                            </button>
+                            </Link>
                             <button className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10">
                               Proponer Contrato
                             </button>

@@ -13,7 +13,7 @@ const OwnerContactForm = dynamic(
         <span className="loading loading-spinner loading-lg text-blue-600"></span>
       </div>
     ),
-  }
+  },
 );
 
 export function OwnerContactCard() {
@@ -34,9 +34,9 @@ export function OwnerContactCard() {
             Soy Propietario de Flota
           </h3>
           <p className="text-slate-650 text-xs leading-relaxed">
-            Monitorea rutas en vivo, comparte enlaces de seguimiento en
-            tiempo real con tus clientes, analiza consumo de combustible y
-            reduce costos operativos.
+            Monitorea rutas en vivo, comparte enlaces de seguimiento en tiempo
+            real con tus clientes, analiza consumo de combustible y reduce
+            costos operativos.
           </p>
         </div>
         <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">

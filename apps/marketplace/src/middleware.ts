@@ -24,7 +24,8 @@ export async function middleware(request: NextRequest) {
   const refreshToken = request.cookies.get("refresh_token")?.value;
 
   // Solo nos interesa la página principal u otras vistas del Marketplace
-  if (pathname !== "/") return NextResponse.next();
+  if (pathname !== "/" && !pathname.startsWith("/drivers/"))
+    return NextResponse.next();
 
   // Si no hay refresh_token, es un invitado, seguimos adelante sin autenticar
   if (!refreshToken) return NextResponse.next();
@@ -34,18 +35,15 @@ export async function middleware(request: NextRequest) {
   // Si el access_token no existe o está expirado, intentamos refrescarlo en el servidor
   if (!accessToken || isTokenExpired(accessToken)) {
     try {
-      const internalApiUrl = process.env.INTERNAL_API_URL || "http://localhost:8000";
-      const res = await fetch(
-        `${internalApiUrl}/api/auth/refresh`,
-        {
-          method: "POST",
-          headers: {
-            Cookie: `refresh_token=${refreshToken}`,
-            "User-Agent":
-              request.headers.get("user-agent") || "VantX-Middleware",
-          },
+      const internalApiUrl =
+        process.env.INTERNAL_API_URL || "http://localhost:8000";
+      const res = await fetch(`${internalApiUrl}/api/auth/refresh`, {
+        method: "POST",
+        headers: {
+          Cookie: `refresh_token=${refreshToken}`,
+          "User-Agent": request.headers.get("user-agent") || "VantX-Middleware",
         },
-      );
+      });
 
       if (!res.ok) throw new Error("Refresh backend falló");
       const { accessToken: newToken } = await res.json();
@@ -78,7 +76,10 @@ export async function middleware(request: NextRequest) {
 
       return response;
     } catch (error) {
-      console.error("[Auth] Error crítico en middleware de marketplace:", error);
+      console.error(
+        "[Auth] Error crítico en middleware de marketplace:",
+        error,
+      );
       // Limpieza agresiva de cookies en caso de falla
       const response = NextResponse.next();
       const deleteSettings = getCookieSettings(0);

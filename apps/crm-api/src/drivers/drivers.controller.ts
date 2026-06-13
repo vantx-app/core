@@ -10,6 +10,7 @@ import {
   Req,
   Query,
   BadRequestException,
+  ForbiddenException,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { DriversService } from './drivers.service';
@@ -109,12 +110,40 @@ export class DriversController {
     return this.driversService.findTripsForDriver('me', req.user);
   }
 
-  @Roles(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN)
+  @Roles(ROLES.DRIVER)
+  @Patch('me/share-settings')
+  async updateShareSettings(
+    @Req() req: Request & { user: AccessTokenPayload },
+    @Body() body: { shareScoresPublicly: boolean },
+  ) {
+    if (typeof body.shareScoresPublicly !== 'boolean') {
+      throw new BadRequestException(
+        'El valor de shareScoresPublicly debe ser un booleano.',
+      );
+    }
+    const result = await this.driversService.updateShareSettings(
+      req.user.sub,
+      body.shareScoresPublicly,
+    );
+    return result;
+  }
+
+  @Roles(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN, ROLES.DRIVER)
   @Get(':id')
-  findOne(
+  async findOne(
     @Req() req: Request & { user: AccessTokenPayload },
     @Param('id') id: string,
   ) {
+    if (req.user.role === ROLES.DRIVER) {
+      const myDriver = await this.driversService.findStatsByUserId(
+        req.user.sub,
+      );
+      if (myDriver.id !== id) {
+        throw new ForbiddenException(
+          'No tienes permisos para ver este perfil.',
+        );
+      }
+    }
     return this.driversService.findOne(id, req.user);
   }
 

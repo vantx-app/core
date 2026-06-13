@@ -1148,6 +1148,7 @@ export interface DriverProfileStats {
   firstName: string;
   lastName: string;
   assignments?: DriverAssignment[];
+  shareScoresPublicly?: boolean;
 }
 
 export interface DriverAssignment {

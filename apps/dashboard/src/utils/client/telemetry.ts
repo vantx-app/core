@@ -148,7 +148,7 @@ export function condenseDailyRollupsByDriver(
 
 /**
  * Groups daily telemetry reports by vehicle, aggregating values for duplicate dates.
- * 
+ *
  * @param dailyReports Array of daily telemetry reports.
  * @returns Array of grouped vehicle reports.
  */
@@ -205,11 +205,9 @@ export function groupDailyReportsByVehicle(dailyReports: any[]): any[] {
       existingReport.corneringCount += report.corneringCount || 0;
       existingReport.accelerationCount += report.accelerationCount || 0;
       existingReport.deviceUnpluggedCount += report.deviceUnpluggedCount || 0;
-      existingReport.activeFaultCodesCount +=
-        report.activeFaultCodesCount || 0;
+      existingReport.activeFaultCodesCount += report.activeFaultCodesCount || 0;
       existingReport.highRpmCount += report.highRpmCount || 0;
-      existingReport.coldEngineStrainCount +=
-        report.coldEngineStrainCount || 0;
+      existingReport.coldEngineStrainCount += report.coldEngineStrainCount || 0;
       existingReport.coastingInNeutralCount +=
         report.coastingInNeutralCount || 0;
       existingReport.engineLuggingCount += report.engineLuggingCount || 0;
@@ -239,7 +237,7 @@ export function groupDailyReportsByVehicle(dailyReports: any[]): any[] {
 
 /**
  * Groups daily telemetry rollups by month and year in Spanish.
- * 
+ *
  * @param rollups Array of DailyTelemetryRollup items.
  * @returns Record mapping month/year label to rollups.
  */

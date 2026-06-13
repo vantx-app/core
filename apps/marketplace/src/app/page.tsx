@@ -20,14 +20,20 @@ export default async function MarketplaceHome() {
       try {
         driverStats = await fetchServer("/drivers/me/stats");
       } catch (err) {
-        console.error("Marketplace: error fetching driver stats on server:", err);
+        console.error(
+          "Marketplace: error fetching driver stats on server:",
+          err,
+        );
       }
     } else {
       // Owner/Admin view
       try {
         initialDrivers = await fetchServer("/drivers?available=true");
       } catch (err) {
-        console.error("Marketplace: error fetching owner drivers list on server:", err);
+        console.error(
+          "Marketplace: error fetching owner drivers list on server:",
+          err,
+        );
       }
     }
   } else {
@@ -35,7 +41,10 @@ export default async function MarketplaceHome() {
     try {
       initialDrivers = await fetchServer("/drivers/public");
     } catch (err) {
-      console.error("Marketplace: error fetching public drivers list on server:", err);
+      console.error(
+        "Marketplace: error fetching public drivers list on server:",
+        err,
+      );
     }
   }
 

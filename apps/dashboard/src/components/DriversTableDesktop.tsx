@@ -5,7 +5,12 @@ import React from "react";
 import { Table } from "@/components/ui/Table";
 import { DriverAvatar } from "@/components/ui/DriverAvatar";
 import { CreditCard, Car, UserCheck } from "lucide-react";
-import { getScoreBadgeColor, formatDate, getDriverStatusBadgeClass, getDriverStatusText } from "@/utils/client";
+import {
+  getScoreBadgeColor,
+  formatDate,
+  getDriverStatusBadgeClass,
+  getDriverStatusText,
+} from "@/utils/client";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
@@ -23,7 +28,11 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
     return (
       <span
         className={`badge gap-1 ${getDriverStatusBadgeClass(status)}`}
-        title={status === "INACTIVE" ? "Creado por administrador, sin cuenta registrada" : undefined}
+        title={
+          status === "INACTIVE"
+            ? "Creado por administrador, sin cuenta registrada"
+            : undefined
+        }
       >
         {status === "ACTIVE" && <UserCheck className="size-3" />}
         {getDriverStatusText(status)}

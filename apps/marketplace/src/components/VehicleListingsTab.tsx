@@ -93,7 +93,6 @@ export function VehicleListingsTab({
     );
   };
 
-
   if (loading) {
     return (
       <div className="card bg-white border border-slate-200 shadow-md rounded-2xl w-full">

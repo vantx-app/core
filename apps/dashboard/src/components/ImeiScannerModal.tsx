@@ -24,8 +24,6 @@ export default function ImeiScannerModal({
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isUnmountedRef = useRef(false);
 
-
-
   const startScanning = async (
     cameraId: string,
     scannerInstance: Html5Qrcode,

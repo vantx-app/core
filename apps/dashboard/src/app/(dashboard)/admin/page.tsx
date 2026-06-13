@@ -780,24 +780,15 @@ function AdminOverviewTab() {
         }
       />
 
-      {/* Card 4: Validación de Documentos */}
+      {/* Card 4: Portal de Reclutamiento (Marketplace) */}
       <AdminCard
-        href={getLink("/admin/documents")}
-        icon={ShieldCheck}
-        iconColorClass="bg-teal-500/10 text-teal-600 group-hover:bg-teal-600 group-hover:text-white"
-        title="Validación de Documentos"
-        description="Revisa los documentos pendientes que fallaron la validación automática. Compara los datos del conductor con el escaneo de forma manual."
-        disabled={!hasOrgContext}
-        disabledBadge="Requiere Organización"
-        disabledDescription={
-          <>
-            Revisa los documentos de conductores de la flota.{" "}
-            <strong className="text-primary/60">
-              Selecciona una organización primero.
-            </strong>
-          </>
+        href={
+          process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002"
         }
-        disabledTitleAttr="Requiere seleccionar una organización para impersonar"
+        icon={Briefcase}
+        iconColorClass="bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white"
+        title="Portal de Reclutamiento"
+        description="Accede al Marketplace de conductores. Publica ofertas de alquiler de vehículos y gestiona postulaciones de choferes profesionales."
       />
     </div>
   );

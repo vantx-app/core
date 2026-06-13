@@ -288,15 +288,15 @@ export function DriverDetailClient({
         </div>
 
         {day.overspeedCount > 0 ||
-          totalHarsh > 0 ||
-          day.deviceUnpluggedCount > 0 ||
-          day.activeFaultCodesCount > 0 ||
-          day.highRpmCount > 0 ||
-          day.coldEngineStrainCount > 0 ||
-          day.coastingInNeutralCount > 0 ||
-          day.engineLuggingCount > 0 ||
-          day.highLoadStrainCount > 0 ||
-          day.criticalOverheatingCount > 0 ? (
+        totalHarsh > 0 ||
+        day.deviceUnpluggedCount > 0 ||
+        day.activeFaultCodesCount > 0 ||
+        day.highRpmCount > 0 ||
+        day.coldEngineStrainCount > 0 ||
+        day.coastingInNeutralCount > 0 ||
+        day.engineLuggingCount > 0 ||
+        day.highLoadStrainCount > 0 ||
+        day.criticalOverheatingCount > 0 ? (
           <div className="flex flex-wrap gap-1.5 pt-1">
             {day.overspeedCount > 0 && (
               <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 border border-rose-500/20 font-bold font-mono text-[9px] gap-0.5">
@@ -447,7 +447,9 @@ export function DriverDetailClient({
                 <span
                   className={`badge ${driver.status === "ACTIVE" ? "badge-success text-white" : "badge-neutral"} badge-sm font-bold`}
                 >
-                  {driver.status === "ACTIVE" ? "Activo" : "Sin cuenta vinculada"}
+                  {driver.status === "ACTIVE"
+                    ? "Activo"
+                    : "Sin cuenta vinculada"}
                 </span>
               </div>
               <p className="text-xs text-base-content/60 mt-0.5">
@@ -535,40 +537,44 @@ export function DriverDetailClient({
       <div className="tabs tabs-boxed bg-base-200/50 p-1 rounded-xl w-full max-w-lg shrink-0 border border-base-200/60 backdrop-blur-md">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "overview"
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "overview"
               ? "tab-active bg-base-100 shadow-sm text-primary"
               : "text-base-content/60"
-            }`}
+          }`}
         >
           <Info className="size-3.5 mr-1.5" />
           Resumen
         </button>
         <button
           onClick={() => setActiveTab("scores")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "scores"
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "scores"
               ? "tab-active bg-base-100 shadow-sm text-primary"
               : "text-base-content/60"
-            }`}
+          }`}
         >
           <Calendar className="size-3.5 mr-1.5" />
           Desempeño
         </button>
         <button
           onClick={() => setActiveTab("trips")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "trips"
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "trips"
               ? "tab-active bg-base-100 shadow-sm text-primary"
               : "text-base-content/60"
-            }`}
+          }`}
         >
           <Route className="size-3.5 mr-1.5" />
           Viajes ({trips.length})
         </button>
         <button
           onClick={() => setActiveTab("rollups")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "rollups"
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "rollups"
               ? "tab-active bg-base-100 shadow-sm text-primary"
               : "text-base-content/60"
-            }`}
+          }`}
         >
           <Activity className="size-3.5 mr-1.5" />
           Actividad Diaria
@@ -860,10 +866,11 @@ export function DriverDetailClient({
                 return (
                   <div
                     key={index}
-                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded
+                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${
+                      isExpanded
                         ? "border-primary/30 shadow-md"
                         : "border-base-200 hover:border-base-300"
-                      }`}
+                    }`}
                   >
                     <div
                       className="px-4 py-3 flex justify-between items-center cursor-pointer select-none"
@@ -991,10 +998,11 @@ export function DriverDetailClient({
                 return (
                   <div
                     key={groupKey}
-                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${isExpanded
+                    className={`bg-base-100/50 border rounded-2xl overflow-hidden transition-all duration-300 ${
+                      isExpanded
                         ? "border-primary/30 shadow-md"
                         : "border-base-200 hover:border-base-300"
-                      }`}
+                    }`}
                   >
                     <div
                       className="px-4 py-3 flex flex-col sm:flex-row sm:justify-between sm:items-center cursor-pointer select-none gap-2 hover:bg-base-200/20 transition-colors"

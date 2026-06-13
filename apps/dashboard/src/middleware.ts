@@ -16,7 +16,10 @@ export async function middleware(request: NextRequest) {
   const refreshToken = request.cookies.get("refresh_token")?.value;
 
   // Resolución robusta del host del cliente (evitando 0.0.0.0 cuando Next.js corre en un contenedor con HOSTNAME=0.0.0.0)
-  let host = request.headers.get("x-forwarded-host") || request.headers.get("host") || request.nextUrl.host;
+  let host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    request.nextUrl.host;
   if (host.startsWith("0.0.0.0")) {
     host = host.replace("0.0.0.0", "localhost");
   }

@@ -4,11 +4,33 @@ import {
   DriverProfileCardProps,
   DriverProfileStats,
 } from "@/types";
-import React from "react";
-import { Car } from "lucide-react";
+import React, { useState } from "react";
+import { Car, Loader2 } from "lucide-react";
+import api from "@/utils/client/api-client";
 
 export function DriverProfileCard({ stats }: DriverProfileCardProps) {
   if (!stats) return null;
+
+  const [shareScores, setShareScores] = useState(
+    stats.shareScoresPublicly ?? false,
+  );
+  const [updating, setUpdating] = useState(false);
+
+  const handleToggleShare = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    setUpdating(true);
+    try {
+      await api.patch("/drivers/me/share-settings", {
+        shareScoresPublicly: newValue,
+      });
+      setShareScores(newValue);
+    } catch (err) {
+      console.error("Error updating sharing settings:", err);
+      alert("No se pudo actualizar la configuración de privacidad.");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const activeAssignment = stats.assignments?.find((a) => a.to === null);
   const vehicle = activeAssignment?.vehicle;
@@ -42,7 +64,7 @@ export function DriverProfileCard({ stats }: DriverProfileCardProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
           {/* Driver identity info */}
-          <div className="space-y-4 bg-base-100/50 p-4 rounded-xl border border-base-200">
+          <div className="space-y-4 bg-base-100/50 p-4 rounded-xl border border-base-200 text-left">
             <h4 className="font-bold text-xs uppercase tracking-wider text-base-content/40">
               Datos del Conductor
             </h4>
@@ -69,7 +91,7 @@ export function DriverProfileCard({ stats }: DriverProfileCardProps) {
           </div>
 
           {/* Assigned vehicle info */}
-          <div className="space-y-4 bg-base-100/50 p-4 rounded-xl border border-base-200">
+          <div className="space-y-4 bg-base-100/50 p-4 rounded-xl border border-base-200 text-left">
             <h4 className="font-bold text-xs uppercase tracking-wider text-base-content/40">
               Vehículo Asignado
             </h4>
@@ -101,6 +123,31 @@ export function DriverProfileCard({ stats }: DriverProfileCardProps) {
                 </p>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Privacy settings section */}
+        <div className="border-t border-base-200/80 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-0.5 max-w-xl text-left">
+            <h4 className="text-sm font-bold text-base-content flex items-center gap-1.5">
+              Compartir puntuaciones públicamente
+            </h4>
+            <p className="text-xs text-base-content/50">
+              Permite que los dueños de flotas y administradores vean tus scores
+              en tu perfil público del Marketplace de Conductores.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            {updating && (
+              <Loader2 className="size-4 animate-spin text-primary" />
+            )}
+            <input
+              type="checkbox"
+              className="toggle toggle-primary"
+              checked={shareScores}
+              onChange={handleToggleShare}
+              disabled={updating}
+            />
           </div>
         </div>
       </div>

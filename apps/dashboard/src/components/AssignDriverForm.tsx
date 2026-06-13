@@ -228,8 +228,6 @@ export default function AssignDriverForm({
     await handleAssign(idToAssign);
   };
 
-
-
   if (isLoadingDriver) {
     return (
       <div className="flex items-center justify-center py-6 gap-2 text-xs text-base-content/65">

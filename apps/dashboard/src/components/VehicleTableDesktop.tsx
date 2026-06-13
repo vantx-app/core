@@ -9,14 +9,15 @@ import Link from "next/link";
 import { Pencil, UserCog, Route, Eye } from "lucide-react";
 import { DriverInfoLabel } from "@/components/ui/DriverInfoLabel";
 import { Table } from "@/components/ui/Table";
-import { getVehicleStatusBadgeClass, getVehicleStatusLabel } from "@/utils/client";
+import {
+  getVehicleStatusBadgeClass,
+  getVehicleStatusLabel,
+} from "@/utils/client";
 
 export function VehicleTableDesktop({
   vehicles,
   targetOrgId,
 }: VehicleTableDesktopProps) {
-
-
   const columns: TableColumn<FleetVehicleSummary>[] = [
     {
       key: "index",

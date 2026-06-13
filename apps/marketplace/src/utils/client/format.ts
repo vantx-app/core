@@ -41,9 +41,7 @@ export const getInitials = (name: string): string => {
 
 export const maskDriverName = (driver: any, userRole?: string): string => {
   const isOwner =
-    userRole === "OWNER" ||
-    userRole === "ADMIN" ||
-    userRole === "SUPER_ADMIN";
+    userRole === "OWNER" || userRole === "ADMIN" || userRole === "SUPER_ADMIN";
   if (isOwner) {
     return driver.name || `${driver.firstName} ${driver.lastName}`;
   }
@@ -70,7 +68,8 @@ export const getDocStatusText = (driver: any, type: string): string => {
   const status = doc?.status || "PENDING_UPLOAD";
 
   if (status === "APPROVED") return "Verificado";
-  if (status === "PENDING_VALIDATION" || status === "PENDING_MANUAL_REVIEW") return "Pendiente Revisión";
+  if (status === "PENDING_VALIDATION" || status === "PENDING_MANUAL_REVIEW")
+    return "Pendiente Revisión";
   if (status === "REJECTED") return "Rechazado";
   return "No Subido";
 };
