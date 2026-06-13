@@ -45,3 +45,4 @@ jobs:
           build-args: |
             NEXT_PUBLIC_MAPBOX_TOKEN=${{ secrets.NEXT_PUBLIC_MAPBOX_TOKEN }}
             NEXT_PUBLIC_LANDING_URL=${{ vars.NEXT_PUBLIC_LANDING_URL }}
+            NEXT_PUBLIC_MARKETPLACE_URL=${{ vars.NEXT_PUBLIC_MARKETPLACE_URL }}

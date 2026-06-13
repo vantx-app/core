@@ -17,6 +17,9 @@ COPY --from=pruner /app/out/package-lock.json ./package-lock.json
 ARG NEXT_PUBLIC_DASHBOARD_URL
 ENV NEXT_PUBLIC_DASHBOARD_URL=$NEXT_PUBLIC_DASHBOARD_URL
 
+ARG NEXT_PUBLIC_LANDING_URL
+ENV NEXT_PUBLIC_LANDING_URL=$NEXT_PUBLIC_LANDING_URL
+
 RUN npm run build -- --filter=@vantx/marketplace
 
 # === STAGE 3: Runner ===
