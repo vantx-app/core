@@ -192,7 +192,7 @@ export function MarketplaceClientView({
   });
 
   return (
-    <div className="relative">
+    <div className="relative flex-grow flex flex-col w-full">
       {/* Header */}
       <header className="relative border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50 transform-gpu">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -238,291 +238,295 @@ export function MarketplaceClientView({
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative max-w-7xl mx-auto px-6 py-8">
-        <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-slate-100 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-          <div className="text-left">
-            <h1 className="text-2xl font-extrabold text-slate-950">
-              Asignaciones de Conductores y Vehículos
-            </h1>
-            <p className="text-slate-600 text-xs max-w-xl mt-1 leading-relaxed">
-              Conectamos conductores profesionales verificados mediante firma
-              digital con flotas comerciales. Explora vehículos disponibles o
-              postúlate a asignaciones.
-            </p>
-          </div>
-          {isDriver && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white shadow-sm shrink-0">
-              <span className="text-xs text-slate-500 font-semibold">
-                Tu Estado:
-              </span>
-              <span
-                className={`badge text-xs font-bold px-2 py-0.5 rounded-full border ${
-                  isDriverActive
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                    : "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
-                }`}
-              >
-                {isDriverActive
-                  ? "Activo (Verificado)"
-                  : "Pendiente de Verificación"}
-              </span>
+      {/* Middle Content Wrapper */}
+      <div className="flex-grow flex flex-col w-full">
+        {/* Hero Section */}
+        <section className="relative max-w-7xl mx-auto px-6 py-8 w-full">
+          <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-slate-100 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+            <div className="text-left">
+              <h1 className="text-2xl font-extrabold text-slate-950">
+                Asignaciones de Conductores y Vehículos
+              </h1>
+              <p className="text-slate-600 text-xs max-w-xl mt-1 leading-relaxed">
+                Conectamos conductores profesionales verificados mediante firma
+                digital con flotas comerciales. Explora vehículos disponibles o
+                postúlate a asignaciones.
+              </p>
             </div>
-          )}
-        </div>
-      </section>
-      {/* Navigation Tabs (Only for DRIVER) */}
-      {isDriver && (
-        <section className="max-w-7xl mx-auto px-6 mb-6">
-          <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-md">
-            <button
-              onClick={() => setActiveTab("vehicles")}
-              className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                activeTab === "vehicles"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-950"
-              }`}
-            >
-              <Car className="size-4" />
-              Vehículos Disponibles
-            </button>
-            <button
-              onClick={() => setActiveTab("documents")}
-              className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                activeTab === "documents"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-950"
-              }`}
-            >
-              <ShieldCheck className="size-4" />
-              Mis Documentos
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Navigation Tabs (Only for SUPER_ADMIN) */}
-      {user?.role === "SUPER_ADMIN" && (
-        <section className="max-w-7xl mx-auto px-6 mb-6">
-          <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-md">
-            <button
-              onClick={() => setActiveTab("drivers")}
-              className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                activeTab === "drivers"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-950"
-              }`}
-            >
-              <User className="size-4" />
-              Conductores Disponibles
-            </button>
-            <button
-              onClick={() => setActiveTab("validation")}
-              className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                activeTab === "validation"
-                  ? "bg-white text-blue-600 shadow-sm"
-                  : "text-slate-500 hover:text-slate-950"
-              }`}
-            >
-              <ShieldCheck className="size-4" />
-              Revisar Documentos
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* Main Content Area */}
-      <section className="max-w-7xl mx-auto px-6 pb-20">
-        {isDriver ? (
-          <div>
-            {activeTab === "vehicles" && (
-              <VehicleListingsTab isDriverActive={isDriverActive} />
-            )}
-            {activeTab === "documents" && (
-              <VerificationTab onSync={syncProfileAndState} />
-            )}
-          </div>
-        ) : activeTab === "validation" && user?.role === "SUPER_ADMIN" ? (
-          <AdminDocumentsReviewTab />
-        ) : (
-          <div className="flex flex-col lg:flex-row gap-8">
-            {/* Sidebar Filters */}
-            <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">
-              <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm text-left">
-                <h2 className="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-1.5">
-                  <Filter className="size-4 text-blue-600" />
-                  Filtrar Conductores
-                </h2>
-
-                <div className="flex flex-col gap-4">
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase">
-                      TIPO DE LICENCIA
-                    </label>
-                    <select
-                      value={categoryFilter}
-                      onChange={(e) => setCategoryFilter(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
-                    >
-                      <option>Todos</option>
-                      <option>D (Comercial/Particular)</option>
-                      <option>E1 (Transporte Selectivo)</option>
-                      <option>E2 (Buses/Colectivo)</option>
-                      <option>F (Equipo Pesado)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase">
-                      ZONA GEOGRÁFICA
-                    </label>
-                    <select
-                      value={zoneFilter}
-                      onChange={(e) => setZoneFilter(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
-                    >
-                      <option>Todas</option>
-                      <option>Zona Metropolitana</option>
-                      <option>Zona Norte</option>
-                      <option>Zona Centro</option>
-                      <option>Zona Oeste</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </aside>
-
-            {/* Drivers List (For Owners & Public Guests) */}
-            <div className="flex-1 flex flex-col gap-6 text-left">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-extrabold text-slate-950">
-                  Conductores Profesionales Disponibles
-                </h2>
+            {isDriver && (
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white shadow-sm shrink-0">
                 <span className="text-xs text-slate-500 font-semibold">
-                  {filteredDrivers.length} conductores encontrados
+                  Tu Estado:
+                </span>
+                <span
+                  className={`badge text-xs font-bold px-2 py-0.5 rounded-full border ${
+                    isDriverActive
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
+                  }`}
+                >
+                  {isDriverActive
+                    ? "Activo (Verificado)"
+                    : "Pendiente de Verificación"}
                 </span>
               </div>
+            )}
+          </div>
+        </section>
 
-              {driversLoading ? (
-                <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white border border-slate-200 rounded-2xl">
-                  <Loader2 className="size-8 animate-spin text-blue-600" />
-                  <p className="text-xs text-slate-500">
-                    Cargando lista de conductores...
-                  </p>
-                </div>
-              ) : filteredDrivers.length === 0 ? (
-                <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 py-16">
-                  <User className="size-14 text-slate-300 mb-3" />
-                  <h3 className="text-sm font-bold text-slate-700">
-                    No hay conductores
-                  </h3>
-                  <p className="text-xs text-slate-400 max-w-sm mt-1">
-                    No hay conductores disponibles actualmente para
-                    reclutamiento en este momento.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {filteredDrivers.map((driver) => (
-                    <div
-                      key={driver.id}
-                      className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-5 shadow-sm"
-                    >
-                      {/* Header */}
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="space-y-0.5">
-                          <h3 className="text-base font-extrabold text-slate-950">
-                            {maskDriverName(driver, user?.role)}
-                          </h3>
-                          <p className="text-[10px] text-slate-550 font-semibold uppercase tracking-wider">
-                            Licencia: {driver.licenseType || "N/A"}
-                          </p>
-                          {isOwner && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              <span
-                                className={`badge text-[8px] font-bold border rounded-full px-1.5 py-0.5 leading-none shrink-0 ${getDocStatusBadge(
-                                  driver,
-                                  "NATIONAL_ID",
-                                )}`}
-                              >
-                                Cédula:{" "}
-                                {getDocStatusText(driver, "NATIONAL_ID")}
-                              </span>
-                              <span
-                                className={`badge text-[8px] font-bold border rounded-full px-1.5 py-0.5 leading-none shrink-0 ${getDocStatusBadge(
-                                  driver,
-                                  "POLICE_RECORD",
-                                )}`}
-                              >
-                                Historial Policivo:{" "}
-                                {getDocStatusText(driver, "POLICE_RECORD")}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
-                          Disponible
-                        </span>
-                      </div>
+        {/* Navigation Tabs (Only for DRIVER) */}
+        {isDriver && (
+          <section className="max-w-7xl mx-auto px-6 mb-6 w-full">
+            <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-md">
+              <button
+                onClick={() => setActiveTab("vehicles")}
+                className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeTab === "vehicles"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-950"
+                }`}
+              >
+                <Car className="size-4" />
+                Vehículos Disponibles
+              </button>
+              <button
+                onClick={() => setActiveTab("documents")}
+                className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeTab === "documents"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-950"
+                }`}
+              >
+                <ShieldCheck className="size-4" />
+                Mis Documentos
+              </button>
+            </div>
+          </section>
+        )}
 
-                      {/* Body stats */}
-                      <div className="grid grid-cols-2 gap-4 border-y border-slate-100 py-3 text-xs">
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
-                            Puntaje Histórico
-                          </span>
-                          <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
-                            <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                            {driver.globalStats?.globalOverallScore != null
-                              ? `${driver.globalStats.globalOverallScore} pts`
-                              : "N/A (Privado)"}
-                          </span>
-                        </div>
-                        <div>
-                          <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
-                            Conducción Segura
-                          </span>
-                          <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
-                            <ShieldCheck className="size-3.5 text-blue-600" />
-                            {driver.globalStats?.globalSafetyScore != null
-                              ? `${driver.globalStats.globalSafetyScore}%`
-                              : "N/A (Privado)"}
-                          </span>
-                        </div>
-                      </div>
+        {/* Navigation Tabs (Only for SUPER_ADMIN) */}
+        {user?.role === "SUPER_ADMIN" && (
+          <section className="max-w-7xl mx-auto px-6 mb-6 w-full">
+            <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-md">
+              <button
+                onClick={() => setActiveTab("drivers")}
+                className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeTab === "drivers"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-950"
+                }`}
+              >
+                <User className="size-4" />
+                Conductores Disponibles
+              </button>
+              <button
+                onClick={() => setActiveTab("validation")}
+                className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                  activeTab === "validation"
+                    ? "bg-white text-blue-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-950"
+                }`}
+              >
+                <ShieldCheck className="size-4" />
+                Revisar Documentos
+              </button>
+            </div>
+          </section>
+        )}
 
-                      {/* Actions */}
-                      <div className="flex items-center gap-3">
-                        {!user ? (
-                          <a
-                            href={`${landingUrl}/login`}
-                            className="w-full text-center py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1.5"
-                          >
-                            <Lock className="size-3.5" />
-                            Iniciar Sesión para Contactar
-                          </a>
-                        ) : (
-                          <>
-                            <Link
-                              href={`/drivers/${driver.id}`}
-                              className="flex-1 text-center py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 transition-all active:scale-95"
-                            >
-                              Ver Perfil
-                            </Link>
-                            <button className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10">
-                              Proponer Contrato
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+        {/* Main Content Area */}
+        <section className="max-w-7xl mx-auto px-6 pb-20 flex-grow w-full">
+          {isDriver ? (
+            <div>
+              {activeTab === "vehicles" && (
+                <VehicleListingsTab isDriverActive={isDriverActive} />
+              )}
+              {activeTab === "documents" && (
+                <VerificationTab onSync={syncProfileAndState} />
               )}
             </div>
-          </div>
-        )}
-      </section>
+          ) : activeTab === "validation" && user?.role === "SUPER_ADMIN" ? (
+            <AdminDocumentsReviewTab />
+          ) : (
+            <div className="flex flex-col lg:flex-row gap-8">
+              {/* Sidebar Filters */}
+              <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">
+                <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm text-left">
+                  <h2 className="text-sm font-extrabold text-slate-900 mb-4 flex items-center gap-1.5">
+                    <Filter className="size-4 text-blue-600" />
+                    Filtrar Conductores
+                  </h2>
+
+                  <div className="flex flex-col gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase">
+                        TIPO DE LICENCIA
+                      </label>
+                      <select
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                      >
+                        <option>Todos</option>
+                        <option>D (Comercial/Particular)</option>
+                        <option>E1 (Transporte Selectivo)</option>
+                        <option>E2 (Buses/Colectivo)</option>
+                        <option>F (Equipo Pesado)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase">
+                        ZONA GEOGRÁFICA
+                      </label>
+                      <select
+                        value={zoneFilter}
+                        onChange={(e) => setZoneFilter(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+                      >
+                        <option>Todas</option>
+                        <option>Zona Metropolitana</option>
+                        <option>Zona Norte</option>
+                        <option>Zona Centro</option>
+                        <option>Zona Oeste</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </aside>
+
+              {/* Drivers List (For Owners & Public Guests) */}
+              <div className="flex-1 flex flex-col gap-6 text-left">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-extrabold text-slate-950">
+                    Conductores Profesionales Disponibles
+                  </h2>
+                  <span className="text-xs text-slate-500 font-semibold">
+                    {filteredDrivers.length} conductores encontrados
+                  </span>
+                </div>
+
+                {driversLoading ? (
+                  <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white border border-slate-200 rounded-2xl">
+                    <Loader2 className="size-8 animate-spin text-blue-600" />
+                    <p className="text-xs text-slate-500">
+                      Cargando lista de conductores...
+                    </p>
+                  </div>
+                ) : filteredDrivers.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 py-16">
+                    <User className="size-14 text-slate-300 mb-3" />
+                    <h3 className="text-sm font-bold text-slate-700">
+                      No hay conductores
+                    </h3>
+                    <p className="text-xs text-slate-400 max-w-sm mt-1">
+                      No hay conductores disponibles actualmente para
+                      reclutamiento en este momento.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {filteredDrivers.map((driver) => (
+                      <div
+                        key={driver.id}
+                        className="p-6 rounded-2xl bg-white border border-slate-200 hover:border-blue-300 hover:shadow-md transition-all duration-300 flex flex-col justify-between gap-5 shadow-sm"
+                      >
+                        {/* Header */}
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-0.5">
+                            <h3 className="text-base font-extrabold text-slate-950">
+                              {maskDriverName(driver, user?.role)}
+                            </h3>
+                            <p className="text-[10px] text-slate-550 font-semibold uppercase tracking-wider">
+                              Licencia: {driver.licenseType || "N/A"}
+                            </p>
+                            {isOwner && (
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                <span
+                                  className={`badge text-[8px] font-bold border rounded-full px-1.5 py-0.5 leading-none shrink-0 ${getDocStatusBadge(
+                                    driver,
+                                    "NATIONAL_ID",
+                                  )}`}
+                                >
+                                  Cédula:{" "}
+                                  {getDocStatusText(driver, "NATIONAL_ID")}
+                                </span>
+                                <span
+                                  className={`badge text-[8px] font-bold border rounded-full px-1.5 py-0.5 leading-none shrink-0 ${getDocStatusBadge(
+                                    driver,
+                                    "POLICE_RECORD",
+                                  )}`}
+                                >
+                                  Historial Policivo:{" "}
+                                  {getDocStatusText(driver, "POLICE_RECORD")}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                            Disponible
+                          </span>
+                        </div>
+
+                        {/* Body stats */}
+                        <div className="grid grid-cols-2 gap-4 border-y border-slate-100 py-3 text-xs">
+                          <div>
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
+                              Puntaje Histórico
+                            </span>
+                            <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
+                              <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                              {driver.globalStats?.globalOverallScore != null
+                                ? `${driver.globalStats.globalOverallScore} pts`
+                                : "N/A (Privado)"}
+                            </span>
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
+                              Conducción Segura
+                            </span>
+                            <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
+                              <ShieldCheck className="size-3.5 text-blue-600" />
+                              {driver.globalStats?.globalSafetyScore != null
+                                ? `${driver.globalStats.globalSafetyScore}%`
+                                : "N/A (Privado)"}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex items-center gap-3">
+                          {!user ? (
+                            <a
+                              href={`${landingUrl}/login`}
+                              className="w-full text-center py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1.5"
+                            >
+                              <Lock className="size-3.5" />
+                              Iniciar Sesión para Contactar
+                            </a>
+                          ) : (
+                            <>
+                              <Link
+                                href={`/drivers/${driver.id}`}
+                                className="flex-1 text-center py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 transition-all active:scale-95"
+                              >
+                                Ver Perfil
+                              </Link>
+                              <button className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10">
+                                Proponer Contrato
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
+      </div>
 
       {/* Footer */}
       <footer className="border-t border-slate-200 py-6 text-center text-xs text-slate-500 bg-white">
