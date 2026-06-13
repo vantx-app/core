@@ -110,7 +110,7 @@ export class DriversController {
     return this.driversService.findTripsForDriver('me', req.user);
   }
 
-  @Roles(ROLES.DRIVER)
+  @Roles(ROLES.DRIVER, ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN)
   @Patch('me/share-settings')
   async updateShareSettings(
     @Req() req: Request & { user: AccessTokenPayload },
