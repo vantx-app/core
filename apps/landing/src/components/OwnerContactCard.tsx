@@ -2,7 +2,19 @@
 
 import { useState } from "react";
 import { Truck, ChevronRight, X } from "lucide-react";
-import { OwnerContactForm } from "./OwnerContactForm";
+import dynamic from "next/dynamic";
+
+const OwnerContactForm = dynamic(
+  () => import("./OwnerContactForm").then((m) => m.OwnerContactForm),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-48 items-center justify-center">
+        <span className="loading loading-spinner loading-lg text-blue-600"></span>
+      </div>
+    ),
+  }
+);
 
 export function OwnerContactCard() {
   const [isOwnerContactOpen, setIsOwnerContactOpen] = useState(false);

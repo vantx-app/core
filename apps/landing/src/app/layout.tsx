@@ -18,8 +18,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es">
-      <body>{children}</body>
+    <html lang="es" data-theme="light">
+      <body className="bg-slate-50 text-slate-800">{children}</body>
     </html>
   );
 }

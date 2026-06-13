@@ -5,6 +5,10 @@ const apiUrl = process.env.INTERNAL_API_URL || "http://localhost:8000";
 const nextConfig: NextConfig = {
   devIndicators: false,
   output: "standalone",
+  transpilePackages: ["@vantx/ui", "@vantx/auth"],
+  experimental: {
+    optimizePackageImports: ["lucide-react", "@vantx/ui"],
+  },
   async rewrites() {
     return [
       {
