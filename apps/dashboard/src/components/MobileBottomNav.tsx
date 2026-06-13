@@ -20,6 +20,12 @@ export function MobileBottomNav() {
     const rolesToShow = link.menuAllowedRoles || link.allowedRoles;
     if (!rolesToShow.includes(effectiveRole)) return false;
     if ("hidden" in link && link.hidden) return false;
+    if (
+      link.hideInMobileBottomNavForRoles &&
+      link.hideInMobileBottomNavForRoles.includes(effectiveRole)
+    ) {
+      return false;
+    }
     return true;
   });
 

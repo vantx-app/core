@@ -8,6 +8,7 @@ import {
   Shield,
   Settings,
   FileText,
+  Briefcase,
 } from "lucide-react";
 import { ROLES } from "../enums";
 import { NavLink } from "@/types";
@@ -73,6 +74,14 @@ export const NAV_LINKS: NavLink[] = [
     icon: Shield,
     allowedRoles: [ROLES.OWNER, ROLES.SUPER_ADMIN],
     hidden: true,
+  },
+  {
+    href: process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002",
+    label: "Marketplace",
+    key: "nav.marketplace",
+    icon: Briefcase,
+    allowedRoles: [ROLES.DRIVER, ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    hideInMobileBottomNavForRoles: [ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
   },
   {
     href: "/account",

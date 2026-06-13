@@ -1263,4 +1263,5 @@ export interface NavLink {
   menuAllowedRoles?: ROLES[];
   hidden?: boolean;
   overrideClassNames?: string;
+  hideInMobileBottomNavForRoles?: ROLES[];
 }
