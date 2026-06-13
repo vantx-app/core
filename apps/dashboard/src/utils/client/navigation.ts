@@ -76,7 +76,7 @@ export const NAV_LINKS: NavLink[] = [
     hidden: true,
   },
   {
-    href: process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002",
+    href: "/marketplace",
     label: "Marketplace",
     key: "nav.marketplace",
     icon: Briefcase,

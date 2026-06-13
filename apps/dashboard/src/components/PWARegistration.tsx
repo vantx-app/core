@@ -7,7 +7,7 @@ export default function PWARegistration() {
     if (typeof window !== "undefined" && "serviceWorker" in navigator) {
       const handleRegister = () => {
         navigator.serviceWorker
-          .register("/sw.js")
+          .register("/dashboard/sw.js", { scope: "/" })
           .then((reg) => {
             // SW registrado con éxito en la aplicación
             console.log(
