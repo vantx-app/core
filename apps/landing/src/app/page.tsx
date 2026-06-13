@@ -32,12 +32,12 @@ function LandingContent() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-blue-600 selection:text-white relative">
       {/* Dynamic Light Background Gradients */}
-      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute top-1/3 right-1/4 w-[700px] h-[700px] bg-emerald-600/5 rounded-full blur-[160px] pointer-events-none" />
-      <div className="absolute bottom-10 left-10 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-blue-600/5 rounded-full blur-[90px] transform-gpu will-change-[transform,filter] pointer-events-none" />
+      <div className="absolute top-1/3 right-1/4 w-[700px] h-[700px] bg-emerald-600/5 rounded-full blur-[90px] transform-gpu will-change-[transform,filter] pointer-events-none" />
+      <div className="absolute bottom-10 left-10 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[90px] transform-gpu will-change-[transform,filter] pointer-events-none" />
 
       {/* Navigation Header */}
-      <header className="relative max-w-7xl mx-auto px-6 py-6 flex items-center justify-between z-20 border-b border-slate-200/60 bg-white/40 backdrop-blur-md sticky top-0">
+      <header className="relative max-w-7xl mx-auto px-6 py-6 flex items-center justify-between z-20 border-b border-slate-200/60 bg-white/40 backdrop-blur-md sticky top-0 transform-gpu">
         <div className="flex items-center gap-2">
           <Logo size="lg" variant="light" />
         </div>

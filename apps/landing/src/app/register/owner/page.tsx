@@ -245,7 +245,7 @@ function OwnerRegisterStepper() {
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-12 bg-slate-50 text-slate-800 overflow-x-hidden font-sans">
       {/* Columna Izquierda: Branding & Decoración Visual */}
       <div className="hidden md:flex md:col-span-5 relative overflow-hidden bg-slate-900 text-white p-12 flex-col justify-between border-r border-slate-800">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[60px] transform-gpu will-change-[transform,filter] pointer-events-none" />
 
         <div className="z-10 flex items-center gap-2">
           <Logo size="lg" variant="dark" />
@@ -265,7 +265,7 @@ function OwnerRegisterStepper() {
           </p>
 
           {/* Panel decorativo de telemetría mockup */}
-          <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-md overflow-hidden">
+          <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-md overflow-hidden transform-gpu">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-semibold text-slate-300">
                 Monitoreo de Flota Activa
