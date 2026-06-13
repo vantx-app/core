@@ -1,34 +1,18 @@
-"use client";
-
-import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import React, { Suspense } from "react";
 import { Logo } from "@vantx/ui";
-import { OwnerContactForm } from "@/components/OwnerContactForm";
 import Link from "next/link";
 import {
   Truck,
   UserCheck,
   Cpu,
-  X,
   CheckCircle,
   ChevronRight,
   ArrowDown,
 } from "lucide-react";
+import { OwnerContactCard } from "@/components/OwnerContactCard";
+import { LoginRedirectHandler } from "@/components/LoginRedirectHandler";
 
-function LandingContent() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  // Modals state
-  const [isOwnerContactOpen, setIsOwnerContactOpen] = useState(false);
-
-  // Auto-redirect to login page if URL has ?login=true
-  useEffect(() => {
-    if (searchParams.get("login") === "true") {
-      router.replace("/login");
-    }
-  }, [searchParams, router]);
-
+export default function LandingPage() {
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-blue-600 selection:text-white relative">
       {/* Dynamic Light Background Gradients */}
@@ -88,33 +72,13 @@ function LandingContent() {
 
         {/* Hero Split Funnel Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto mt-8">
-          {/* Card 1: B2B Fleet Owner */}
-          <div
-            className="glass-card p-8 flex flex-col items-center justify-between text-center group cursor-pointer bg-white/70 border-slate-200"
-            onClick={() => setIsOwnerContactOpen(true)}
-          >
-            <div className="w-14 h-14 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-              <Truck className="size-6" />
-            </div>
-            <div className="my-4">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">
-                Soy Propietario de Flota
-              </h3>
-              <p className="text-slate-650 text-xs leading-relaxed">
-                Monitorea rutas en vivo, comparte enlaces de seguimiento en
-                tiempo real con tus clientes, analiza consumo de combustible y
-                reduce costos operativos.
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
-              Solicitar Demostración <ChevronRight className="size-4" />
-            </span>
-          </div>
+          {/* Card 1: B2B Fleet Owner (Client component with modal state) */}
+          <OwnerContactCard />
 
-          {/* Card 2: B2C Driver */}
-          <div
+          {/* Card 2: B2C Driver (Standard Server Component Link) */}
+          <Link
+            href="/register"
             className="glass-card p-8 flex flex-col items-center justify-between text-center group cursor-pointer bg-white/70 border-slate-200"
-            onClick={() => router.push("/register")}
           >
             <div className="w-14 h-14 rounded-2xl bg-emerald-600/10 border border-emerald-600/20 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-650 group-hover:text-white transition-all duration-300">
               <UserCheck className="size-6" />
@@ -132,7 +96,7 @@ function LandingContent() {
             <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 group-hover:translate-x-1 transition-transform">
               Registrarme Gratis <ChevronRight className="size-4" />
             </span>
-          </div>
+          </Link>
         </div>
       </section>
 
@@ -385,7 +349,7 @@ function LandingContent() {
           </div>
 
           {/* Text Content on the Right */}
-          <div className="order-1 lg:order-2">
+          <div>
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600">
               Conexión Inteligente y Vetted Marketplace
             </span>
@@ -552,42 +516,10 @@ function LandingContent() {
         </p>
       </footer>
 
-      {/* SSO LOGIN MODAL REMOVED (Migrated to central /login route) */}
-
-      {/* OWNER CONTACT FORM MODAL */}
-      {isOwnerContactOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-            onClick={() => setIsOwnerContactOpen(false)}
-          />
-          {/* Modal Content */}
-          <div className="glass-card w-full max-w-xl p-8 bg-white/95 border-slate-200 relative z-10 animate-in fade-in zoom-in-95 duration-200">
-            <button
-              onClick={() => setIsOwnerContactOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-650 transition-colors"
-            >
-              <X className="size-5" />
-            </button>
-            <OwnerContactForm />
-          </div>
-        </div>
-      )}
+      {/* Dynamic redirect processor loaded in Suspense */}
+      <Suspense fallback={null}>
+        <LoginRedirectHandler />
+      </Suspense>
     </main>
-  );
-}
-
-export default function LandingPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex h-screen items-center justify-center bg-slate-50">
-          <span className="loading loading-spinner loading-lg text-blue-600"></span>
-        </div>
-      }
-    >
-      <LandingContent />
-    </Suspense>
   );
 }

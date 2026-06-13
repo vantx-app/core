@@ -15,6 +15,12 @@ export async function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("access_token")?.value;
   const refreshToken = request.cookies.get("refresh_token")?.value;
 
+  // Resolución robusta del host del cliente (evitando 0.0.0.0 cuando Next.js corre en un contenedor con HOSTNAME=0.0.0.0)
+  let host = request.headers.get("x-forwarded-host") || request.headers.get("host") || request.nextUrl.host;
+  if (host.startsWith("0.0.0.0")) {
+    host = host.replace("0.0.0.0", "localhost");
+  }
+
   // Redirigir usuarios autenticados fuera de las páginas de auth
   const isAuthRoute = pathname === "/login" || pathname === "/register";
   if (isAuthRoute && refreshToken && !isTokenExpired(refreshToken)) {
@@ -24,7 +30,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/login") {
     const landingUrl =
       process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
-    const currentUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}/`;
+    const currentUrl = `${request.nextUrl.protocol}//${host}/`;
     const callbackUrl =
       request.nextUrl.searchParams.get("callbackUrl") || currentUrl;
     return NextResponse.redirect(
@@ -44,7 +50,7 @@ export async function middleware(request: NextRequest) {
   if (!refreshToken) {
     const landingUrl =
       process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
-    const currentUrl = `${request.nextUrl.protocol}//${request.nextUrl.host}${pathname}${search}`;
+    const currentUrl = `${request.nextUrl.protocol}//${host}${pathname}${search}`;
     const callbackUrl = encodeURIComponent(currentUrl);
     return NextResponse.redirect(
       new URL(`${landingUrl}/login?callbackUrl=${callbackUrl}`),

@@ -2,6 +2,7 @@ import { FleetVehicle } from "@/types";
 import { useEffect, useState, useRef, useMemo } from "react";
 import { io, Socket } from "socket.io-client";
 import Cookies from "js-cookie";
+import { getCookieSettings } from "@vantx/auth";
 import axios from "axios";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -129,8 +130,15 @@ export const useFleetSocket = (
           console.error("Fallo crítico de refresh", e);
           // Si falla el refresh, forzamos logout borrando la cookie is_authenticated
           // para que el middleware de Next.js expulse al usuario.
-          Cookies.remove("access_token");
-          Cookies.remove("refresh_token");
+          const deleteSettings = getCookieSettings(0);
+          Cookies.remove("access_token", {
+            path: deleteSettings.path,
+            domain: deleteSettings.domain,
+          });
+          Cookies.remove("refresh_token", {
+            path: deleteSettings.path,
+            domain: deleteSettings.domain,
+          });
           window.location.href = "/login";
         }
       }

@@ -4,6 +4,7 @@ import { DriverDocumentsStats, DriverProfileStats, UserProfile } from "@/types";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
+import { getCookieSettings } from "@vantx/auth";
 import api from "@/utils/client/api-client";
 import {
   Mail,
@@ -70,8 +71,15 @@ export default function AccountPage() {
       });
 
       if (response.ok) {
-        Cookies.remove("access_token");
-        Cookies.remove("refresh_token");
+        const deleteSettings = getCookieSettings(0);
+        Cookies.remove("access_token", {
+          path: deleteSettings.path,
+          domain: deleteSettings.domain,
+        });
+        Cookies.remove("refresh_token", {
+          path: deleteSettings.path,
+          domain: deleteSettings.domain,
+        });
         router.push("/login");
         router.refresh();
       } else {
