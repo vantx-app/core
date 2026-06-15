@@ -67,7 +67,9 @@ function ReportsPageContent() {
   const [driverTrips, setDriverTrips] = useState<VehicleTripsTrip[]>([]);
   const [isLoadingTrips, setIsLoadingTrips] = useState(false);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
-  const [expandedRules, setExpandedRules] = useState<Record<string, boolean>>({});
+  const [expandedRules, setExpandedRules] = useState<Record<string, boolean>>(
+    {},
+  );
 
   // Refs de control para evitar llamadas API duplicadas al cambiar de pestaña
   const lastFetchedBreakdownRef = useRef<{
@@ -337,8 +339,10 @@ function ReportsPageContent() {
                               {startTimeStr} ({timeStr})
                             </span>
                             <span className="text-base-content/50 text-[9px]">
-                              {t.occurrences} {t.occurrences === 1 ? "vez" : "veces"}
-                              {t.severity > 0 && ` (Severidad: ${t.severity.toFixed(1)})`}
+                              {t.occurrences}{" "}
+                              {t.occurrences === 1 ? "vez" : "veces"}
+                              {t.severity > 0 &&
+                                ` (Severidad: ${t.severity.toFixed(1)})`}
                             </span>
                           </div>
                           <button

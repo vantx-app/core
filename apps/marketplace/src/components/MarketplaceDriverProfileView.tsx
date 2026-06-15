@@ -219,9 +219,22 @@ export function MarketplaceDriverProfileView({
             <h2 className="text-xl font-extrabold text-slate-950">
               {displayName}
             </h2>
-            <p className="text-xs font-semibold text-slate-400 mt-1 uppercase tracking-wider">
-              Licencia Tipo {driver.licenseType || "No Declarada"}
-            </p>
+            {driver.licenseType ? (
+              <div className="flex items-center justify-center flex-wrap gap-1 mt-2">
+                {driver.licenseType.split(",").map((cat: string) => (
+                  <span
+                    key={cat.trim()}
+                    className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider border border-slate-200"
+                  >
+                    Lic. {cat.trim()}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs font-semibold text-slate-400 mt-1 uppercase tracking-wider">
+                Sin Licencia Declarada
+              </p>
+            )}
 
             <div className="w-full border-t border-slate-100 my-5 pt-4 space-y-3.5 text-xs text-left">
               <div className="flex justify-between border-b border-slate-50 pb-2">

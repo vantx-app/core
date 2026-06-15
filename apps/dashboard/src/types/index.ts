@@ -1,6 +1,40 @@
 import { ROLES } from "@/utils/enums";
 import { ElementType } from "react";
 
+/**
+ * Clasificación oficial de licencias de conducir de la ATTT de Panamá.
+ * Los valores corresponden a las categorías únicas. Los conductores pueden tener
+ * múltiples categorías almacenadas como cadena separada por coma (ej. "C, D").
+ */
+export type PanamaLicenseType =
+  | "A"
+  | "B"
+  | "C"
+  | "D"
+  | "E1"
+  | "E2"
+  | "E3"
+  | "F"
+  | "G"
+  | "H"
+  | "I"
+  | "J";
+
+export const PANAMA_LICENSE_TYPE_OPTIONS: PanamaLicenseType[] = [
+  "A",
+  "B",
+  "C",
+  "D",
+  "E1",
+  "E2",
+  "E3",
+  "F",
+  "G",
+  "H",
+  "I",
+  "J",
+];
+
 export interface DashboardPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
@@ -335,7 +369,8 @@ export interface MarketplaceDriver {
   firstName: string;
   lastName: string;
   phone: string;
-  licenseType: string | null;
+  /** Single category (e.g. "D") or comma-joined multi-category (e.g. "C, D"). */
+  licenseType: PanamaLicenseType | string | null;
   shareScoresPublicly: boolean;
   globalStats?: {
     globalSafetyScore: number;
@@ -964,6 +999,7 @@ export interface AdminCardProps {
   disabledBadge?: string;
   disabledDescription?: React.ReactNode;
   disabledTitleAttr?: string;
+  isExternalLink?: boolean;
 }
 
 export interface OwnerDashboardProps {
@@ -1119,7 +1155,8 @@ export interface DriverDocumentsCardProps {
 }
 
 export interface DriverDocumentsStats {
-  licenseType?: string | null;
+  /** Single category (e.g. "D") or comma-joined multi-category (e.g. "C, D"). */
+  licenseType?: PanamaLicenseType | string | null;
 }
 
 export interface DriverDocument {

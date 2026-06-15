@@ -85,7 +85,7 @@ export async function middleware(request: NextRequest) {
         }
         throw new Error("TRANSIENT_ERROR");
       }
-      
+
       const { accessToken: newToken } = await res.json();
       validAccessToken = newToken;
 

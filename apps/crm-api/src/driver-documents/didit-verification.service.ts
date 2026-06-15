@@ -8,13 +8,16 @@ import {
   DriverDocumentStatus,
   Prisma,
 } from '@prisma/client';
-// import { Cron, CronExpression } from '@nestjs/schedule';
+import { Cron } from '@nestjs/schedule';
 import {
   DriverDocumentExtractedData,
   DiditSessionResponse,
   DiditDecisionResponse,
 } from './driver-documents.types';
-import { mapToPanamaLicenseType } from './driver-documents.utils';
+import {
+  mapToPanamaLicenseType,
+  extractLicenseTypeFromBarcodes,
+} from './driver-documents.utils';
 
 @Injectable()
 export class DiditVerificationService {
@@ -32,8 +35,6 @@ export class DiditVerificationService {
   async createDiditSession(
     driverId: string,
     type: DriverDocumentType,
-    driverFirstName: string | null,
-    driverLastName: string | null,
     driverNationalId: string,
   ): Promise<{ url: string; sessionId: string }> {
     const apiKey = this.configService.get<string>('DIDIT_API_KEY');
@@ -53,10 +54,13 @@ export class DiditVerificationService {
       workflowId = dlWorkflow;
     }
 
-    const frontendUrl =
-      this.configService.get<string>('FRONTEND_URL') ?? 'http://localhost:3001';
+    // Tras completar la verificación en Didit, el conductor regresa al marketplace
+    // en la pestaña de documentos para ver el resultado actualizado.
+    const marketplaceUrl =
+      this.configService.get<string>('MARKETPLACE_URL') ??
+      'http://localhost:3002';
 
-    const callbackUrl = `${frontendUrl}/account`;
+    const callbackUrl = `${marketplaceUrl}?tab=documents`;
 
     try {
       const response = await firstValueFrom(
@@ -70,8 +74,11 @@ export class DiditVerificationService {
               expected_document_types: [
                 type === DriverDocumentType.NATIONAL_ID ? 'ID' : 'DL',
               ],
-              first_name: driverFirstName || undefined,
-              last_name: driverLastName || undefined,
+              // first_name / last_name intentionally omitted: Panama documents
+              // split surnames across two lines (paternal + maternal) which
+              // can't map to a single lastName field — triggers Didit warnings.
+              // The cédula (personal_number) is the unique identifier and is
+              // sufficient for identity verification.
               personal_number: driverNationalId || undefined,
             },
           },
@@ -201,9 +208,13 @@ export class DiditVerificationService {
         if (verification) {
           expirationDate = verification.expiration_date || null;
           if (doc.type === DriverDocumentType.DRIVERS_LICENSE) {
+            // Priority 1: QR barcode raw_text on the back of the license
             licenseType =
-              verification.extra_fields?.dl_categories ||
-              verification.document_type ||
+              extractLicenseTypeFromBarcodes(verification) ??
+              // Priority 2: extra_fields.dl_categories from Didit OCR
+              verification.extra_fields?.dl_categories ??
+              // Priority 3: generic document_type field
+              verification.document_type ??
               null;
           }
         }
@@ -265,38 +276,55 @@ export class DiditVerificationService {
   }
 
   /**
-   * Cron de respaldo para sincronizar todas las sesiones pendientes o en revisión manual de Didit.
+   * Safety-net cron: sincroniza sesiones Didit que quedaron huérfanas (el conductor
+   * no volvió a abrir la app y el lazy-sync nunca se disparó).
+   *
+   * Criterios de selección:
+   *   - Estado PENDING_VALIDATION o PENDING_MANUAL_REVIEW
+   *   - updatedAt > 2 horas atrás  → el lazy-sync ya cubrió los recientes
+   *   - createdAt < 7 días atrás   → las sesiones Didit expiran, no tiene sentido consultar más
+   *
+   * Se ejecuta una vez al día a las 04:00 para mantener el costo de API mínimo.
    */
-  // @Cron(CronExpression.EVERY_HOUR)
-  // async syncAllPendingDiditSessions(): Promise<void> {
-  //   this.logger.log(
-  //     'Iniciando cron de sincronización de documentos con Didit...',
-  //   );
-  //   try {
-  //     const pendingDocs = await this.prisma.driverDocument.findMany({
-  //       where: {
-  //         status: {
-  //           in: [
-  //             DriverDocumentStatus.PENDING_VALIDATION,
-  //             DriverDocumentStatus.PENDING_MANUAL_REVIEW,
-  //           ],
-  //         },
-  //       },
-  //     });
+  @Cron('0 4 * * *', { name: 'didit-daily-safety-net' })
+  async syncAllPendingDiditSessions(): Promise<void> {
+    this.logger.log(
+      'Iniciando cron diario de sincronización de documentos con Didit...',
+    );
 
-  //     for (const doc of pendingDocs) {
-  //       if (doc.extractedData) {
-  //         const dataObj = doc.extractedData as DriverDocumentExtractedData;
-  //         if (dataObj.diditSessionId) {
-  //           await this.syncDiditSessionStatus(doc.id, dataObj.diditSessionId);
-  //         }
-  //       }
-  //     }
-  //     this.logger.log(
-  //       'Sincronización cron de documentos con Didit finalizada.',
-  //     );
-  //   } catch (err) {
-  //     this.logger.error('Error en cron de sincronización con Didit', err);
-  //   }
-  // }
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    try {
+      const stuckDocs = await this.prisma.driverDocument.findMany({
+        where: {
+          status: {
+            in: [
+              DriverDocumentStatus.PENDING_VALIDATION,
+              DriverDocumentStatus.PENDING_MANUAL_REVIEW,
+            ],
+          },
+          updatedAt: { lt: twoHoursAgo },
+          createdAt: { gt: sevenDaysAgo },
+        },
+      });
+
+      this.logger.log(
+        `Cron Didit: ${stuckDocs.length} sesión(es) huérfana(s) encontrada(s).`,
+      );
+
+      for (const doc of stuckDocs) {
+        if (doc.extractedData) {
+          const dataObj = doc.extractedData as DriverDocumentExtractedData;
+          if (dataObj.diditSessionId) {
+            await this.syncDiditSessionStatus(doc.id, dataObj.diditSessionId);
+          }
+        }
+      }
+
+      this.logger.log('Cron diario de sincronización con Didit finalizado.');
+    } catch (err) {
+      this.logger.error('Error en cron de sincronización con Didit', err);
+    }
+  }
 }

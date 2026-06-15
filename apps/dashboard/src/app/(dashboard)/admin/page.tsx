@@ -785,6 +785,7 @@ function AdminOverviewTab() {
         href={
           process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002"
         }
+        isExternalLink={true}
         icon={Briefcase}
         iconColorClass="bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white"
         title="Portal de Reclutamiento"

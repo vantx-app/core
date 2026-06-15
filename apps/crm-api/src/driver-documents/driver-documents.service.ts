@@ -14,7 +14,10 @@ import { DocumentStorageService } from './document-storage.service';
 import { DocumentVerificationService } from './document-verification.service';
 import { DiditVerificationService } from './didit-verification.service';
 import { DriverDocumentExtractedData } from './driver-documents.types';
-import { mapToPanamaLicenseType } from './driver-documents.utils';
+import {
+  mapToPanamaLicenseType,
+  extractLicenseTypeFromBarcodes,
+} from './driver-documents.utils';
 
 @Injectable()
 export class DriverDocumentsService {
@@ -310,11 +313,16 @@ export class DriverDocumentsService {
       let licenseType: string | null = null;
       if (doc.extractedData) {
         const extracted = doc.extractedData as any;
-        if (extracted.diditDecision?.id_verifications?.length > 0) {
-          const verification = extracted.diditDecision.id_verifications[0];
+        const idVerifications = extracted.diditDecision?.id_verifications;
+        if (idVerifications?.length > 0) {
+          const verification = idVerifications[0];
+          // Priority 1: QR barcode raw_text on the back of the license
           licenseType =
-            verification.extra_fields?.dl_categories ||
-            verification.document_type ||
+            extractLicenseTypeFromBarcodes(verification) ??
+            // Priority 2: extra_fields.dl_categories from Didit OCR
+            verification.extra_fields?.dl_categories ??
+            // Priority 3: generic document_type field
+            verification.document_type ??
             null;
         }
       }
@@ -366,8 +374,6 @@ export class DriverDocumentsService {
     return this.diditService.createDiditSession(
       driver.id,
       type,
-      driver.firstName,
-      driver.lastName,
       driver.nationalId,
     );
   }

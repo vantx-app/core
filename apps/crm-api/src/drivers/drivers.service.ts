@@ -1023,7 +1023,8 @@ export class DriversService {
         }
 
         const config =
-          (vehicle.scoringProfile?.rulesEngine as unknown as RuleEngineConfig) ||
+          (vehicle.scoringProfile
+            ?.rulesEngine as unknown as RuleEngineConfig) ||
           this.DEFAULT_CONFIG;
 
         const details =
@@ -1066,9 +1067,13 @@ export class DriversService {
           vehicles: vehiclesBreakdown,
         };
       } else {
-        const finalSafety = parseFloat((weightedSafety / totalDriverKm).toFixed(2));
+        const finalSafety = parseFloat(
+          (weightedSafety / totalDriverKm).toFixed(2),
+        );
         const finalEco = parseFloat((weightedEco / totalDriverKm).toFixed(2));
-        const finalAsset = parseFloat((weightedAsset / totalDriverKm).toFixed(2));
+        const finalAsset = parseFloat(
+          (weightedAsset / totalDriverKm).toFixed(2),
+        );
         const finalOverall = parseFloat(
           (weightedOverall / totalDriverKm).toFixed(2),
         );

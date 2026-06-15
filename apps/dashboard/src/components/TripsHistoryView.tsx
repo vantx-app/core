@@ -62,14 +62,14 @@ export default function TripsHistoryView({
   const [trips, setTrips] = useState<VehicleTripsTrip[]>(initialTrips);
   const [visibleCount, setVisibleCount] = useState(10);
   const [selectedTripId, setSelectedTripId] = useState<string | null>(
-    initialSelectedTripId
+    initialSelectedTripId,
   );
   const [routeCoordinates, setRouteCoordinates] = useState<Coordinate[]>([]);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isMobileMapActive, setIsMobileMapActive] = useState(
-    !!initialSelectedTripId
+    !!initialSelectedTripId,
   );
 
   useEffect(() => {

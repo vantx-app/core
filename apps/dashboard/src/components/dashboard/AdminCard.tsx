@@ -12,7 +12,10 @@ export function AdminCard({
   disabledBadge,
   disabledDescription,
   disabledTitleAttr,
+  isExternalLink = false,
 }: AdminCardProps) {
+  const LinkComponent = isExternalLink ? "a" : Link;
+
   if (disabled) {
     return (
       <div
@@ -42,7 +45,7 @@ export function AdminCard({
   }
 
   return (
-    <Link
+    <LinkComponent
       href={href}
       className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-2xl hover:border-primary/30 hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between"
     >
@@ -60,6 +63,6 @@ export function AdminCard({
           <p className="text-xs text-base-content/50 mt-1">{description}</p>
         </div>
       </div>
-    </Link>
+    </LinkComponent>
   );
 }

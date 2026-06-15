@@ -23,6 +23,13 @@ export interface DriverDocumentExtractedData {
 
 // ─── Respuestas de la API Didit ─────────────────────────────────────────────
 
+export interface DiditBarcode {
+  type: string;
+  was_decoded: boolean;
+  raw_text: string | null;
+  error?: string;
+}
+
 export interface DiditIdVerification {
   status: string;
   document_type?: string;
@@ -31,6 +38,7 @@ export interface DiditIdVerification {
     dl_categories?: string;
     [key: string]: string | undefined;
   };
+  barcodes?: DiditBarcode[];
 }
 
 export interface DiditSessionResponse {

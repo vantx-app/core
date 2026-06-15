@@ -141,8 +141,19 @@ export function VerificationTab({ onSync }: VerificationTabProps) {
   };
 
   const handleDiditVerify = async (type: string) => {
-    setUploadingDoc(type);
     setError(null);
+
+    // Guardia: si ya hay una sesión activa de Didit para este documento,
+    // reabrimos la URL existente en lugar de crear una sesión nueva.
+    const existingDoc = documents.find((d) => d.type === type);
+    const existingDiditUrl = existingDoc?.extractedData?.diditUrl;
+    if (existingDoc?.status === "PENDING_VALIDATION" && existingDiditUrl) {
+      window.open(existingDiditUrl, "_blank");
+      startDiditPolling(type);
+      return;
+    }
+
+    setUploadingDoc(type);
 
     try {
       // 1. Obtener la sesión de Didit
@@ -153,31 +164,7 @@ export function VerificationTab({ onSync }: VerificationTabProps) {
       window.open(url, "_blank");
 
       // 3. Polling para actualizar el estado tras la verificación
-      let attempts = 0;
-      const interval = setInterval(async () => {
-        attempts++;
-        try {
-          const { data: docsData } = await api.get("/documents/me");
-          setDocuments(docsData);
-          const currentDoc = docsData.find(
-            (d: DriverDocument) => d.type === type,
-          );
-          if (currentDoc && currentDoc.status !== "PENDING_VALIDATION") {
-            clearInterval(interval);
-            setUploadingDoc(null);
-            if (currentDoc.status === "APPROVED") {
-              onSync?.();
-            }
-          }
-        } catch (pollErr) {
-          console.error("Error durante polling de Didit:", pollErr);
-        }
-
-        if (attempts >= 40) {
-          clearInterval(interval);
-          setUploadingDoc(null);
-        }
-      }, 3000);
+      startDiditPolling(type);
     } catch (err: unknown) {
       console.error("Error al iniciar la verificación de Didit:", err);
       const axiosErr = err as { response?: { data?: { message?: string } } };
@@ -186,6 +173,45 @@ export function VerificationTab({ onSync }: VerificationTabProps) {
       setError(errMsg);
       setUploadingDoc(null);
     }
+  };
+
+  const startDiditPolling = (type: string) => {
+    setUploadingDoc(type);
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const { data: docsData } = await api.get("/documents/me");
+        setDocuments(docsData);
+        const currentDoc = docsData.find(
+          (d: DriverDocument) => d.type === type,
+        );
+        if (currentDoc && currentDoc.status !== "PENDING_VALIDATION") {
+          clearInterval(interval);
+          setUploadingDoc(null);
+          if (currentDoc.status === "APPROVED") {
+            onSync?.();
+          }
+        }
+      } catch (pollErr) {
+        console.error("Error durante polling de Didit:", pollErr);
+      }
+
+      // Timeout tras ~2 minutos: detenemos el polling pero el estado en base de datos
+      // sigue siendo PENDING_VALIDATION, así que el botón mostrará "Continuar en Didit"
+      // en lugar de resetear a "Verificar".
+      if (attempts >= 40) {
+        clearInterval(interval);
+        setUploadingDoc(null);
+        // Refrescamos documentos una última vez para que el estado visible sea fiel a la BD
+        try {
+          const { data: finalDocs } = await api.get("/documents/me");
+          setDocuments(finalDocs);
+        } catch {
+          /* ignorar errores silenciosos */
+        }
+      }
+    }, 3000);
   };
 
   const documentTypes = [
@@ -271,6 +297,17 @@ export function VerificationTab({ onSync }: VerificationTabProps) {
                         Motivo revisión: {extracted.verificationFailureReason}
                       </p>
                     )}
+                    {extracted?.diditDecision?.status === "Declined" && (
+                      <p className="text-[10px] text-red-600 font-semibold mt-1">
+                        Rechazado por Didit: El documento no es válido o no
+                        coincide.
+                      </p>
+                    )}
+                    {extracted?.diditDecision?.status === "Abandoned" && (
+                      <p className="text-[10px] text-amber-600 font-semibold mt-1">
+                        Cancelado: No completaste la verificación en Didit.
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -293,12 +330,14 @@ export function VerificationTab({ onSync }: VerificationTabProps) {
                       href={extracted.diditUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3 py-1.5 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 text-xs font-semibold transition-all"
+                      className="px-3 py-1.5 rounded-lg border border-blue-600 text-blue-600 hover:bg-blue-50 text-xs font-semibold transition-all flex items-center gap-1"
                     >
-                      Continuar
+                      <ShieldCheck className="size-3.5" />
+                      Continuar en Didit
                     </a>
                   )}
 
+                  {/* Mostrar botón de acción principal solo cuando no hay sesión de Didit activa */}
                   {(status === "PENDING_UPLOAD" || status === "REJECTED") &&
                     (docType.type === "POLICE_RECORD" ? (
                       <label className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs cursor-pointer active:scale-95 transition-all shadow-sm flex items-center gap-1">

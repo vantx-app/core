@@ -51,7 +51,7 @@ export async function middleware(request: NextRequest) {
         }
         throw new Error("TRANSIENT_ERROR");
       }
-      
+
       const { accessToken: newToken } = await res.json();
 
       // Clonamos headers para que los Server Components vean el nuevo token en este renderizado
@@ -89,7 +89,7 @@ export async function middleware(request: NextRequest) {
         "[Auth] Error crítico en middleware de marketplace:",
         error,
       );
-      
+
       // Si es un error de red o de servidor (5xx, timeouts), no borramos sesión.
       // Permitimos que proceda de manera normal (los fetches del cliente fallarán controladamente).
       if (

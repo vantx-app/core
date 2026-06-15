@@ -51,7 +51,7 @@ export function parseSetCookie(cookieStr: string): ParsedCookie | null {
   const parts = cookieStr.split(";").map((p) => p.trim());
   const [nameValuePair, ...directives] = parts;
   if (!nameValuePair) return null;
-  
+
   const eqIdx = nameValuePair.indexOf("=");
   if (eqIdx === -1) return null;
   const name = nameValuePair.substring(0, eqIdx);
@@ -68,7 +68,7 @@ export function parseSetCookie(cookieStr: string): ParsedCookie | null {
     } else {
       dName = directive.trim();
     }
-    
+
     const lowerDName = dName.toLowerCase();
     if (lowerDName === "path") {
       options.path = dValue;
@@ -96,4 +96,3 @@ export function parseSetCookie(cookieStr: string): ParsedCookie | null {
 
   return { name, value, options };
 }
-

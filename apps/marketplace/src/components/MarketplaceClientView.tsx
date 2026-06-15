@@ -7,6 +7,37 @@ import { VerificationTab } from "./VerificationTab";
 import { VehicleListingsTab } from "./VehicleListingsTab";
 import { AdminDocumentsReviewTab } from "./AdminDocumentsReviewTab";
 import { MarketplaceDriverProfileView } from "./MarketplaceDriverProfileView";
+
+/** Categorías oficiales de la ATTT de Panamá. */
+type PanamaLicenseType =
+  | "A"
+  | "B"
+  | "C"
+  | "D"
+  | "E1"
+  | "E2"
+  | "E3"
+  | "F"
+  | "G"
+  | "H"
+  | "I"
+  | "J";
+
+const LICENSE_TYPE_OPTIONS: { value: PanamaLicenseType; label: string }[] = [
+  { value: "A", label: "A - Motocicletas" },
+  { value: "B", label: "B - Automóviles Particulares" },
+  { value: "C", label: "C - Vehículos Livianos de Uso Comercial" },
+  { value: "D", label: "D - Comercial / Particular" },
+  { value: "E1", label: "E1 - Transporte Selectivo" },
+  { value: "E2", label: "E2 - Buses / Colectivo" },
+  { value: "E3", label: "E3 - Transporte Colectivo de Dos Pisos" },
+  { value: "F", label: "F - Equipo Pesado" },
+  { value: "G", label: "G - Maquinaria Agrícola" },
+  { value: "H", label: "H - Cuadriciclos / Vehículos Especiales" },
+  { value: "I", label: "I - Vehículos de Emergencia" },
+  { value: "J", label: "J - Instructor de Manejo" },
+];
+
 import {
   getInitials,
   maskDriverName,
@@ -50,7 +81,8 @@ interface DriverProfileStats {
   lastName: string;
   nationalId: string;
   status: string;
-  licenseType: string | null;
+  /** Single category (e.g. "D") or comma-joined multi-category (e.g. "C, D"). */
+  licenseType: PanamaLicenseType | string | null;
 }
 
 interface MarketplaceDriver {
@@ -61,7 +93,8 @@ interface MarketplaceDriver {
   nationalId: string;
   phone: string | null;
   status: "ACTIVE" | "INACTIVE";
-  licenseType?: string | null;
+  /** Single category (e.g. "D") or comma-joined multi-category (e.g. "C, D"). */
+  licenseType?: PanamaLicenseType | string | null;
   globalStats: {
     globalOverallScore: number | null;
     globalSafetyScore: number | null;
@@ -221,8 +254,11 @@ export function MarketplaceClientView({
     const matchesCategory =
       categoryFilter === "Todos" ||
       (driver.licenseType &&
-        driver.licenseType.startsWith(categoryFilter.split(" ")[0]));
-    // (If geographical zone is added in driver profile schema later, we filter. For now it passes)
+        // Support both single values and comma-joined multi-category (e.g. "C, D")
+        driver.licenseType
+          .split(",")
+          .map((t) => t.trim())
+          .includes(categoryFilter));
     return matchesCategory;
   });
 
@@ -246,7 +282,9 @@ export function MarketplaceClientView({
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-sm group"
               >
                 <LayoutDashboard className="size-4 text-slate-500 group-hover:text-blue-600 transition-colors" />
-                <span className="hidden sm:inline text-slate-600 group-hover:text-slate-900 transition-colors">Dashboard</span>
+                <span className="hidden sm:inline text-slate-600 group-hover:text-slate-900 transition-colors">
+                  Dashboard
+                </span>
               </a>
             )}
             {user ? (
@@ -290,10 +328,11 @@ export function MarketplaceClientView({
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 py-4 px-1 text-xs font-extrabold transition-all border-b-2 -mb-[2px] whitespace-nowrap shrink-0 ${isActive
+                      className={`flex items-center gap-2 py-4 px-1 text-xs font-extrabold transition-all border-b-2 -mb-[2px] whitespace-nowrap shrink-0 ${
+                        isActive
                           ? "border-blue-600 text-blue-600"
                           : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
-                        }`}
+                      }`}
                     >
                       <Icon className="size-4" />
                       {tab.label}
@@ -306,7 +345,9 @@ export function MarketplaceClientView({
         )}
 
         {/* Main Content Area */}
-        <section className={`max-w-7xl mx-auto px-6 pb-20 flex-grow w-full ${tabsList.length > 1 ? "" : "mt-8"}`}>
+        <section
+          className={`max-w-7xl mx-auto px-6 pb-20 flex-grow w-full ${tabsList.length > 1 ? "" : "mt-8"}`}
+        >
           {activeTab === "vehicles" && (
             <VehicleListingsTab isDriverActive={isDriverActive} />
           )}
@@ -343,11 +384,12 @@ export function MarketplaceClientView({
                         onChange={(e) => setCategoryFilter(e.target.value)}
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
                       >
-                        <option>Todos</option>
-                        <option>D (Comercial/Particular)</option>
-                        <option>E1 (Transporte Selectivo)</option>
-                        <option>E2 (Buses/Colectivo)</option>
-                        <option>F (Equipo Pesado)</option>
+                        <option value="Todos">Todos</option>
+                        {LICENSE_TYPE_OPTIONS.map(({ value, label }) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
                       </select>
                     </div>
 
