@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getRoleFromToken, isTokenExpired, NAV_LINKS } from "./utils/client";
-import { getCookieSettings } from "@vantx/auth";
+import { getCookieSettings, parseSetCookie } from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -79,7 +79,13 @@ export async function middleware(request: NextRequest) {
         },
       );
 
-      if (!res.ok) throw new Error("Refresh backend falló");
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("AUTH_FAILED");
+        }
+        throw new Error("TRANSIENT_ERROR");
+      }
+      
       const { accessToken: newToken } = await res.json();
       validAccessToken = newToken;
 
@@ -97,12 +103,13 @@ export async function middleware(request: NextRequest) {
         },
       });
 
-      // FIX 1: Usar getSetCookie() devuelve un Array de strings puros.
-      // Esto evita que las comas de las fechas corrompan los headers.
+      // Propagamos de manera robusta las cookies del backend usando el nuevo parser
       const backendCookies = res.headers.getSetCookie();
-
-      backendCookies.forEach((cookie) => {
-        response.headers.append("Set-Cookie", cookie);
+      backendCookies.forEach((cookieStr) => {
+        const parsed = parseSetCookie(cookieStr);
+        if (parsed) {
+          response.cookies.set(parsed.name, parsed.value, parsed.options);
+        }
       });
 
       // Inyectamos el Access Token con la configuración del monorepo
@@ -113,13 +120,21 @@ export async function middleware(request: NextRequest) {
       });
 
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error("[Auth] Error crítico en middleware:", error);
+
+      // Si es un error de red o de servidor (5xx, timeouts), no borramos sesión ni redirigimos.
+      if (
+        error?.message === "TRANSIENT_ERROR" ||
+        (error instanceof Error && error.message !== "AUTH_FAILED")
+      ) {
+        return NextResponse.next();
+      }
 
       const landingUrl =
         process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
       const response = NextResponse.redirect(new URL(`${landingUrl}/login`));
-      // Limpieza agresiva para evitar bucles de redirección
+      // Limpieza agresiva para evitar bucles de redirección en caso de credenciales fallidas
       const deleteSettings = getCookieSettings(0);
       response.cookies.delete({ name: "access_token", ...deleteSettings });
       response.cookies.delete({ name: "refresh_token", ...deleteSettings });

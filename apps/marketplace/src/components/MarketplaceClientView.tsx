@@ -280,7 +280,7 @@ export function MarketplaceClientView({
                 postúlate a asignaciones.
               </p>
             </div>
-            {isDriver && (
+            {canViewAsDriver && (
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white shadow-sm shrink-0">
                 <span className="text-xs text-slate-500 font-semibold">
                   Tu Estado:

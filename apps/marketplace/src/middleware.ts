@@ -1,7 +1,7 @@
 // apps/marketplace/src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getCookieSettings } from "@vantx/auth";
+import { getCookieSettings, parseSetCookie } from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -45,7 +45,13 @@ export async function middleware(request: NextRequest) {
         },
       });
 
-      if (!res.ok) throw new Error("Refresh backend falló");
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          throw new Error("AUTH_FAILED");
+        }
+        throw new Error("TRANSIENT_ERROR");
+      }
+      
       const { accessToken: newToken } = await res.json();
 
       // Clonamos headers para que los Server Components vean el nuevo token en este renderizado
@@ -61,10 +67,13 @@ export async function middleware(request: NextRequest) {
         },
       });
 
-      // Propagamos las cookies que retornó el backend
+      // Propagamos de manera robusta las cookies que retornó el backend usando el nuevo parser
       const backendCookies = res.headers.getSetCookie();
-      backendCookies.forEach((cookie) => {
-        response.headers.append("Set-Cookie", cookie);
+      backendCookies.forEach((cookieStr) => {
+        const parsed = parseSetCookie(cookieStr);
+        if (parsed) {
+          response.cookies.set(parsed.name, parsed.value, parsed.options);
+        }
       });
 
       // Inyectamos el access_token en el navegador del cliente
@@ -75,12 +84,22 @@ export async function middleware(request: NextRequest) {
       });
 
       return response;
-    } catch (error) {
+    } catch (error: any) {
       console.error(
         "[Auth] Error crítico en middleware de marketplace:",
         error,
       );
-      // Limpieza agresiva de cookies en caso de falla
+      
+      // Si es un error de red o de servidor (5xx, timeouts), no borramos sesión.
+      // Permitimos que proceda de manera normal (los fetches del cliente fallarán controladamente).
+      if (
+        error?.message === "TRANSIENT_ERROR" ||
+        (error instanceof Error && error.message !== "AUTH_FAILED")
+      ) {
+        return NextResponse.next();
+      }
+
+      // Limpieza agresiva de cookies en caso de falla real de autenticación
       const response = NextResponse.next();
       const deleteSettings = getCookieSettings(0);
       response.cookies.delete({ name: "access_token", ...deleteSettings });
