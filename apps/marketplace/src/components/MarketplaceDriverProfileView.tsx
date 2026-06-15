@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import api from "../utils/client/api-client";
 import {
   ArrowLeft,
   ShieldCheck,
@@ -39,6 +40,29 @@ export function MarketplaceDriverProfileView({
   const [user] = useState<any>(initialUser);
   const [proposing, setProposing] = useState(false);
   const [proposed, setProposed] = useState(false);
+
+  const [shareScores, setShareScores] = useState(
+    driver.shareScoresPublicly ?? false,
+  );
+  const [updating, setUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
+  const handleToggleShare = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.checked;
+    setUpdating(true);
+    setUpdateError(null);
+    try {
+      await api.patch("/drivers/me/share-settings", {
+        shareScoresPublicly: newValue,
+      });
+      setShareScores(newValue);
+    } catch (err) {
+      console.error("Error updating sharing settings:", err);
+      setUpdateError("No se pudo actualizar la configuración de privacidad.");
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   // Local helper functions for scores
   const getScoreCircleColor = (score: number | null | undefined): string => {
@@ -253,6 +277,36 @@ export function MarketplaceDriverProfileView({
                     </>
                   )}
                 </button>
+              ) : (user?.driver?.id === driver.id || user?.id === driver.userId) ? (
+                <div className="p-4 rounded-xl bg-slate-550/5 border border-slate-200 space-y-3">
+                  <div className="flex items-center gap-2 text-slate-900">
+                    <Sparkles className="size-4 text-blue-600 shrink-0" />
+                    <span className="text-xs font-extrabold">Tu Perfil Público</span>
+                  </div>
+                  <p className="text-[10px] text-slate-550 font-semibold leading-relaxed">
+                    Controla si los propietarios de flota pueden ver tus puntuaciones de telemetría y desempeño en el Marketplace.
+                  </p>
+                  <div className="border-t border-slate-200/60 pt-3 flex items-center justify-between gap-3 text-left">
+                    <span className="text-[10px] font-extrabold text-slate-700">
+                      Compartir scores públicamente
+                    </span>
+                    <div className="flex items-center gap-2">
+                      {updating && <Loader2 className="size-3.5 animate-spin text-blue-600" />}
+                      <input
+                        type="checkbox"
+                        className="toggle toggle-primary toggle-sm cursor-pointer"
+                        checked={shareScores}
+                        onChange={handleToggleShare}
+                        disabled={updating}
+                      />
+                    </div>
+                  </div>
+                  {updateError && (
+                    <p className="text-[9px] text-red-500 font-semibold mt-1">
+                      {updateError}
+                    </p>
+                  )}
+                </div>
               ) : (
                 <div className="p-3 bg-slate-550/5 border rounded-xl text-center text-[11px] text-slate-500 font-semibold">
                   Vista de conductor (solo lectura)

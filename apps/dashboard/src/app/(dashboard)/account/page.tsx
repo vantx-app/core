@@ -1,6 +1,6 @@
 "use client";
 
-import { DriverDocumentsStats, DriverProfileStats, UserProfile } from "@/types";
+import { UserProfile } from "@/types";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Cookies from "js-cookie";
@@ -16,14 +16,11 @@ import {
   CheckCircle2,
   AlertCircle,
 } from "lucide-react";
-import { DriverProfileCard } from "@/components/account/DriverProfileCard";
+
 
 export default function AccountPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [driverStats, setDriverStats] = useState<
-    (DriverProfileStats & DriverDocumentsStats) | null
-  >(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,15 +38,7 @@ export default function AccountPage() {
       const { data } = await api.get("/users/me");
       setProfile(data);
 
-      // Fetch driver stats if user has DRIVER role or has a linked driver profile
-      if (data.role === "DRIVER" || data.driver) {
-        try {
-          const statsRes = await api.get("/drivers/me/stats");
-          setDriverStats(statsRes.data);
-        } catch (err) {
-          console.error("Error fetching driver stats on account page:", err);
-        }
-      }
+
     } catch (err) {
       console.error("Error al cargar perfil:", err);
       setError("No se pudo cargar el perfil del usuario.");
@@ -323,12 +312,7 @@ export default function AccountPage() {
         </div>
       </div>
 
-      {/* Driver profile details if user is a driver or has driver profile linked */}
-      {driverStats && (
-        <>
-          <DriverProfileCard stats={driverStats} />
-        </>
-      )}
+
     </div>
   );
 }

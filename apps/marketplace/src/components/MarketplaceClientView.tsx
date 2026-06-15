@@ -6,6 +6,7 @@ import api from "../utils/client/api-client";
 import { VerificationTab } from "./VerificationTab";
 import { VehicleListingsTab } from "./VehicleListingsTab";
 import { AdminDocumentsReviewTab } from "./AdminDocumentsReviewTab";
+import { MarketplaceDriverProfileView } from "./MarketplaceDriverProfileView";
 import {
   getInitials,
   maskDriverName,
@@ -87,9 +88,9 @@ export function MarketplaceClientView({
   );
   const [drivers, setDrivers] = useState<MarketplaceDriver[]>(initialDrivers);
   const [activeTab, setActiveTab] = useState<
-    "drivers" | "documents" | "vehicles" | "validation"
+    "drivers" | "documents" | "vehicles" | "validation" | "profile"
   >(
-    initialUser?.role === "DRIVER" || initialUser?.driver
+    initialUser?.role === "DRIVER"
       ? "vehicles"
       : "drivers",
   );
@@ -174,12 +175,26 @@ export function MarketplaceClientView({
     }
   };
 
-  const isDriver = user?.role === "DRIVER";
-  const isDriverActive = driverStats?.status === "ACTIVE";
-  const isOwner =
+  const canViewAsOwner =
     user?.role === "OWNER" ||
     user?.role === "ADMIN" ||
     user?.role === "SUPER_ADMIN";
+  const canViewAsDriver = user?.role === "DRIVER" || !!user?.driver;
+  const isDriverActive = driverStats?.status === "ACTIVE";
+  const isOwner = canViewAsOwner;
+
+  const tabsList = [];
+  if (canViewAsOwner) {
+    tabsList.push({ id: "drivers", label: "Conductores Disponibles", icon: User });
+  }
+  if (canViewAsDriver) {
+    tabsList.push({ id: "vehicles", label: "Vehículos Disponibles", icon: Car });
+    tabsList.push({ id: "documents", label: "Mis Documentos", icon: ShieldCheck });
+    tabsList.push({ id: "profile", label: "Mi Perfil", icon: User });
+  }
+  if (user?.role === "SUPER_ADMIN") {
+    tabsList.push({ id: "validation", label: "Revisar Documentos", icon: ShieldCheck });
+  }
 
   // Apply filters locally on the drivers list
   const filteredDrivers = drivers.filter((driver) => {
@@ -274,80 +289,46 @@ export function MarketplaceClientView({
           </div>
         </section>
 
-        {/* Navigation Tabs (Only for DRIVER) */}
-        {isDriver && (
+        {/* Navigation Tabs */}
+        {tabsList.length > 1 && (
           <section className="max-w-7xl mx-auto px-6 mb-6 w-full">
-            <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-md">
-              <button
-                onClick={() => setActiveTab("vehicles")}
-                className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                  activeTab === "vehicles"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-950"
-                }`}
-              >
-                <Car className="size-4" />
-                Vehículos Disponibles
-              </button>
-              <button
-                onClick={() => setActiveTab("documents")}
-                className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                  activeTab === "documents"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-950"
-                }`}
-              >
-                <ShieldCheck className="size-4" />
-                Mis Documentos
-              </button>
-            </div>
-          </section>
-        )}
-
-        {/* Navigation Tabs (Only for SUPER_ADMIN) */}
-        {user?.role === "SUPER_ADMIN" && (
-          <section className="max-w-7xl mx-auto px-6 mb-6 w-full">
-            <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-md">
-              <button
-                onClick={() => setActiveTab("drivers")}
-                className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                  activeTab === "drivers"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-950"
-                }`}
-              >
-                <User className="size-4" />
-                Conductores Disponibles
-              </button>
-              <button
-                onClick={() => setActiveTab("validation")}
-                className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                  activeTab === "validation"
-                    ? "bg-white text-blue-600 shadow-sm"
-                    : "text-slate-500 hover:text-slate-950"
-                }`}
-              >
-                <ShieldCheck className="size-4" />
-                Revisar Documentos
-              </button>
+            <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-xl">
+              {tabsList.map((tab) => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
+                      activeTab === tab.id
+                        ? "bg-white text-blue-600 shadow-sm"
+                        : "text-slate-500 hover:text-slate-950"
+                    }`}
+                  >
+                    <Icon className="size-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
             </div>
           </section>
         )}
 
         {/* Main Content Area */}
         <section className="max-w-7xl mx-auto px-6 pb-20 flex-grow w-full">
-          {isDriver ? (
-            <div>
-              {activeTab === "vehicles" && (
-                <VehicleListingsTab isDriverActive={isDriverActive} />
-              )}
-              {activeTab === "documents" && (
-                <VerificationTab onSync={syncProfileAndState} />
-              )}
-            </div>
-          ) : activeTab === "validation" && user?.role === "SUPER_ADMIN" ? (
+          {activeTab === "vehicles" && (
+            <VehicleListingsTab isDriverActive={isDriverActive} />
+          )}
+          {activeTab === "documents" && (
+            <VerificationTab onSync={syncProfileAndState} />
+          )}
+          {activeTab === "profile" && driverStats && (
+            <MarketplaceDriverProfileView initialUser={user} driver={driverStats} />
+          )}
+          {activeTab === "validation" && user?.role === "SUPER_ADMIN" && (
             <AdminDocumentsReviewTab />
-          ) : (
+          )}
+          {activeTab === "drivers" && (
             <div className="flex flex-col lg:flex-row gap-8">
               {/* Sidebar Filters */}
               <aside className="w-full lg:w-64 shrink-0 flex flex-col gap-6">

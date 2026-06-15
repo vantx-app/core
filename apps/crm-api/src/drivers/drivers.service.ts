@@ -188,7 +188,11 @@ export class DriversService {
     let shouldMask = true;
     let assignments: { from: Date; to: Date | null }[] = [];
 
-    if (!queryingUser || queryingUser.role === ROLES.SUPER_ADMIN) {
+    if (
+      !queryingUser ||
+      queryingUser.role === ROLES.SUPER_ADMIN ||
+      queryingUser.sub === driver.userId
+    ) {
       shouldMask = false;
     } else if (driver.shareScoresPublicly) {
       shouldMask = false;
@@ -293,6 +297,12 @@ export class DriversService {
         where: { userId },
         include: {
           globalStats: true,
+          documents: {
+            select: {
+              type: true,
+              status: true,
+            },
+          },
           scoreSnapshots: {
             orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }],
             take: 12,
