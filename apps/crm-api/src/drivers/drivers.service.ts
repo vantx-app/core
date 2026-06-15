@@ -39,8 +39,8 @@ export class DriversService {
       {
         code: 'OVERSPEEDING',
         pillar: 'SAFETY',
-        deductionPer100Km: 12.0,
-        maxDeduction: 50.0,
+        deductionPer100Km: 5.0,
+        maxDeduction: 20.0,
       },
       {
         code: 'EXCESSIVE_IDLING',
@@ -882,7 +882,40 @@ export class DriversService {
     const driverId = await this.resolveDriverId(driverIdOrMe, queryingUser);
     await this.checkDriverAccess(driverId, queryingUser);
 
-    // 1. Intentar recuperar breakdown precalculado/congelado del snapshot
+    const { start, end } = this.getISOWeekRange(year, week);
+
+    // 1. Fetch rollups with vehicle and trip details
+    const rollups = this.prismaService.dailyTelemetryRollup
+      ? await this.prismaService.dailyTelemetryRollup.findMany({
+          where: {
+            driverId,
+            date: { gte: start, lte: end },
+          },
+          include: {
+            vehicle: {
+              select: {
+                id: true,
+                alias: true,
+                plateNumber: true,
+                scoringProfile: {
+                  select: {
+                    rulesEngine: true,
+                  },
+                },
+              },
+            },
+            trip: {
+              select: {
+                id: true,
+                startTime: true,
+                endTime: true,
+              },
+            },
+          },
+        })
+      : [];
+
+    // 2. Intentar recuperar breakdown precalculado/congelado del snapshot
     const snapshot = await this.prismaService.driverScoreSnapshot.findUnique({
       where: {
         driverId_weekNumber_year: {
@@ -893,184 +926,259 @@ export class DriversService {
       },
     });
 
+    let breakdown: any;
     if (snapshot && snapshot.breakdown) {
-      return snapshot.breakdown;
+      breakdown = JSON.parse(JSON.stringify(snapshot.breakdown));
     }
 
-    const { start, end } = this.getISOWeekRange(year, week);
-
-    const rollups = await this.prismaService.dailyTelemetryRollup.findMany({
-      where: {
-        driverId,
-        date: { gte: start, lte: end },
-      },
-      include: {
-        vehicle: {
-          select: {
-            id: true,
-            alias: true,
-            plateNumber: true,
-            scoringProfile: {
-              select: {
-                rulesEngine: true,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    if (rollups.length === 0) {
-      return {
-        overallScore: 100,
-        safetyScore: 100,
-        ecoScore: 100,
-        assetScore: 100,
-        totalKm: 0,
-        totalHours: 0,
-        idlingHours: 0,
-        vehicles: [],
-      };
-    }
-
-    // Agrupar por vehículo
-    const groupedByVehicle: Record<string, typeof rollups> = {};
-    for (const r of rollups) {
-      const vId = r.vehicleId;
-      if (!groupedByVehicle[vId]) {
-        groupedByVehicle[vId] = [];
-      }
-      groupedByVehicle[vId].push(r);
-    }
-
-    let totalDriverKm = 0;
-    let totalDriverHours = 0;
-    let totalIdlingHours = 0;
-    let weightedSafety = 0;
-    let weightedEco = 0;
-    let weightedAsset = 0;
-    let weightedOverall = 0;
-
-    const vehiclesBreakdown: any[] = [];
-
-    for (const [vehicleId, vehicleRollups] of Object.entries(
-      groupedByVehicle,
-    )) {
-      const firstRollup = vehicleRollups[0];
-      const vehicle = firstRollup.vehicle;
-
-      // Sumar métricas
-      const summary = {
-        driverId,
-        vehicleId,
-        _sum: {
+    if (!breakdown) {
+      if (rollups.length === 0) {
+        return {
+          overallScore: 100,
+          safetyScore: 100,
+          ecoScore: 100,
+          assetScore: 100,
           totalKm: 0,
-          totalEngineHours: 0,
+          totalHours: 0,
           idlingHours: 0,
-          overspeedCount: 0,
-          overspeedSeverity: 0,
-          brakingCount: 0,
-          brakingSeverity: 0,
-          corneringCount: 0,
-          corneringSeverity: 0,
-          accelerationCount: 0,
-          accelerationSeverity: 0,
-          highRpmCount: 0,
-          highRpmSeverity: 0,
-          coldEngineStrainCount: 0,
-          coastingInNeutralCount: 0,
-          engineLuggingCount: 0,
-          highLoadStrainCount: 0,
-          criticalOverheatingCount: 0,
-          activeFaultCodesCount: 0,
-          deviceUnpluggedCount: 0,
-        },
-      };
-
-      for (const r of vehicleRollups) {
-        summary._sum.totalKm += r.totalKm;
-        summary._sum.totalEngineHours += r.totalEngineHours;
-        summary._sum.idlingHours += r.idlingHours;
-        summary._sum.overspeedCount += r.overspeedCount;
-        summary._sum.overspeedSeverity += r.overspeedSeverity;
-        summary._sum.brakingCount += r.brakingCount;
-        summary._sum.brakingSeverity += r.brakingSeverity;
-        summary._sum.corneringCount += r.corneringCount;
-        summary._sum.corneringSeverity += r.corneringSeverity;
-        summary._sum.accelerationCount += r.accelerationCount;
-        summary._sum.accelerationSeverity += r.accelerationSeverity;
-        summary._sum.highRpmCount += r.highRpmCount;
-        summary._sum.highRpmSeverity += r.highRpmSeverity;
-        summary._sum.coldEngineStrainCount += r.coldEngineStrainCount;
-        summary._sum.coastingInNeutralCount += r.coastingInNeutralCount;
-        summary._sum.engineLuggingCount += r.engineLuggingCount;
-        summary._sum.highLoadStrainCount += r.highLoadStrainCount;
-        summary._sum.criticalOverheatingCount += r.criticalOverheatingCount;
-        summary._sum.activeFaultCodesCount += r.activeFaultCodesCount;
-        summary._sum.deviceUnpluggedCount += r.deviceUnpluggedCount || 0;
+          vehicles: [],
+        };
       }
 
-      const config =
-        (vehicle.scoringProfile?.rulesEngine as unknown as RuleEngineConfig) ||
-        this.DEFAULT_CONFIG;
+      // Agrupar por vehículo
+      const groupedByVehicle: Record<string, typeof rollups> = {};
+      for (const r of rollups) {
+        const vId = r.vehicleId;
+        if (!groupedByVehicle[vId]) {
+          groupedByVehicle[vId] = [];
+        }
+        groupedByVehicle[vId].push(r);
+      }
 
-      const details =
-        this.rulesEngineService.evaluateAggregatedRollupWithDetails(
-          summary,
-          config,
+      let totalDriverKm = 0;
+      let totalDriverHours = 0;
+      let totalIdlingHours = 0;
+      let weightedSafety = 0;
+      let weightedEco = 0;
+      let weightedAsset = 0;
+      let weightedOverall = 0;
+
+      const vehiclesBreakdown: any[] = [];
+
+      for (const [vehicleId, vehicleRollups] of Object.entries(
+        groupedByVehicle,
+      )) {
+        const firstRollup = vehicleRollups[0];
+        const vehicle = firstRollup.vehicle;
+
+        // Sumar métricas
+        const summary = {
+          driverId,
+          vehicleId,
+          _sum: {
+            totalKm: 0,
+            totalEngineHours: 0,
+            idlingHours: 0,
+            overspeedCount: 0,
+            overspeedSeverity: 0,
+            brakingCount: 0,
+            brakingSeverity: 0,
+            corneringCount: 0,
+            corneringSeverity: 0,
+            accelerationCount: 0,
+            accelerationSeverity: 0,
+            highRpmCount: 0,
+            highRpmSeverity: 0,
+            coldEngineStrainCount: 0,
+            coastingInNeutralCount: 0,
+            engineLuggingCount: 0,
+            highLoadStrainCount: 0,
+            criticalOverheatingCount: 0,
+            activeFaultCodesCount: 0,
+            deviceUnpluggedCount: 0,
+          },
+        };
+
+        for (const r of vehicleRollups) {
+          summary._sum.totalKm += r.totalKm;
+          summary._sum.totalEngineHours += r.totalEngineHours;
+          summary._sum.idlingHours += r.idlingHours;
+          summary._sum.overspeedCount += r.overspeedCount;
+          summary._sum.overspeedSeverity += r.overspeedSeverity;
+          summary._sum.brakingCount += r.brakingCount;
+          summary._sum.brakingSeverity += r.brakingSeverity;
+          summary._sum.corneringCount += r.corneringCount;
+          summary._sum.corneringSeverity += r.corneringSeverity;
+          summary._sum.accelerationCount += r.accelerationCount;
+          summary._sum.accelerationSeverity += r.accelerationSeverity;
+          summary._sum.highRpmCount += r.highRpmCount;
+          summary._sum.highRpmSeverity += r.highRpmSeverity;
+          summary._sum.coldEngineStrainCount += r.coldEngineStrainCount;
+          summary._sum.coastingInNeutralCount += r.coastingInNeutralCount;
+          summary._sum.engineLuggingCount += r.engineLuggingCount;
+          summary._sum.highLoadStrainCount += r.highLoadStrainCount;
+          summary._sum.criticalOverheatingCount += r.criticalOverheatingCount;
+          summary._sum.activeFaultCodesCount += r.activeFaultCodesCount;
+          summary._sum.deviceUnpluggedCount += r.deviceUnpluggedCount || 0;
+        }
+
+        const config =
+          (vehicle.scoringProfile?.rulesEngine as unknown as RuleEngineConfig) ||
+          this.DEFAULT_CONFIG;
+
+        const details =
+          this.rulesEngineService.evaluateAggregatedRollupWithDetails(
+            summary,
+            config,
+          );
+
+        totalDriverKm += details.scores.totalKm;
+        totalDriverHours += details.scores.totalHours;
+        totalIdlingHours += details.scores.idlingHours;
+
+        weightedSafety += details.scores.safetyScore * details.scores.totalKm;
+        weightedEco += details.scores.ecoScore * details.scores.totalKm;
+        weightedAsset += details.scores.assetScore * details.scores.totalKm;
+        weightedOverall += details.scores.overallScore * details.scores.totalKm;
+
+        vehiclesBreakdown.push({
+          vehicleId,
+          vehicleAlias: vehicle.alias,
+          vehiclePlate: vehicle.plateNumber,
+          totalKm: parseFloat(details.scores.totalKm.toFixed(2)),
+          totalHours: parseFloat(details.scores.totalHours.toFixed(2)),
+          idlingHours: parseFloat(details.scores.idlingHours.toFixed(2)),
+          scores: details.scores,
+          ruleDeductions: details.ruleDeductions,
+          pillarDeductions: details.pillarDeductions,
+        });
+      }
+
+      if (totalDriverKm < 1.0) {
+        breakdown = {
+          overallScore: 100,
+          safetyScore: 100,
+          ecoScore: 100,
+          assetScore: 100,
+          totalKm: parseFloat(totalDriverKm.toFixed(2)),
+          totalHours: parseFloat(totalDriverHours.toFixed(2)),
+          idlingHours: parseFloat(totalIdlingHours.toFixed(2)),
+          vehicles: vehiclesBreakdown,
+        };
+      } else {
+        const finalSafety = parseFloat((weightedSafety / totalDriverKm).toFixed(2));
+        const finalEco = parseFloat((weightedEco / totalDriverKm).toFixed(2));
+        const finalAsset = parseFloat((weightedAsset / totalDriverKm).toFixed(2));
+        const finalOverall = parseFloat(
+          (weightedOverall / totalDriverKm).toFixed(2),
         );
 
-      totalDriverKm += details.scores.totalKm;
-      totalDriverHours += details.scores.totalHours;
-      totalIdlingHours += details.scores.idlingHours;
-
-      weightedSafety += details.scores.safetyScore * details.scores.totalKm;
-      weightedEco += details.scores.ecoScore * details.scores.totalKm;
-      weightedAsset += details.scores.assetScore * details.scores.totalKm;
-      weightedOverall += details.scores.overallScore * details.scores.totalKm;
-
-      vehiclesBreakdown.push({
-        vehicleId,
-        vehicleAlias: vehicle.alias,
-        vehiclePlate: vehicle.plateNumber,
-        totalKm: parseFloat(details.scores.totalKm.toFixed(2)),
-        totalHours: parseFloat(details.scores.totalHours.toFixed(2)),
-        idlingHours: parseFloat(details.scores.idlingHours.toFixed(2)),
-        scores: details.scores,
-        ruleDeductions: details.ruleDeductions,
-        pillarDeductions: details.pillarDeductions,
-      });
+        breakdown = {
+          overallScore: finalOverall,
+          safetyScore: finalSafety,
+          ecoScore: finalEco,
+          assetScore: finalAsset,
+          totalKm: parseFloat(totalDriverKm.toFixed(2)),
+          totalHours: parseFloat(totalDriverHours.toFixed(2)),
+          idlingHours: parseFloat(totalIdlingHours.toFixed(2)),
+          vehicles: vehiclesBreakdown,
+        };
+      }
     }
 
-    if (totalDriverKm < 1.0) {
-      return {
-        overallScore: 100,
-        safetyScore: 100,
-        ecoScore: 100,
-        assetScore: 100,
-        totalKm: parseFloat(totalDriverKm.toFixed(2)),
-        totalHours: parseFloat(totalDriverHours.toFixed(2)),
-        idlingHours: parseFloat(totalIdlingHours.toFixed(2)),
-        vehicles: vehiclesBreakdown,
+    // Attach trip associations
+    if (breakdown && breakdown.vehicles) {
+      const tripAssociations: Record<
+        string,
+        Record<
+          string,
+          Array<{
+            tripId: string;
+            startTime: Date;
+            endTime: Date | null;
+            occurrences: number;
+            severity: number;
+          }>
+        >
+      > = {};
+
+      const ruleCodeToField: Record<string, string> = {
+        OVERSPEEDING: 'overspeed',
+        HARSH_BRAKING: 'braking',
+        HARSH_CORNERING: 'cornering',
+        HARSH_ACCELERATION: 'acceleration',
+        HIGH_RPM: 'highRpm',
+        COLD_ENGINE_STRAIN: 'coldEngineStrain',
+        COASTING_IN_NEUTRAL: 'coastingInNeutral',
+        ENGINE_LUGGING: 'engineLugging',
+        HIGH_LOAD_STRAIN: 'highLoadStrain',
+        CRITICAL_OVERHEATING: 'criticalOverheating',
+        ACTIVE_FAULT_CODES: 'activeFaultCodes',
+        DEVICE_UNPLUGGED: 'deviceUnplugged',
       };
+
+      const fieldsWithSeverity = [
+        'OVERSPEEDING',
+        'HARSH_BRAKING',
+        'HARSH_CORNERING',
+        'HARSH_ACCELERATION',
+        'HIGH_RPM',
+      ];
+
+      for (const r of rollups) {
+        if (!r.tripId || !r.trip) continue;
+        const vId = r.vehicleId;
+        if (!tripAssociations[vId]) {
+          tripAssociations[vId] = {};
+        }
+
+        // Check idling
+        if (r.idlingHours > 0) {
+          if (!tripAssociations[vId]['EXCESSIVE_IDLING']) {
+            tripAssociations[vId]['EXCESSIVE_IDLING'] = [];
+          }
+          tripAssociations[vId]['EXCESSIVE_IDLING'].push({
+            tripId: r.tripId,
+            startTime: r.trip.startTime,
+            endTime: r.trip.endTime,
+            occurrences: Math.floor(r.idlingHours * 4),
+            severity: 0,
+          });
+        }
+
+        // Check other rules
+        for (const [code, fieldPrefix] of Object.entries(ruleCodeToField)) {
+          const count = Number(r[`${fieldPrefix}Count`] || 0);
+          const severity = fieldsWithSeverity.includes(code)
+            ? Number((r as any)[`${fieldPrefix}Severity`] || 0)
+            : 0;
+          if (count > 0) {
+            if (!tripAssociations[vId][code]) {
+              tripAssociations[vId][code] = [];
+            }
+            tripAssociations[vId][code].push({
+              tripId: r.tripId,
+              startTime: r.trip.startTime,
+              endTime: r.trip.endTime,
+              occurrences: count,
+              severity,
+            });
+          }
+        }
+      }
+
+      // Attach to ruleDeductions
+      for (const vBreak of breakdown.vehicles) {
+        const vId = vBreak.vehicleId;
+        const vehicleTrips = tripAssociations[vId] || {};
+        if (vBreak.ruleDeductions) {
+          for (const rule of vBreak.ruleDeductions) {
+            rule.trips = vehicleTrips[rule.code] || [];
+          }
+        }
+      }
     }
 
-    const finalSafety = parseFloat((weightedSafety / totalDriverKm).toFixed(2));
-    const finalEco = parseFloat((weightedEco / totalDriverKm).toFixed(2));
-    const finalAsset = parseFloat((weightedAsset / totalDriverKm).toFixed(2));
-    const finalOverall = parseFloat(
-      (weightedOverall / totalDriverKm).toFixed(2),
-    );
-
-    return {
-      overallScore: finalOverall,
-      safetyScore: finalSafety,
-      ecoScore: finalEco,
-      assetScore: finalAsset,
-      totalKm: parseFloat(totalDriverKm.toFixed(2)),
-      totalHours: parseFloat(totalDriverHours.toFixed(2)),
-      idlingHours: parseFloat(totalIdlingHours.toFixed(2)),
-      vehicles: vehiclesBreakdown,
-    };
+    return breakdown;
   }
 }

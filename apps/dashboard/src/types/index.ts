@@ -247,6 +247,13 @@ export interface RuleDeductionDetail {
   severity: number;
   rawDeduction: number;
   appliedDeduction: number;
+  trips?: Array<{
+    tripId: string;
+    startTime: string;
+    endTime: string | null;
+    occurrences: number;
+    severity: number;
+  }>;
 }
 
 export interface VehicleBreakdown {

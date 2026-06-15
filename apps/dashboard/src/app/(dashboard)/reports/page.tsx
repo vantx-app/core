@@ -17,6 +17,8 @@ import {
   Clock,
   MapPin,
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
@@ -25,7 +27,7 @@ import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
 import { ScoreProgressBar } from "@/components/ui/ScoreProgressBar";
 import type { RuleDeductionDetail, ScoreBreakdown } from "@/types";
 import { BackButton } from "@/components/ui/BackButton";
-import { formatHours } from "@/utils/client";
+import { formatHours, formatTripDate, formatTimeOnly } from "@/utils/client";
 
 function ReportsPageContent() {
   const searchParams = useSearchParams();
@@ -64,6 +66,8 @@ function ReportsPageContent() {
   // Trips tab states
   const [driverTrips, setDriverTrips] = useState<VehicleTripsTrip[]>([]);
   const [isLoadingTrips, setIsLoadingTrips] = useState(false);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [expandedRules, setExpandedRules] = useState<Record<string, boolean>>({});
 
   // Refs de control para evitar llamadas API duplicadas al cambiar de pestaña
   const lastFetchedBreakdownRef = useRef<{
@@ -231,6 +235,18 @@ function ReportsPageContent() {
     }
   }, [fetchDriverTrips, activeTab]);
 
+  const toggleRuleTrips = (ruleCode: string) => {
+    setExpandedRules((prev) => ({
+      ...prev,
+      [ruleCode]: !prev[ruleCode],
+    }));
+  };
+
+  const handleViewTrip = (tripId: string) => {
+    setSelectedTripId(tripId);
+    setActiveTab("daily");
+  };
+
   const renderRuleList = (
     rules: RuleDeductionDetail[],
     pillar: "SAFETY" | "EFFICIENCY" | "ASSET_CARE",
@@ -262,24 +278,81 @@ function ReportsPageContent() {
               ? `${rule.occurrences} ${rule.occurrences === 1 ? "día" : "días"} (-20 pts/día)`
               : `${rule.occurrences} ${rule.occurrences === 1 ? "vez" : "veces"}`;
 
+          const hasTrips = rule.trips && rule.trips.length > 0;
+          const isExpanded = !!expandedRules[rule.code];
+
           return (
             <div
               key={idx}
-              className="flex justify-between items-center bg-base-200/50 hover:bg-base-200 border border-base-300/40 p-3 rounded-xl transition-all duration-200"
+              className="bg-base-200/50 hover:bg-base-200/80 border border-base-300/40 rounded-xl transition-all duration-200 overflow-hidden"
             >
-              <div>
-                <span className="text-xs font-bold text-base-content block">
-                  {rule.label}
-                </span>
-                <span className="text-[10px] text-base-content/50 font-medium">
-                  {qtyText}{" "}
-                  {rule.severity > 0 &&
-                    `(Severidad: ${rule.severity.toFixed(1)})`}
-                </span>
+              <div className="flex justify-between items-center p-3">
+                <div className="flex-grow min-w-0 pr-2">
+                  <span className="text-xs font-bold text-base-content block truncate">
+                    {rule.label}
+                  </span>
+                  <span className="text-[10px] text-base-content/50 font-medium">
+                    {qtyText}{" "}
+                    {rule.severity > 0 &&
+                      `(Severidad: ${rule.severity.toFixed(1)})`}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs font-black text-rose-500 font-mono">
+                    -{rule.appliedDeduction.toFixed(1)} pts
+                  </span>
+                  {hasTrips && (
+                    <button
+                      onClick={() => toggleRuleTrips(rule.code)}
+                      className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-base-content/85"
+                      title={isExpanded ? "Ocultar viajes" : "Ver viajes"}
+                    >
+                      {isExpanded ? (
+                        <ChevronUp className="size-4" />
+                      ) : (
+                        <ChevronDown className="size-4" />
+                      )}
+                    </button>
+                  )}
+                </div>
               </div>
-              <span className="text-xs font-black text-rose-500 font-mono">
-                -{rule.appliedDeduction.toFixed(1)} pts
-              </span>
+
+              {/* Collapsible Trips List */}
+              {isExpanded && hasTrips && (
+                <div className="border-t border-base-200/50 p-3 bg-base-200/25 space-y-2">
+                  <span className="text-[9px] text-base-content/40 font-bold uppercase tracking-wider block">
+                    Viajes con este evento:
+                  </span>
+                  <div className="space-y-1">
+                    {rule.trips?.map((t, tIdx) => {
+                      const startTimeStr = formatTripDate(t.startTime);
+                      const timeStr = formatTimeOnly(t.startTime);
+                      return (
+                        <div
+                          key={tIdx}
+                          className="flex justify-between items-center text-[10px] py-1.5 border-b border-base-200/20 last:border-b-0"
+                        >
+                          <div className="min-w-0 flex-1 pr-2">
+                            <span className="font-semibold block text-base-content/75 truncate">
+                              {startTimeStr} ({timeStr})
+                            </span>
+                            <span className="text-base-content/50 text-[9px]">
+                              {t.occurrences} {t.occurrences === 1 ? "vez" : "veces"}
+                              {t.severity > 0 && ` (Severidad: ${t.severity.toFixed(1)})`}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => handleViewTrip(t.tripId)}
+                            className="btn btn-primary btn-xs text-[10px] h-6 min-h-0 rounded-lg px-2.5 shrink-0 font-bold"
+                          >
+                            Ver en mapa
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
@@ -602,6 +675,7 @@ function ReportsPageContent() {
                   <TripsHistoryView
                     initialTrips={driverTrips}
                     isDriverCentric={true}
+                    initialSelectedTripId={selectedTripId}
                   />
                 </div>
               )}

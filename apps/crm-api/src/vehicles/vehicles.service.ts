@@ -28,8 +28,8 @@ export class VehiclesService {
       {
         code: 'OVERSPEEDING',
         pillar: 'SAFETY',
-        deductionPer100Km: 12.0,
-        maxDeduction: 50.0,
+        deductionPer100Km: 5.0,
+        maxDeduction: 20.0,
       },
       {
         code: 'EXCESSIVE_IDLING',

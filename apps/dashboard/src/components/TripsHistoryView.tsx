@@ -49,6 +49,7 @@ interface TripsHistoryViewProps {
   vehicleContext?: VehicleTripsVehicle | null;
   driverContextName?: string;
   isDriverCentric?: boolean;
+  initialSelectedTripId?: string | null;
 }
 
 export default function TripsHistoryView({
@@ -56,15 +57,43 @@ export default function TripsHistoryView({
   vehicleContext,
   driverContextName,
   isDriverCentric = false,
+  initialSelectedTripId = null,
 }: TripsHistoryViewProps) {
-  const [trips] = useState<VehicleTripsTrip[]>(initialTrips);
+  const [trips, setTrips] = useState<VehicleTripsTrip[]>(initialTrips);
   const [visibleCount, setVisibleCount] = useState(10);
-  const [selectedTripId, setSelectedTripId] = useState<string | null>(null);
+  const [selectedTripId, setSelectedTripId] = useState<string | null>(
+    initialSelectedTripId
+  );
   const [routeCoordinates, setRouteCoordinates] = useState<Coordinate[]>([]);
   const [isLoadingRoute, setIsLoadingRoute] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isMobileMapActive, setIsMobileMapActive] = useState(false);
+  const [isMobileMapActive, setIsMobileMapActive] = useState(
+    !!initialSelectedTripId
+  );
+
+  useEffect(() => {
+    setTrips(initialTrips);
+  }, [initialTrips]);
+
+  useEffect(() => {
+    if (initialSelectedTripId) {
+      setSelectedTripId(initialSelectedTripId);
+      setIsMobileMapActive(true);
+      if (typeof window !== "undefined" && !window.history.state?.mapActive) {
+        window.history.pushState({ mapActive: true }, "");
+      }
+    }
+  }, [initialSelectedTripId]);
+
+  useEffect(() => {
+    if (selectedTripId && trips.length > 0) {
+      const idx = trips.findIndex((t) => t.id === selectedTripId);
+      if (idx !== -1 && idx >= visibleCount) {
+        setVisibleCount(idx + 1);
+      }
+    }
+  }, [selectedTripId, trips, visibleCount]);
 
   const searchParams = useSearchParams();
   const targetOrgId = searchParams.get("targetOrgId");
