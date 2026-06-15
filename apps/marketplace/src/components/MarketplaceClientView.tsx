@@ -89,11 +89,7 @@ export function MarketplaceClientView({
   const [drivers, setDrivers] = useState<MarketplaceDriver[]>(initialDrivers);
   const [activeTab, setActiveTab] = useState<
     "drivers" | "documents" | "vehicles" | "validation" | "profile"
-  >(
-    initialUser?.role === "DRIVER"
-      ? "vehicles"
-      : "drivers",
-  );
+  >(initialUser?.role === "DRIVER" ? "vehicles" : "drivers");
 
   const [driversLoading, setDriversLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("Todos");
@@ -185,15 +181,31 @@ export function MarketplaceClientView({
 
   const tabsList = [];
   if (canViewAsOwner) {
-    tabsList.push({ id: "drivers", label: "Conductores Disponibles", icon: User });
+    tabsList.push({
+      id: "drivers",
+      label: "Conductores Disponibles",
+      icon: User,
+    });
   }
   if (canViewAsDriver) {
-    tabsList.push({ id: "vehicles", label: "Vehículos Disponibles", icon: Car });
-    tabsList.push({ id: "documents", label: "Mis Documentos", icon: ShieldCheck });
+    tabsList.push({
+      id: "vehicles",
+      label: "Vehículos Disponibles",
+      icon: Car,
+    });
+    tabsList.push({
+      id: "documents",
+      label: "Mis Documentos",
+      icon: ShieldCheck,
+    });
     tabsList.push({ id: "profile", label: "Mi Perfil", icon: User });
   }
   if (user?.role === "SUPER_ADMIN") {
-    tabsList.push({ id: "validation", label: "Revisar Documentos", icon: ShieldCheck });
+    tabsList.push({
+      id: "validation",
+      label: "Revisar Documentos",
+      icon: ShieldCheck,
+    });
   }
 
   // Apply filters locally on the drivers list
@@ -323,7 +335,10 @@ export function MarketplaceClientView({
             <VerificationTab onSync={syncProfileAndState} />
           )}
           {activeTab === "profile" && driverStats && (
-            <MarketplaceDriverProfileView initialUser={user} driver={driverStats} />
+            <MarketplaceDriverProfileView
+              initialUser={user}
+              driver={driverStats}
+            />
           )}
           {activeTab === "validation" && user?.role === "SUPER_ADMIN" && (
             <AdminDocumentsReviewTab />

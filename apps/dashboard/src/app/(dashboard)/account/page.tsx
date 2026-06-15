@@ -17,7 +17,6 @@ import {
   AlertCircle,
 } from "lucide-react";
 
-
 export default function AccountPage() {
   const router = useRouter();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -37,8 +36,6 @@ export default function AccountPage() {
       setLoading(true);
       const { data } = await api.get("/users/me");
       setProfile(data);
-
-
     } catch (err) {
       console.error("Error al cargar perfil:", err);
       setError("No se pudo cargar el perfil del usuario.");
@@ -311,8 +308,6 @@ export default function AccountPage() {
           </div>
         </div>
       </div>
-
-
     </div>
   );
 }

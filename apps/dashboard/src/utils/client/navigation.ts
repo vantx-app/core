@@ -81,7 +81,11 @@ export const NAV_LINKS: NavLink[] = [
     key: "nav.marketplace",
     icon: Briefcase,
     allowedRoles: [ROLES.DRIVER, ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
-    hideInMobileBottomNavForRoles: [ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
+    hideInMobileBottomNavForRoles: [
+      ROLES.OWNER,
+      ROLES.ADMIN,
+      ROLES.SUPER_ADMIN,
+    ],
     isExternal: true,
   },
   {

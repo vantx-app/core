@@ -1,13 +1,13 @@
 const CACHE_NAME = "vantx-cache-v1";
-const OFFLINE_URL = "/offline";
+const OFFLINE_URL = "/dashboard/offline";
 
 const ASSETS_TO_CACHE = [
   OFFLINE_URL,
-  "/manifest.json",
-  "/icons/icon-32x32.png",
-  "/icons/icon-192x192.png",
-  "/icons/icon-512x512.png",
-  "/icons/icon-maskable.png",
+  "/dashboard/manifest.json",
+  "/dashboard/icons/icon-32x32.png",
+  "/dashboard/icons/icon-192x192.png",
+  "/dashboard/icons/icon-512x512.png",
+  "/dashboard/icons/icon-maskable.png",
 ];
 
 self.addEventListener("install", (event) => {

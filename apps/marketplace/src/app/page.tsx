@@ -17,7 +17,10 @@ export default async function MarketplaceHome() {
   // 2. Fetch driver stats or available drivers list based on user role
   if (user) {
     const isUserDriver = user.role === "DRIVER" || !!user.driver;
-    const isUserOwner = user.role === "OWNER" || user.role === "ADMIN" || user.role === "SUPER_ADMIN";
+    const isUserOwner =
+      user.role === "OWNER" ||
+      user.role === "ADMIN" ||
+      user.role === "SUPER_ADMIN";
 
     if (isUserDriver) {
       try {
