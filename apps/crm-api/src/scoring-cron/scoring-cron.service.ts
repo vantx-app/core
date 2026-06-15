@@ -228,7 +228,10 @@ export class ScoringCronService {
       return { overspeedCount: 0, overspeedSeverity: 0 };
     }
 
-    if (!validLogs.some((log) => log.speed > 10)) {
+    // Si la velocidad máxima registrada no superó los 42 km/h,
+    // es matemáticamente imposible que haya un exceso de velocidad,
+    // incluso en zonas escolares de 30 km/h con el buffer de 12 km/h.
+    if (!validLogs.some((log) => log.speed > 42)) {
       return { overspeedCount: 0, overspeedSeverity: 0 };
     }
 

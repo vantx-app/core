@@ -17,8 +17,8 @@ export class HereRoutesClientService {
   private consecutiveErrors = 0;
   private isSuspended = false;
 
-  /** Máximo de waypoints por llamada a HERE Routing (Origin + 21 Waypoints + Destination) */
-  private readonly MAX_WAYPOINTS_PER_CALL = 23;
+  /** Máximo de waypoints por llamada a HERE Routing (Origin + 73 Waypoints + Destination) */
+  private readonly MAX_WAYPOINTS_PER_CALL = 75;
   /** Distancia mínima entre puntos para el downsampling (en km) */
   private readonly DOWNSAMPLE_MIN_DISTANCE_KM = 0.3;
   /** Máximo de puntos después del downsampling */

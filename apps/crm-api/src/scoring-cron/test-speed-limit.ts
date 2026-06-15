@@ -260,7 +260,7 @@ async function getRouteSpeedLimits(
     return null;
   }
 
-  const chunks = splitIntoChunks(sampled, 23);
+  const chunks = splitIntoChunks(sampled, 75);
   console.log(`[HERE] Dividido en ${chunks.length} chunks para la API.`);
 
   const allSpans: any[] = [];
@@ -397,9 +397,9 @@ async function run() {
   console.log(`- Velocidad promedio: ${avgSpeed.toFixed(1)} km/h`);
 
   // Validación rápida previa a llamadas de API (igual que el servicio)
-  if (!validLogs.some((log) => log.speed > 10)) {
+  if (!validLogs.some((log) => log.speed > 42)) {
     console.log(
-      '[INFO] La velocidad máxima no superó los 10 km/h. Exceso de velocidad: 0',
+      '[INFO] La velocidad máxima no superó los 42 km/h. Exceso de velocidad: 0',
     );
     process.exit(0);
   }
