@@ -8,6 +8,7 @@ import {
   downsampleByDistance,
   splitIntoChunks,
   decodeFlexiblePolyline,
+  haversineDistance,
 } from './route-utils';
 
 @Injectable()
@@ -55,11 +56,29 @@ export class HereRoutesClientService {
       return null;
     }
 
+    // Calcular distancia acumulada del viaje
+    let tripDistanceKm = 0;
+    for (let i = 1; i < coordinates.length; i++) {
+      tripDistanceKm += haversineDistance(
+        coordinates[i - 1].lat,
+        coordinates[i - 1].lng,
+        coordinates[i].lat,
+        coordinates[i].lng,
+      );
+    }
+
+    let maxDownsampledPoints = this.MAX_DOWNSAMPLED_POINTS;
+    if (tripDistanceKm >= 30 && tripDistanceKm <= 100) {
+      maxDownsampledPoints = 150;
+    } else if (tripDistanceKm > 100) {
+      maxDownsampledPoints = 225;
+    }
+
     // Paso 1: Downsampling basado en distancia
     const sampled = downsampleByDistance(
       coordinates,
       this.DOWNSAMPLE_MIN_DISTANCE_KM,
-      this.MAX_DOWNSAMPLED_POINTS,
+      maxDownsampledPoints,
     );
     if (sampled.length < 2) {
       return null;

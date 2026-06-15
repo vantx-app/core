@@ -250,9 +250,26 @@ async function getRouteSpeedLimits(
   travelMode: 'Car' | 'Truck',
   apiKey: string,
 ): Promise<{ spans: any[]; geometry: [number, number][] } | null> {
-  const sampled = downsampleByDistance(coordinates, 0.3, 75);
+  let tripDistanceKm = 0;
+  for (let i = 1; i < coordinates.length; i++) {
+    tripDistanceKm += haversineDistance(
+      coordinates[i - 1].lat,
+      coordinates[i - 1].lng,
+      coordinates[i].lat,
+      coordinates[i].lng,
+    );
+  }
+
+  let maxDownsampledPoints = 75;
+  if (tripDistanceKm >= 30 && tripDistanceKm <= 100) {
+    maxDownsampledPoints = 150;
+  } else if (tripDistanceKm > 100) {
+    maxDownsampledPoints = 225;
+  }
+
+  const sampled = downsampleByDistance(coordinates, 0.3, maxDownsampledPoints);
   console.log(
-    `[HERE] Coordenadas originales: ${coordinates.length}, Downsampled: ${sampled.length}`,
+    `[HERE] Coordenadas originales: ${coordinates.length}, Downsampled: ${sampled.length} (Max Limit: ${maxDownsampledPoints}, Dist: ${tripDistanceKm.toFixed(2)} km)`,
   );
 
   if (sampled.length < 2) {
