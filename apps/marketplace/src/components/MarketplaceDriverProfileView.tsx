@@ -31,11 +31,13 @@ import {
 interface MarketplaceDriverProfileViewProps {
   initialUser: any;
   driver: any;
+  hideBackLink?: boolean;
 }
 
 export function MarketplaceDriverProfileView({
   initialUser,
   driver,
+  hideBackLink = false,
 }: MarketplaceDriverProfileViewProps) {
   const [user] = useState<any>(initialUser);
   const [proposing, setProposing] = useState(false);
@@ -166,14 +168,16 @@ export function MarketplaceDriverProfileView({
   return (
     <div className="max-w-7xl mx-auto px-6 py-8 relative z-10 text-left">
       {/* Back navigation */}
-      <div className="mb-6">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="size-4" /> Volver al Marketplace
-        </Link>
-      </div>
+      {!hideBackLink && (
+        <div className="mb-6">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="size-4" /> Volver al Marketplace
+          </Link>
+        </div>
+      )}
 
       {proposed && (
         <div className="mb-6 p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2.5 shadow-sm animate-fade-in">
@@ -298,13 +302,16 @@ export function MarketplaceDriverProfileView({
                       {updating && (
                         <Loader2 className="size-3.5 animate-spin text-blue-600" />
                       )}
-                      <input
-                        type="checkbox"
-                        className="toggle toggle-primary toggle-sm cursor-pointer"
-                        checked={shareScores}
-                        onChange={handleToggleShare}
-                        disabled={updating}
-                      />
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={shareScores}
+                          onChange={handleToggleShare}
+                          disabled={updating}
+                        />
+                        <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
                     </div>
                   </div>
                   {updateError && (

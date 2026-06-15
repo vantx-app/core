@@ -228,7 +228,7 @@ export function VehicleListingsTab({
                 </div>
 
                 {/* Footer buttons */}
-                <div className="border-t border-slate-100 bg-slate-50/50 p-4 flex items-center justify-between gap-3">
+                <div className="border-t border-slate-100 bg-slate-50/50 p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                   {isLocked ? (
                     <div className="w-full text-center py-2.5 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-500 font-semibold flex items-center justify-center gap-1.5">
                       <Lock className="size-3.5" />

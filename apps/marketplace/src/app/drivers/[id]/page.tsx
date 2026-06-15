@@ -36,7 +36,7 @@ export default async function DriverProfilePage({
   }
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased relative">
+    <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased relative overflow-x-hidden">
       {/* Decorative background gradients */}
       <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] transform-gpu will-change-[transform,filter] pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-indigo-500/5 rounded-full blur-[100px] transform-gpu will-change-[transform,filter] pointer-events-none" />

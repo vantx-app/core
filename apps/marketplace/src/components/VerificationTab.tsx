@@ -274,7 +274,7 @@ export function VerificationTab({ onSync }: VerificationTabProps) {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+                <div className="flex flex-wrap items-center justify-end gap-2 w-full sm:w-auto sm:self-auto shrink-0 mt-2 sm:mt-0">
                   <span
                     className={`badge text-xs font-semibold rounded-full border px-2 py-0.5 ${getDriverDocStatusBadgeClass(status)}`}
                   >

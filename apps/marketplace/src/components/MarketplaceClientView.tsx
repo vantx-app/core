@@ -22,9 +22,11 @@ import {
   LogOut,
   Lock,
   Loader2,
+  LayoutDashboard,
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { getCookieSettings } from "@vantx/auth";
+import { Logo } from "@vantx/ui";
 
 interface UserProfile {
   id: string;
@@ -228,10 +230,11 @@ export function MarketplaceClientView({
     <div className="relative flex-grow flex flex-col w-full">
       {/* Header */}
       <header className="relative border-b border-slate-200 bg-white/80 backdrop-blur-md sticky top-0 z-50 transform-gpu">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
           <div className="flex items-center gap-3">
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              VantX Drivers Marketplace
+            <Logo size="sm" />
+            <span className="text-sm font-semibold text-slate-400 border-l border-slate-200 pl-3 hidden sm:inline whitespace-nowrap">
+              Marketplace
             </span>
           </div>
 
@@ -239,9 +242,11 @@ export function MarketplaceClientView({
             {user && (
               <a
                 href={dashboardUrl}
-                className="text-sm font-semibold hover:text-slate-900 text-slate-500 transition-colors"
+                title="Volver al Dashboard"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-sm group"
               >
-                Volver al Dashboard
+                <LayoutDashboard className="size-4 text-slate-500 group-hover:text-blue-600 transition-colors" />
+                <span className="hidden sm:inline text-slate-600 group-hover:text-slate-900 transition-colors">Dashboard</span>
               </a>
             )}
             {user ? (
@@ -273,67 +278,35 @@ export function MarketplaceClientView({
 
       {/* Middle Content Wrapper */}
       <div className="flex-grow flex flex-col w-full">
-        {/* Hero Section */}
-        <section className="relative max-w-7xl mx-auto px-6 py-8 w-full">
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/50 to-slate-100 border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-            <div className="text-left">
-              <h1 className="text-2xl font-extrabold text-slate-950">
-                Asignaciones de Conductores y Vehículos
-              </h1>
-              <p className="text-slate-600 text-xs max-w-xl mt-1 leading-relaxed">
-                Conectamos conductores profesionales verificados mediante firma
-                digital con flotas comerciales. Explora vehículos disponibles o
-                postúlate a asignaciones.
-              </p>
-            </div>
-            {canViewAsDriver && (
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-white shadow-sm shrink-0">
-                <span className="text-xs text-slate-500 font-semibold">
-                  Tu Estado:
-                </span>
-                <span
-                  className={`badge text-xs font-bold px-2 py-0.5 rounded-full border ${
-                    isDriverActive
-                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                      : "bg-amber-50 text-amber-700 border-amber-200 animate-pulse"
-                  }`}
-                >
-                  {isDriverActive
-                    ? "Activo (Verificado)"
-                    : "Pendiente de Verificación"}
-                </span>
-              </div>
-            )}
-          </div>
-        </section>
-
         {/* Navigation Tabs */}
         {tabsList.length > 1 && (
-          <section className="max-w-7xl mx-auto px-6 mb-6 w-full">
-            <div className="tabs tabs-boxed bg-slate-100 p-1 rounded-xl flex max-w-xl">
-              {tabsList.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`tab flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-lg transition-all ${
-                      activeTab === tab.id
-                        ? "bg-white text-blue-600 shadow-sm"
-                        : "text-slate-500 hover:text-slate-950"
-                    }`}
-                  >
-                    <Icon className="size-4" />
-                    {tab.label}
-                  </button>
-                );
-              })}
+          <section className="border-b border-slate-200/80 bg-white w-full mb-8">
+            <div className="max-w-7xl mx-auto px-6">
+              <div className="flex gap-8 overflow-x-auto scrollbar-none">
+                {tabsList.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center gap-2 py-4 px-1 text-xs font-extrabold transition-all border-b-2 -mb-[2px] whitespace-nowrap shrink-0 ${isActive
+                          ? "border-blue-600 text-blue-600"
+                          : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
+                        }`}
+                    >
+                      <Icon className="size-4" />
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </section>
         )}
 
         {/* Main Content Area */}
-        <section className="max-w-7xl mx-auto px-6 pb-20 flex-grow w-full">
+        <section className={`max-w-7xl mx-auto px-6 pb-20 flex-grow w-full ${tabsList.length > 1 ? "" : "mt-8"}`}>
           {activeTab === "vehicles" && (
             <VehicleListingsTab isDriverActive={isDriverActive} />
           )}
@@ -344,6 +317,7 @@ export function MarketplaceClientView({
             <MarketplaceDriverProfileView
               initialUser={user}
               driver={driverStats}
+              hideBackLink={true}
             />
           )}
           {activeTab === "validation" && user?.role === "SUPER_ADMIN" && (
@@ -497,7 +471,7 @@ export function MarketplaceClientView({
                         </div>
 
                         {/* Actions */}
-                        <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                           {!user ? (
                             <a
                               href={`${landingUrl}/login`}
