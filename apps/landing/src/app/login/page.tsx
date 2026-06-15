@@ -96,16 +96,31 @@ function LoginContent() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await fetch(`/api/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+      });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
     const deleteSettings = getCookieSettings(0);
-    Cookies.remove("access_token", {
-      path: deleteSettings.path,
-      domain: deleteSettings.domain,
-    });
-    Cookies.remove("refresh_token", {
-      path: deleteSettings.path,
-      domain: deleteSettings.domain,
-    });
+    Cookies.remove("access_token", { path: "/" });
+    if (deleteSettings.domain) {
+      Cookies.remove("access_token", {
+        path: "/",
+        domain: deleteSettings.domain,
+      });
+    }
+    Cookies.remove("refresh_token", { path: "/" });
+    if (deleteSettings.domain) {
+      Cookies.remove("refresh_token", {
+        path: "/",
+        domain: deleteSettings.domain,
+      });
+    }
     setIsLoggedIn(false);
   };
 

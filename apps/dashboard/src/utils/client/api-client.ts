@@ -88,18 +88,26 @@ api.interceptors.response.use(
 
         // Limpiamos rastros
         const deleteSettings = getCookieSettings(0);
-        Cookies.remove("access_token", {
-          path: deleteSettings.path,
-          domain: deleteSettings.domain,
-        });
-        Cookies.remove("refresh_token", {
-          path: deleteSettings.path,
-          domain: deleteSettings.domain,
-        });
+        Cookies.remove("access_token", { path: "/" });
+        if (deleteSettings.domain) {
+          Cookies.remove("access_token", {
+            path: "/",
+            domain: deleteSettings.domain,
+          });
+        }
+        Cookies.remove("refresh_token", { path: "/" });
+        if (deleteSettings.domain) {
+          Cookies.remove("refresh_token", {
+            path: "/",
+            domain: deleteSettings.domain,
+          });
+        }
 
         // Redirección forzada (MVP Friendly)
         if (typeof window !== "undefined") {
-          window.location.href = "/login?expired=true";
+          const landingUrl =
+            process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+          window.location.href = `${landingUrl}/login?expired=true`;
         }
 
         return Promise.reject(refreshError);

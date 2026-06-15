@@ -131,15 +131,23 @@ export const useFleetSocket = (
           // Si falla el refresh, forzamos logout borrando la cookie is_authenticated
           // para que el middleware de Next.js expulse al usuario.
           const deleteSettings = getCookieSettings(0);
-          Cookies.remove("access_token", {
-            path: deleteSettings.path,
-            domain: deleteSettings.domain,
-          });
-          Cookies.remove("refresh_token", {
-            path: deleteSettings.path,
-            domain: deleteSettings.domain,
-          });
-          window.location.href = "/login";
+          Cookies.remove("access_token", { path: "/" });
+          if (deleteSettings.domain) {
+            Cookies.remove("access_token", {
+              path: "/",
+              domain: deleteSettings.domain,
+            });
+          }
+          Cookies.remove("refresh_token", { path: "/" });
+          if (deleteSettings.domain) {
+            Cookies.remove("refresh_token", {
+              path: "/",
+              domain: deleteSettings.domain,
+            });
+          }
+          const landingUrl =
+            process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+          window.location.href = `${landingUrl}/login`;
         }
       }
     });

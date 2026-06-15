@@ -99,6 +99,7 @@ export class AuthController {
 
     await this.authService.logout(refreshToken);
     res.clearCookie('refresh_token', getCookieSettings(0));
+    res.clearCookie('access_token', getCookieSettings(0));
     return { message: 'Logged out successfully' };
   }
 }

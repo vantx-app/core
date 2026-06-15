@@ -79,14 +79,20 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         const deleteSettings = getCookieSettings(0);
-        Cookies.remove("access_token", {
-          path: deleteSettings.path,
-          domain: deleteSettings.domain,
-        });
-        Cookies.remove("refresh_token", {
-          path: deleteSettings.path,
-          domain: deleteSettings.domain,
-        });
+        Cookies.remove("access_token", { path: "/" });
+        if (deleteSettings.domain) {
+          Cookies.remove("access_token", {
+            path: "/",
+            domain: deleteSettings.domain,
+          });
+        }
+        Cookies.remove("refresh_token", { path: "/" });
+        if (deleteSettings.domain) {
+          Cookies.remove("refresh_token", {
+            path: "/",
+            domain: deleteSettings.domain,
+          });
+        }
 
         // Si es una consulta pública del Marketplace (como verificar perfil o listar conductores),
         // no forzamos redirección para permitir navegación en modo invitado.

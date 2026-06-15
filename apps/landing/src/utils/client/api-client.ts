@@ -82,14 +82,20 @@ api.interceptors.response.use(
         processQueue(refreshError, null);
 
         const deleteSettings = getCookieSettings(0);
-        Cookies.remove("access_token", {
-          path: deleteSettings.path,
-          domain: deleteSettings.domain,
-        });
-        Cookies.remove("refresh_token", {
-          path: deleteSettings.path,
-          domain: deleteSettings.domain,
-        });
+        Cookies.remove("access_token", { path: "/" });
+        if (deleteSettings.domain) {
+          Cookies.remove("access_token", {
+            path: "/",
+            domain: deleteSettings.domain,
+          });
+        }
+        Cookies.remove("refresh_token", { path: "/" });
+        if (deleteSettings.domain) {
+          Cookies.remove("refresh_token", {
+            path: "/",
+            domain: deleteSettings.domain,
+          });
+        }
 
         return Promise.reject(refreshError);
       } finally {
