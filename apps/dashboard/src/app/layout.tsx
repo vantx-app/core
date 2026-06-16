@@ -22,9 +22,9 @@ export const metadata: Metadata = {
     title: "Vantx",
   },
   icons: {
-    icon: "/dashboard/icons/icon-32x32.png",
-    shortcut: "/dashboard/favicon.ico",
-    apple: "/dashboard/icons/apple-touch-icon.png",
+    icon: "/icons/icon-32x32.png",
+    shortcut: "/favicon.ico",
+    apple: "/icons/icon-apple-touch-icon.png",
   },
 };
 

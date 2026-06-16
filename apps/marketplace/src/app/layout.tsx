@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://vantx.app/marketplace"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_MARKETPLACE_URL || "https://vantx.app/marketplace"),
   title: {
     default: "Marketplace de Conductores Certificados | VantX",
     template: "%s | VantX Marketplace",
@@ -19,9 +19,9 @@ export const metadata: Metadata = {
     "telemetría",
   ],
   icons: {
-    icon: "/icons/icon-32x32.png",
-    shortcut: "/favicon.ico",
-    apple: "/icons/icon-512x512.png",
+    icon: "/marketplace/icons/icon-32x32.png",
+    shortcut: "/marketplace/favicon.ico",
+    apple: "/marketplace/icons/icon-512x512.png",
   },
   openGraph: {
     title: "Marketplace de Conductores Certificados | VantX",
