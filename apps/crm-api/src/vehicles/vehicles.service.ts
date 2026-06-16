@@ -79,6 +79,15 @@ export class VehiclesService {
       throw new BadRequestException('Categoría de vehículo no válida.');
     }
 
+    if (
+      createVehicleDto.subscriptionTier === 'ACTIVE' &&
+      !createVehicleDto.imei
+    ) {
+      throw new BadRequestException(
+        'Se requiere un dispositivo (IMEI) para activar la suscripción del vehículo.',
+      );
+    }
+
     let scoringProfileId = createVehicleDto.scoringProfileId;
     if (!scoringProfileId && createVehicleDto.category) {
       let defaultProfile: any = null;
@@ -123,58 +132,87 @@ export class VehiclesService {
       throw new BadRequestException('Categoría de vehículo no válida.');
     }
 
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id },
+      include: { scoringProfile: true },
+    });
+
+    if (!vehicle) {
+      throw new NotFoundException('Vehículo no encontrado.');
+    }
+
+    const targetTier =
+      updateVehicleDto.subscriptionTier !== undefined
+        ? updateVehicleDto.subscriptionTier
+        : vehicle.subscriptionTier;
+    const targetImei =
+      updateVehicleDto.imei !== undefined
+        ? updateVehicleDto.imei
+        : vehicle.imei;
+
+    if (targetTier === 'ACTIVE' && !targetImei) {
+      throw new BadRequestException(
+        'Se requiere un dispositivo (IMEI) para activar la suscripción del vehículo.',
+      );
+    }
+
     const { imei, vin, ...rest } = updateVehicleDto;
+    const dataToUpdate: any = { ...rest };
+    if (updateVehicleDto.imei !== undefined)
+      dataToUpdate.imei = updateVehicleDto.imei;
+    if (updateVehicleDto.vin !== undefined)
+      dataToUpdate.vin = updateVehicleDto.vin;
 
-    if (rest.category !== undefined || rest.fuelType !== undefined) {
-      const vehicle = await this.prisma.vehicle.findUnique({
-        where: { id },
-        include: { scoringProfile: true },
-      });
+    if (
+      dataToUpdate.category !== undefined ||
+      dataToUpdate.fuelType !== undefined
+    ) {
+      const currentProfileName = vehicle.scoringProfile?.name;
+      const isDefaultProfile =
+        !currentProfileName ||
+        [
+          'DEFAULT',
+          'DEFAULT_HDV',
+          'DEFAULT_LCV',
+          'DEFAULT_PASSENGER',
+          'DEFAULT_MACHINERY',
+          'DEFAULT_HDV_DIESEL',
+          'DEFAULT_LCV_DIESEL',
+          'DEFAULT_PASSENGER_DIESEL',
+        ].includes(currentProfileName);
 
-      if (vehicle) {
-        const currentProfileName = vehicle.scoringProfile?.name;
-        const isDefaultProfile =
-          !currentProfileName ||
-          [
-            'DEFAULT',
-            'DEFAULT_HDV',
-            'DEFAULT_LCV',
-            'DEFAULT_PASSENGER',
-            'DEFAULT_MACHINERY',
-            'DEFAULT_HDV_DIESEL',
-            'DEFAULT_LCV_DIESEL',
-            'DEFAULT_PASSENGER_DIESEL',
-          ].includes(currentProfileName);
+      if (isDefaultProfile && !dataToUpdate.scoringProfileId) {
+        const categoryToUse =
+          dataToUpdate.category !== undefined
+            ? dataToUpdate.category
+            : vehicle.category;
+        const fuelTypeToUse =
+          dataToUpdate.fuelType !== undefined
+            ? dataToUpdate.fuelType
+            : vehicle.fuelType;
 
-        if (isDefaultProfile && !rest.scoringProfileId) {
-          const categoryToUse =
-            rest.category !== undefined ? rest.category : vehicle.category;
-          const fuelTypeToUse =
-            rest.fuelType !== undefined ? rest.fuelType : vehicle.fuelType;
-
-          let defaultProfile: any = null;
-          if (fuelTypeToUse) {
-            const defaultProfileNameWithFuel = `DEFAULT_${categoryToUse}_${fuelTypeToUse}`;
-            defaultProfile = await this.prisma.scoringProfile.findFirst({
-              where: { name: defaultProfileNameWithFuel },
-            });
-          }
-          if (!defaultProfile) {
-            const defaultProfileName = `DEFAULT_${categoryToUse}`;
-            defaultProfile = await this.prisma.scoringProfile.findFirst({
-              where: { name: defaultProfileName },
-            });
-          }
-          if (defaultProfile) {
-            rest.scoringProfileId = defaultProfile.id;
-          }
+        let defaultProfile: any = null;
+        if (fuelTypeToUse) {
+          const defaultProfileNameWithFuel = `DEFAULT_${categoryToUse}_${fuelTypeToUse}`;
+          defaultProfile = await this.prisma.scoringProfile.findFirst({
+            where: { name: defaultProfileNameWithFuel },
+          });
+        }
+        if (!defaultProfile) {
+          const defaultProfileName = `DEFAULT_${categoryToUse}`;
+          defaultProfile = await this.prisma.scoringProfile.findFirst({
+            where: { name: defaultProfileName },
+          });
+        }
+        if (defaultProfile) {
+          dataToUpdate.scoringProfileId = defaultProfile.id;
         }
       }
     }
 
     return this.prisma.vehicle.update({
       where: { id },
-      data: rest,
+      data: dataToUpdate,
     });
   }
 
@@ -865,9 +903,9 @@ export class VehiclesService {
     return zip.toBuffer();
   }
 
-  async findMarketplaceListings(user: AccessTokenPayload) {
+  async findMarketplaceListings(user?: AccessTokenPayload) {
     // 1. Si es un chofer, verificar si ya tiene un vehículo asignado
-    if (user.role === 'DRIVER') {
+    if (user && user.role === 'DRIVER') {
       const activeAssignment = await this.prisma.assignment.findFirst({
         where: {
           driver: {
@@ -921,6 +959,24 @@ export class VehiclesService {
         },
       },
     });
+
+    if (!user) {
+      return vehicles.map((v) => ({
+        id: v.id,
+        make: v.make,
+        model: v.model,
+        year: v.year,
+        category: v.category,
+        fuelType: v.fuelType,
+        listingPrice: v.listingPrice,
+        listingDescription: v.listingDescription,
+        hasOptionToBuy: v.hasOptionToBuy,
+        isLocked: true,
+        organization: v.organization
+          ? { name: v.organization.name, users: [] }
+          : null,
+      }));
+    }
 
     // 3. Si el rol es DRIVER, verificar su estado de activación
     if (user.role === 'DRIVER') {

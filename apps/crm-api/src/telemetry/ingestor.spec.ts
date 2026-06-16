@@ -25,13 +25,13 @@ jest.mock('@prisma/client', () => {
 });
 
 // Mock notification module
-jest.mock('../../ingestor/utils/notifyApi', () => ({
+jest.mock('../../../telemetry-ingestor/src/utils/notifyApi', () => ({
   notifyApi: jest.fn().mockResolvedValue({ success: true }),
 }));
 
-import { parseTeltonikaData } from '../../ingestor/utils/parseTeltonikaData';
-import { processDataBatch } from '../../ingestor/utils/processDataBatch';
-import { DEVICE_PROFILES } from '../../ingestor/utils/device-profiles.config';
+import { parseTeltonikaData } from '../../../../packages/telemetry-parser/src/parseTeltonikaData';
+import { processDataBatch } from '../../../telemetry-ingestor/src/utils/processDataBatch';
+import { DEVICE_PROFILES } from '../../../../packages/telemetry-parser/src/device-profiles.config';
 import { PrismaClient } from '@prisma/client';
 
 // Retrieve the mocked methods safely

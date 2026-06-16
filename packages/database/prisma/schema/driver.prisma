@@ -7,7 +7,7 @@ model Driver {
   phone                 String?
   status                DriverStatus           @default(INACTIVE)
   licenseType           String?
-  shareScoresPublicly   Boolean                @default(false)
+  shareScoresPublicly   Boolean                @default(true)
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   assignments           Assignment[]

@@ -25,7 +25,8 @@ export default async function DriverProfilePage({
 
   // 2. Fetch target driver details
   try {
-    driver = await fetchServer(`/drivers/${id}`);
+    const endpoint = user ? `/drivers/${id}` : `/drivers/public/${id}`;
+    driver = await fetchServer(endpoint);
   } catch (err: any) {
     console.error(
       "Marketplace Profile: error fetching driver stats on server:",

@@ -92,6 +92,10 @@ export class DriversService {
     const fName = driver.firstName || 'Conductor';
     const lInitial = driver.lastName ? `${driver.lastName[0]}.` : '';
     const maskedName = `${fName} ${lInitial}`.trim();
+    const share = driver.shareScoresPublicly ?? true;
+    const hasHistory =
+      !!driver.globalStats &&
+      (driver.globalStats.totalKm > 0 || driver.globalStats.totalSnapshots > 0);
     return {
       id: driver.id,
       name: maskedName,
@@ -101,15 +105,33 @@ export class DriversService {
       phone: null,
       status: driver.status,
       licenseType: driver.licenseType,
+      shareScoresPublicly: share,
+      hasHistory,
       globalStats: driver.globalStats
         ? {
-            globalOverallScore: null,
-            globalSafetyScore: null,
-            globalEcoScore: null,
-            globalAssetScore: null,
+            globalOverallScore: share
+              ? (driver.globalStats.globalOverallScore ??
+                driver.globalStats.overallScore ??
+                null)
+              : null,
+            globalSafetyScore: share
+              ? (driver.globalStats.globalSafetyScore ??
+                driver.globalStats.safetyScore ??
+                null)
+              : null,
+            globalEcoScore: share
+              ? (driver.globalStats.globalEcoScore ??
+                driver.globalStats.ecoScore ??
+                null)
+              : null,
+            globalAssetScore: share
+              ? (driver.globalStats.globalAssetScore ??
+                driver.globalStats.assetScore ??
+                null)
+              : null,
           }
         : null,
-      scoreSnapshots: [],
+      scoreSnapshots: share ? driver.scoreSnapshots || [] : [],
       documents: driver.documents || [],
     };
   }

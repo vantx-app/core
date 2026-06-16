@@ -221,32 +221,45 @@ export function MarketplaceClientView({
   const isOwner = canViewAsOwner;
 
   const tabsList = [];
-  if (canViewAsOwner) {
+  if (!user) {
     tabsList.push({
       id: "drivers",
       label: "Conductores Disponibles",
       icon: User,
     });
-  }
-  if (canViewAsDriver) {
     tabsList.push({
       id: "vehicles",
       label: "Vehículos Disponibles",
       icon: Car,
     });
-    tabsList.push({
-      id: "documents",
-      label: "Mis Documentos",
-      icon: ShieldCheck,
-    });
-    tabsList.push({ id: "profile", label: "Mi Perfil", icon: User });
-  }
-  if (user?.role === "SUPER_ADMIN") {
-    tabsList.push({
-      id: "validation",
-      label: "Revisar Documentos",
-      icon: ShieldCheck,
-    });
+  } else {
+    if (canViewAsOwner) {
+      tabsList.push({
+        id: "drivers",
+        label: "Conductores Disponibles",
+        icon: User,
+      });
+    }
+    if (canViewAsDriver) {
+      tabsList.push({
+        id: "vehicles",
+        label: "Vehículos Disponibles",
+        icon: Car,
+      });
+      tabsList.push({
+        id: "documents",
+        label: "Mis Documentos",
+        icon: ShieldCheck,
+      });
+      tabsList.push({ id: "profile", label: "Mi Perfil", icon: User });
+    }
+    if (user?.role === "SUPER_ADMIN") {
+      tabsList.push({
+        id: "validation",
+        label: "Revisar Documentos",
+        icon: ShieldCheck,
+      });
+    }
   }
 
   // Apply filters locally on the drivers list
@@ -289,11 +302,25 @@ export function MarketplaceClientView({
             )}
             {user ? (
               <div className="flex items-center gap-3">
-                <div className="avatar placeholder">
+                <button
+                  onClick={() => {
+                    if (canViewAsDriver) {
+                      setActiveTab("profile");
+                    } else {
+                      window.location.href = dashboardUrl;
+                    }
+                  }}
+                  title={
+                    canViewAsDriver
+                      ? "Ver mi perfil de conductor"
+                      : "Ir al Dashboard de Propietario"
+                  }
+                  className="avatar placeholder cursor-pointer active:scale-95 transition-all outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 rounded-full"
+                >
                   <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-full w-8 h-8 font-bold text-xs shadow-sm flex items-center justify-center">
                     <span>{getInitials(user.name)}</span>
                   </div>
-                </div>
+                </button>
                 <button
                   onClick={handleLogout}
                   title="Cerrar Sesión"
@@ -349,7 +376,10 @@ export function MarketplaceClientView({
           className={`max-w-7xl mx-auto px-6 pb-20 flex-grow w-full ${tabsList.length > 1 ? "" : "mt-8"}`}
         >
           {activeTab === "vehicles" && (
-            <VehicleListingsTab isDriverActive={isDriverActive} />
+            <VehicleListingsTab
+              isDriverActive={isDriverActive}
+              isGuest={!user}
+            />
           )}
           {activeTab === "documents" && (
             <VerificationTab onSync={syncProfileAndState} />
@@ -488,40 +518,68 @@ export function MarketplaceClientView({
 
                         {/* Body stats */}
                         <div className="grid grid-cols-2 gap-4 border-y border-slate-100 py-3 text-xs">
-                          <div>
-                            <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
-                              Puntaje Histórico
-                            </span>
-                            <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
-                              <Star className="size-3.5 fill-amber-400 text-amber-400" />
-                              {driver.globalStats?.globalOverallScore != null
-                                ? `${driver.globalStats.globalOverallScore} pts`
-                                : "N/A (Privado)"}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
-                              Conducción Segura
-                            </span>
-                            <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
-                              <ShieldCheck className="size-3.5 text-blue-600" />
-                              {driver.globalStats?.globalSafetyScore != null
-                                ? `${driver.globalStats.globalSafetyScore}%`
-                                : "N/A (Privado)"}
-                            </span>
-                          </div>
+                          {(() => {
+                            const hasHistory =
+                              (driver as any).hasHistory !== undefined
+                                ? (driver as any).hasHistory
+                                : !!driver.globalStats &&
+                                  (driver.globalStats.globalOverallScore !==
+                                    null ||
+                                    (driver.globalStats as any).overallScore !==
+                                      null);
+                            return (
+                              <>
+                                <div>
+                                  <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
+                                    Puntaje Histórico
+                                  </span>
+                                  <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
+                                    <Star className="size-3.5 fill-amber-400 text-amber-400" />
+                                    {!hasHistory
+                                      ? "Sin Historial"
+                                      : driver.globalStats
+                                            ?.globalOverallScore != null
+                                        ? `${driver.globalStats.globalOverallScore} pts`
+                                        : "N/A (Privado)"}
+                                  </span>
+                                </div>
+                                <div>
+                                  <span className="text-[9px] font-bold text-slate-400 block uppercase tracking-wide">
+                                    Conducción Segura
+                                  </span>
+                                  <span className="font-extrabold text-slate-700 flex items-center gap-1 mt-0.5">
+                                    <ShieldCheck className="size-3.5 text-blue-600" />
+                                    {!hasHistory
+                                      ? "Sin Historial"
+                                      : driver.globalStats?.globalSafetyScore !=
+                                          null
+                                        ? `${driver.globalStats.globalSafetyScore}%`
+                                        : "N/A (Privado)"}
+                                  </span>
+                                </div>
+                              </>
+                            );
+                          })()}
                         </div>
 
                         {/* Actions */}
                         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                           {!user ? (
-                            <a
-                              href={`${landingUrl}/login`}
-                              className="w-full text-center py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1.5"
-                            >
-                              <Lock className="size-3.5" />
-                              Iniciar Sesión para Contactar
-                            </a>
+                            <>
+                              <Link
+                                href={`/drivers/${driver.id}`}
+                                className="flex-1 text-center py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold text-xs border border-slate-200 transition-all active:scale-95"
+                              >
+                                Ver Perfil
+                              </Link>
+                              <a
+                                href={`${landingUrl}/login`}
+                                className="flex-1 text-center py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10 flex items-center justify-center gap-1.5"
+                              >
+                                <Lock className="size-3.5" />
+                                Contactar
+                              </a>
+                            </>
                           ) : (
                             <>
                               <Link

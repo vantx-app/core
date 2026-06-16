@@ -129,6 +129,13 @@ export function MarketplaceDriverProfileView({
   const displayName = maskDriverName(driver, user?.role);
 
   // Scores
+  const hasHistory =
+    driver.hasHistory !== undefined
+      ? driver.hasHistory
+      : !!driver.globalStats &&
+        (driver.globalStats.totalKm > 0 ||
+          driver.globalStats.totalSnapshots > 0);
+
   const hasStats =
     driver.globalStats &&
     (driver.globalStats.globalOverallScore !== null ||
@@ -385,7 +392,46 @@ export function MarketplaceDriverProfileView({
 
         {/* Right Column: Score Summary */}
         <div className="lg:col-span-2 space-y-6">
-          {overallScore === null ? (
+          {!hasHistory ? (
+            /* Friendly New Driver block */
+            <div className="bg-white border border-slate-200 rounded-2xl p-8 shadow-sm flex flex-col items-center text-center justify-center min-h-[500px]">
+              <div className="p-4 bg-blue-50 text-blue-600 rounded-full mb-5 shadow-inner">
+                <Info className="size-10" />
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-950 mb-2">
+                Conductor sin Historial Operativo
+              </h3>
+              <p className="text-slate-500 text-sm max-w-md mb-8 leading-relaxed">
+                Este conductor se ha registrado recientemente en la plataforma y
+                aún no posee historial de telemetría verificado o viajes
+                registrados.
+              </p>
+
+              <div className="w-full max-w-md border border-slate-100 bg-slate-50/50 p-5 rounded-2xl text-left space-y-3.5 text-xs text-slate-600">
+                <h4 className="font-bold text-slate-950 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                  <Sparkles className="size-4 text-blue-600" />
+                  Información para Reclutadores
+                </h4>
+                <ul className="space-y-2.5 leading-relaxed font-medium">
+                  <li className="flex gap-2">
+                    <span className="text-blue-600 font-bold shrink-0">1.</span>
+                    <span>
+                      Puedes proponerle un contrato para incorporarlo a tu flota
+                      y comenzar a registrar sus viajes.
+                    </span>
+                  </li>
+                  <li className="flex gap-2">
+                    <span className="text-blue-600 font-bold shrink-0">2.</span>
+                    <span>
+                      Una vez que empiece a conducir un vehículo con el
+                      dispositivo de telemetría instalado, sus puntajes y
+                      estadísticas de conducción se generarán automáticamente.
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          ) : overallScore === null ? (
             /* Privacy blocker card */
             <div className="bg-gradient-to-tr from-slate-900 via-slate-950 to-indigo-950 text-white rounded-2xl p-8 border border-slate-800 shadow-lg flex flex-col items-center text-center justify-center min-h-[500px]">
               <div className="p-4 bg-white/10 backdrop-blur-md text-amber-400 rounded-2xl mb-5 shadow-inner">

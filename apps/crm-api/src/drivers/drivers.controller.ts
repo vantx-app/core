@@ -11,6 +11,7 @@ import {
   Query,
   BadRequestException,
   ForbiddenException,
+  NotFoundException,
   ParseUUIDPipe,
 } from '@nestjs/common';
 import { DriversService } from './drivers.service';
@@ -70,6 +71,16 @@ export class DriversController {
   async findPublicAvailableDrivers() {
     const drivers = await this.driversService.findAll(true);
     return drivers.map((d) => this.driversService.maskDriverForPublic(d));
+  }
+
+  @Public()
+  @Get('public/:id')
+  async findOnePublic(@Param('id') id: string) {
+    const driver = await this.driversService.findOne(id);
+    if (!driver || driver.status !== 'ACTIVE') {
+      throw new NotFoundException('Conductor no encontrado o no disponible.');
+    }
+    return this.driversService.maskDriverForPublic(driver);
   }
 
   @Roles(ROLES.DRIVER, ROLES.OWNER, ROLES.ADMIN)

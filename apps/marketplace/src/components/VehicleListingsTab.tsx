@@ -35,20 +35,28 @@ export interface VehicleListing {
 
 export interface VehicleListingsTabProps {
   isDriverActive: boolean;
+  isGuest?: boolean;
 }
 
 export function VehicleListingsTab({
   isDriverActive,
+  isGuest = false,
 }: VehicleListingsTabProps) {
   const [listings, setListings] = useState<VehicleListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const landingUrl =
+    process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+
   const fetchListings = async () => {
     try {
       setLoading(true);
       setError(null);
-      const { data } = await api.get("/vehicles/marketplace");
+      const endpoint = isGuest
+        ? "/vehicles/marketplace/public"
+        : "/vehicles/marketplace";
+      const { data } = await api.get(endpoint);
       setListings(data);
     } catch (err: any) {
       console.error("Error al cargar listados de vehículos:", err);
@@ -167,7 +175,9 @@ export function VehicleListingsTab({
                   {isLocked && (
                     <div className="absolute top-4 right-4 p-1.5 bg-amber-50 text-amber-700 rounded-lg border border-amber-200/50 flex items-center gap-1 text-[10px] font-bold z-10 shadow-sm">
                       <Lock className="size-3" />
-                      Verificación Requerida
+                      {isGuest
+                        ? "Iniciar Sesión Requerido"
+                        : "Verificación Requerida"}
                     </div>
                   )}
 
@@ -230,10 +240,20 @@ export function VehicleListingsTab({
                 {/* Footer buttons */}
                 <div className="border-t border-slate-100 bg-slate-50/50 p-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
                   {isLocked ? (
-                    <div className="w-full text-center py-2.5 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-500 font-semibold flex items-center justify-center gap-1.5">
-                      <Lock className="size-3.5" />
-                      Desbloquear con tu Verificación
-                    </div>
+                    isGuest ? (
+                      <a
+                        href={`${landingUrl}/login`}
+                        className="w-full text-center py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10 flex items-center justify-center gap-1.5"
+                      >
+                        <Lock className="size-3.5" />
+                        Iniciar Sesión para Contactar
+                      </a>
+                    ) : (
+                      <div className="w-full text-center py-2.5 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-500 font-semibold flex items-center justify-center gap-1.5">
+                        <Lock className="size-3.5" />
+                        Desbloquear con tu Verificación
+                      </div>
+                    )
                   ) : (
                     <>
                       <button
