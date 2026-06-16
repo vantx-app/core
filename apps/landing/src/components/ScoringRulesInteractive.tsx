@@ -213,10 +213,10 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
       return `> ${rule.threshold} RPM`;
     }
     if (rule.code === "EXCESSIVE_IDLING") {
-      return `> 15 min ralentí continuo`;
+      return `> 5 min continuo`;
     }
     if (rule.threshold) {
-      return `Gravedad > ${rule.threshold}`;
+      return `> ${rule.threshold} mG`;
     }
     return "Inmediato";
   };
@@ -534,15 +534,21 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
               puntuación, el sistema aplica un "Prior Bayesiano" sumando{" "}
               <strong>100 km de amortiguación</strong> a la distancia total
               antes del cálculo. A mayor distancia recorrida, el promedio
-              converge al comportamiento real, premiando la constancia.
+              converge al comportamiento real, premiando la constancia. En el
+              caso del <strong>Ralentí Excesivo</strong>, la telemetría lo
+              registra tras <strong>5 minutos continuos</strong> con el motor
+              encendido y el vehículo detenido; luego, el motor de reglas
+              acumula esta duración y aplica la penalización por cada bloque de{" "}
+              <strong>15 minutos acumulados</strong> durante la semana.
             </p>
             <p>
               <strong>Gravedad Promediada de Eventos</strong>: Ciertas reglas
-              (como los giros y frenadas severas) no solo cuentan las veces que
-              ocurren, sino que miden la <em>fuerza G</em> del sensor
-              (gravedad). Esta intensidad se acumula y se normaliza bajo el
-              mismo prior de distancia para calcular la deducción proporcional
-              al riesgo real del evento.
+              (como los giros, aceleraciones y frenadas severas) no solo cuentan
+              las veces que ocurren, sino que miden la <em>fuerza G</em> del
+              sensor en <strong>mili-G (mG)</strong> (donde 1000 mG = 1G de
+              aceleración terrestre). Esta intensidad se acumula y se normaliza
+              bajo el mismo prior de distancia para calcular la deducción
+              proporcional al riesgo real del evento.
             </p>
             <p>
               Las deducciones calculadas se restan del puntaje del pilar

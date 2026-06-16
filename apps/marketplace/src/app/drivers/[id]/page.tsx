@@ -33,14 +33,20 @@ export async function generateMetadata({
   if (!driver) {
     return {
       title: "Conductor No Encontrado",
-      description: "El conductor solicitado no existe o no tienes permisos para verlo.",
+      description:
+        "El conductor solicitado no existe o no tienes permisos para verlo.",
     };
   }
 
   const name = maskDriverName(driver, user?.role);
-  const score = driver.globalStats?.globalOverallScore || driver.globalStats?.overallScore;
-  const scoreText = score ? `con un Driver Score verificado de ${score}/100` : "con Driver Score certificado";
-  const experienceText = driver.experienceYears ? ` y ${driver.experienceYears} años de experiencia` : "";
+  const score =
+    driver.globalStats?.globalOverallScore || driver.globalStats?.overallScore;
+  const scoreText = score
+    ? `con un Driver Score verificado de ${score}/100`
+    : "con Driver Score certificado";
+  const experienceText = driver.experienceYears
+    ? ` y ${driver.experienceYears} años de experiencia`
+    : "";
   const desc = `Perfil profesional del conductor verificado ${name}${experienceText}, disponible en el marketplace de VantX ${scoreText}.`;
 
   return {
