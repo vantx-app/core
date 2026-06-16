@@ -3,6 +3,12 @@ import { cookies } from "next/headers";
 export async function fetchServer(endpoint: string, options: RequestInit = {}) {
   const cookieStore = await cookies();
   const token = cookieStore.get("access_token")?.value;
+
+  // Si no hay token y se consulta /users/me, es un invitado
+  if (endpoint === "/users/me" && !token) {
+    return null;
+  }
+
   const url = `${process.env.INTERNAL_API_URL}/api${endpoint}`;
 
   console.log(`🚀 Intentando fetch a: ${url}`);

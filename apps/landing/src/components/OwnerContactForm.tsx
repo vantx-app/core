@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useSearchParams } from "next/navigation";
 import {
   ShieldCheck,
   Mail,
@@ -13,6 +14,8 @@ import {
 
 export function OwnerContactForm() {
   const [submitted, setSubmitted] = useState(false);
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
 
   const {
     register,
@@ -44,11 +47,26 @@ export function OwnerContactForm() {
         <h3 className="text-2xl font-bold text-slate-800">
           Solicitud Recibida
         </h3>
-        <p className="text-slate-500 text-sm max-w-sm">
+        <p className="text-slate-500 text-sm max-w-sm mb-2">
           Gracias por tu interés en VantX. Un especialista de flotas se pondrá
           en contacto contigo a través del correo o teléfono provisto en menos
           de 24 horas.
         </p>
+        {callbackUrl ? (
+          <a
+            href={callbackUrl}
+            className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md transition-all text-center flex items-center justify-center cursor-pointer active:scale-95"
+          >
+            Volver al Marketplace
+          </a>
+        ) : (
+          <a
+            href="/"
+            className="w-full py-3 px-4 rounded-xl bg-slate-200 hover:bg-slate-350 text-slate-700 font-bold text-sm transition-all text-center flex items-center justify-center cursor-pointer active:scale-95"
+          >
+            Volver al Inicio
+          </a>
+        )}
       </div>
     );
   }

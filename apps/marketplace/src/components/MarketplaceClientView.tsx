@@ -356,11 +356,10 @@ export function MarketplaceClientView({
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 py-4 px-1 text-xs font-extrabold transition-all border-b-2 -mb-[2px] whitespace-nowrap shrink-0 ${
-                        isActive
+                      className={`flex items-center gap-2 py-4 px-1 text-xs font-extrabold transition-all border-b-2 -mb-[2px] whitespace-nowrap shrink-0 ${isActive
                           ? "border-blue-600 text-blue-600"
                           : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
-                      }`}
+                        }`}
                     >
                       <Icon className="size-4" />
                       {tab.label}
@@ -524,10 +523,10 @@ export function MarketplaceClientView({
                               (driver as any).hasHistory !== undefined
                                 ? (driver as any).hasHistory
                                 : !!driver.globalStats &&
-                                  (driver.globalStats.globalOverallScore !==
-                                    null ||
-                                    (driver.globalStats as any).overallScore !==
-                                      null);
+                                (driver.globalStats.globalOverallScore !==
+                                  null ||
+                                  (driver.globalStats as any).overallScore !==
+                                  null);
                             return (
                               <>
                                 <div>
@@ -539,7 +538,7 @@ export function MarketplaceClientView({
                                     {!hasHistory
                                       ? "Sin Historial"
                                       : driver.globalStats
-                                            ?.globalOverallScore != null
+                                        ?.globalOverallScore != null
                                         ? `${driver.globalStats.globalOverallScore} pts`
                                         : "N/A (Privado)"}
                                   </span>
@@ -553,7 +552,7 @@ export function MarketplaceClientView({
                                     {!hasHistory
                                       ? "Sin Historial"
                                       : driver.globalStats?.globalSafetyScore !=
-                                          null
+                                        null
                                         ? `${driver.globalStats.globalSafetyScore}%`
                                         : "N/A (Privado)"}
                                   </span>
@@ -650,8 +649,8 @@ export function MarketplaceClientView({
                   Soy Conductor
                 </a>
                 <a
-                  href={`${landingUrl}/contact`}
-                  className="py-2.5 px-3 rounded-xl bg-white border border-slate-250 hover:border-slate-400 text-slate-800 font-bold text-xs transition-all flex items-center justify-center text-center shadow-sm"
+                  href={`${landingUrl}/contact?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
+                  className="py-2.5 px-3 rounded-xl bg-white border border-slate-200 hover:border-slate-400 text-slate-800 font-bold text-xs transition-all flex items-center justify-center text-center shadow-sm"
                 >
                   Soy Propietario
                 </a>

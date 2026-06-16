@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import type { Metadata } from "next";
 import { OwnerContactForm } from "@/components/OwnerContactForm";
 import { Logo } from "@vantx/ui";
@@ -37,7 +37,7 @@ export default function ContactPage() {
           </h1>
           <p className="text-slate-350 text-sm leading-relaxed">
             Completa el formulario de la derecha. Un especialista en telemetría
-            de flotas se pondrá en contacto contigo para coordinar una prueba y
+            de flotas se pondrá en contacto contigo a través de esta plataforma para coordinar una prueba y
             guiarte en el equipamiento Teltonika idóneo.
           </p>
 
@@ -92,7 +92,9 @@ export default function ContactPage() {
 
           {/* Form wrapper card */}
           <div className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-10 shadow-md">
-            <OwnerContactForm />
+            <Suspense fallback={<div className="text-center py-8 text-xs text-slate-400">Cargando formulario...</div>}>
+              <OwnerContactForm />
+            </Suspense>
           </div>
         </div>
       </div>

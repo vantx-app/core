@@ -12,12 +12,8 @@ import {
   EyeOff,
   ShieldAlert,
   Lock,
-  Unlock,
   Mail,
-  LayoutDashboard,
-  ShoppingBag,
   CheckCircle,
-  ArrowLeft,
 } from "lucide-react";
 
 function LoginContent() {
@@ -28,9 +24,7 @@ function LoginContent() {
 
   const [apiError, setApiError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
-  const [showLoginForm, setShowLoginForm] = useState(false);
 
   const {
     register,
@@ -50,11 +44,12 @@ function LoginContent() {
       if (callbackUrl) {
         window.location.href = callbackUrl;
       } else {
-        setIsLoggedIn(true);
+        router.push("/select");
       }
+    } else {
+      setIsCheckingSession(false);
     }
-    setIsCheckingSession(false);
-  }, [callbackUrl]);
+  }, [callbackUrl, router]);
 
   const onSubmit = async (data: any) => {
     setApiError(null);
@@ -83,7 +78,7 @@ function LoginContent() {
         if (callbackUrl) {
           window.location.href = callbackUrl;
         } else {
-          setIsLoggedIn(true);
+          router.push("/select");
         }
       } else {
         const errData = await response.json().catch(() => ({}));
@@ -99,35 +94,6 @@ function LoginContent() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch(`/api/auth/logout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-      });
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
-    const deleteSettings = getCookieSettings(0);
-    Cookies.remove("access_token", { path: "/" });
-    if (deleteSettings.domain) {
-      Cookies.remove("access_token", {
-        path: "/",
-        domain: deleteSettings.domain,
-      });
-    }
-    Cookies.remove("refresh_token", { path: "/" });
-    if (deleteSettings.domain) {
-      Cookies.remove("refresh_token", {
-        path: "/",
-        domain: deleteSettings.domain,
-      });
-    }
-    setIsLoggedIn(false);
-    setShowLoginForm(false);
-  };
-
   if (isCheckingSession) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
@@ -135,11 +101,6 @@ function LoginContent() {
       </div>
     );
   }
-
-  const dashboardUrl =
-    process.env.NEXT_PUBLIC_DASHBOARD_URL || "http://localhost:3001";
-  const marketplaceUrl =
-    process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002";
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-12 bg-slate-50 text-slate-800 overflow-x-hidden font-sans">
@@ -207,306 +168,143 @@ function LoginContent() {
         </div>
       </div>
 
-      {/* Right Column: Form, Selection, or Unified Gateway */}
+      {/* Right Column: Form */}
       <div className="col-span-1 md:col-span-7 flex flex-col justify-center items-center p-6 md:p-12 min-h-screen relative bg-slate-50">
-        {/* CASE 1: NOT LOGGED IN & SHOW SELECTION SCREEN (UNIFIED GATEWAY) */}
-        {!isLoggedIn && !showLoginForm && (
-          <div className="w-full max-w-lg z-10 flex flex-col items-center gap-6 animate-in fade-in duration-350">
-            <div className="md:hidden flex justify-center mb-2">
-              <Logo size="lg" />
-            </div>
-
-            <div className="text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-                Bienvenido a VantX
-              </h2>
-              <p className="text-sm text-slate-500 mt-2">
-                Elige la plataforma a la que deseas acceder hoy.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full mt-6">
-              {/* Option 1: Dashboard de Flotas (LOCKED for guest users) */}
-              <div
-                onClick={() => setShowLoginForm(true)}
-                className="border border-slate-200 bg-white hover:border-blue-650 hover:shadow-lg rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer group relative overflow-hidden"
-              >
-                <div className="absolute top-3 right-3 p-1 bg-slate-100 text-slate-500 rounded-lg border border-slate-200 flex items-center gap-1 text-[9px] font-bold z-10">
-                  <Lock className="size-3" />
-                  Protegido
-                </div>
-
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                  <LayoutDashboard className="size-6" />
-                </div>
-                <div className="my-6">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">
-                    Dashboard de Flotas
-                  </h3>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Monitoreo, telemetría y reportes de conducción en tiempo
-                    real.
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 transition-transform">
-                  Iniciar Sesión
-                </span>
-              </div>
-
-              {/* Option 2: Marketplace (OPEN for guest users) */}
-              <Link
-                href="/marketplace"
-                className="border border-slate-200 bg-white hover:border-emerald-650 hover:shadow-lg rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer group relative overflow-hidden"
-              >
-                <div className="absolute top-3 right-3 p-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-250 flex items-center gap-1 text-[9px] font-bold z-10">
-                  <Unlock className="size-3" />
-                  Acceso Libre
-                </div>
-
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
-                  <ShoppingBag className="size-6" />
-                </div>
-                <div className="my-6">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">
-                    Marketplace
-                  </h3>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Publicar vehículos, buscar alquileres o contratar
-                    conductores.
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 transition-transform">
-                  Explorar como Invitado
-                </span>
-              </Link>
-            </div>
-
-            {/* Link back to home */}
-            <Link
-              href="/"
-              className="text-xs font-bold text-slate-500 hover:text-slate-700 mt-4 transition-colors"
-            >
-              Volver al inicio de la Landing Page
-            </Link>
+        <div className="w-full max-w-md z-10 flex flex-col gap-6 animate-in fade-in duration-350">
+          {/* Logo visible only on mobile */}
+          <div className="md:hidden flex justify-center">
+            <Logo size="lg" />
           </div>
-        )}
 
-        {/* CASE 2: NOT LOGGED IN & SHOW LOGIN FORM */}
-        {!isLoggedIn && showLoginForm && (
-          <div className="w-full max-w-md z-10 flex flex-col gap-6 animate-in fade-in duration-350">
-            {/* Logo visible only on mobile */}
-            <div className="md:hidden flex justify-center">
-              <Logo size="lg" />
+          <div className="text-center">
+            <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
+              Iniciar Sesión en Dashboard
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              Ingresa tus credenciales para acceder a tu panel de control de
+              flota.
+            </p>
+          </div>
+
+          {registered && (
+            <div className="alert alert-success text-xs border border-emerald-200 bg-emerald-50 text-emerald-800 p-3.5 rounded-xl flex items-center gap-2 animate-in fade-in">
+              <CheckCircle className="size-4 shrink-0" />
+              <span>
+                ¡Registro completado con éxito! Por favor, inicia sesión.
+              </span>
+            </div>
+          )}
+
+          {apiError && (
+            <div className="alert alert-error text-xs border border-red-200 bg-red-50 text-red-700 p-3.5 rounded-xl flex items-start gap-2 animate-in fade-in">
+              <ShieldAlert className="size-4 shrink-0 mt-0.5" />
+              <span>{apiError}</span>
+            </div>
+          )}
+
+          <form
+            onSubmit={handleSubmit(onSubmit)}
+            className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-4 shadow-md"
+          >
+            {/* Email Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 block pl-0.5">
+                Correo Electrónico
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+                <input
+                  type="email"
+                  disabled={isSubmitting}
+                  className={`w-full bg-slate-50 border ${errors.email
+                      ? "border-red-400 focus:border-red-500"
+                      : "border-slate-200 focus:border-slate-400"
+                    } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+                  placeholder="ejemplo@vantx.app"
+                  {...register("email", {
+                    required: "El correo es obligatorio",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "Formato de correo no válido",
+                    },
+                  })}
+                />
+              </div>
+              {errors.email && (
+                <span className="text-red-500 text-[11px] block pl-0.5 mt-0.5">
+                  {errors.email.message}
+                </span>
+              )}
             </div>
 
-            {/* Back to selection link */}
+            {/* Password Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-slate-700 block pl-0.5">
+                Contraseña
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  disabled={isSubmitting}
+                  className={`w-full bg-slate-50 border ${errors.password
+                      ? "border-red-400 focus:border-red-500"
+                      : "border-slate-200 focus:border-slate-400"
+                    } rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+                  placeholder="••••••••"
+                  {...register("password", {
+                    required: "La contraseña es obligatoria",
+                  })}
+                />
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-4" />
+                  ) : (
+                    <Eye className="size-4" />
+                  )}
+                </button>
+              </div>
+              {errors.password && (
+                <span className="text-red-500 text-[11px] block pl-0.5 mt-0.5">
+                  {errors.password.message}
+                </span>
+              )}
+            </div>
+
+            {/* Submit Button */}
             <button
-              onClick={() => setShowLoginForm(false)}
-              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 self-start transition-colors group"
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 transition-all disabled:opacity-50 disabled:pointer-events-none mt-2 flex justify-center items-center cursor-pointer"
             >
-              <ArrowLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
-              Volver al selector de aplicaciones
+              {isSubmitting ? (
+                <span className="loading loading-spinner loading-sm"></span>
+              ) : (
+                "Iniciar Sesión"
+              )}
             </button>
 
-            <div className="text-center">
-              <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
-                Iniciar Sesión en Dashboard
-              </h2>
-              <p className="text-sm text-slate-500 mt-1">
-                Ingresa tus credenciales para acceder a tu panel de control de
-                flota.
-              </p>
-            </div>
-
-            {registered && (
-              <div className="alert alert-success text-xs border border-emerald-200 bg-emerald-50 text-emerald-800 p-3.5 rounded-xl flex items-center gap-2 animate-in fade-in">
-                <CheckCircle className="size-4 shrink-0" />
-                <span>
-                  ¡Registro completado con éxito! Por favor, inicia sesión.
-                </span>
-              </div>
-            )}
-
-            {apiError && (
-              <div className="alert alert-error text-xs border border-red-200 bg-red-50 text-red-700 p-3.5 rounded-xl flex items-start gap-2 animate-in fade-in">
-                <ShieldAlert className="size-4 shrink-0 mt-0.5" />
-                <span>{apiError}</span>
-              </div>
-            )}
-
-            <form
-              onSubmit={handleSubmit(onSubmit)}
-              className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-8 flex flex-col gap-4 shadow-md"
-            >
-              {/* Email Field */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block pl-0.5">
-                  Correo Electrónico
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
-                  <input
-                    type="email"
-                    disabled={isSubmitting}
-                    className={`w-full bg-slate-50 border ${
-                      errors.email
-                        ? "border-red-400 focus:border-red-500"
-                        : "border-slate-200 focus:border-slate-400"
-                    } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
-                    placeholder="ejemplo@vantx.app"
-                    {...register("email", {
-                      required: "El correo es obligatorio",
-                      pattern: {
-                        value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                        message: "Formato de correo no válido",
-                      },
-                    })}
-                  />
-                </div>
-                {errors.email && (
-                  <span className="text-red-500 text-[11px] block pl-0.5 mt-0.5">
-                    {errors.email.message}
-                  </span>
-                )}
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700 block pl-0.5">
-                  Contraseña
-                </label>
-                <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-slate-400 pointer-events-none" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    disabled={isSubmitting}
-                    className={`w-full bg-slate-50 border ${
-                      errors.password
-                        ? "border-red-400 focus:border-red-500"
-                        : "border-slate-200 focus:border-slate-400"
-                    } rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
-                    placeholder="••••••••"
-                    {...register("password", {
-                      required: "La contraseña es obligatoria",
-                    })}
-                  />
-                  <button
-                    type="button"
-                    disabled={isSubmitting}
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 focus:outline-none transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="size-4" />
-                    ) : (
-                      <Eye className="size-4" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
-                  <span className="text-red-500 text-[11px] block pl-0.5 mt-0.5">
-                    {errors.password.message}
-                  </span>
-                )}
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm shadow-md shadow-blue-600/10 hover:shadow-blue-600/20 transition-all disabled:opacity-50 disabled:pointer-events-none mt-2 flex justify-center items-center cursor-pointer"
+            <div className="border-t border-slate-100 pt-4 mt-2 flex flex-col items-center gap-2">
+              <Link
+                href="/register"
+                className="text-xs text-blue-600 hover:underline font-semibold"
               >
-                {isSubmitting ? (
-                  <span className="loading loading-spinner loading-sm"></span>
-                ) : (
-                  "Iniciar Sesión"
-                )}
-              </button>
-
-              <div className="border-t border-slate-100 pt-4 mt-2 flex flex-col items-center gap-2">
-                <Link
-                  href="/register"
-                  className="text-xs text-blue-600 hover:underline font-semibold"
-                >
-                  ¿Eres conductor? Regístrate aquí
-                </Link>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* CASE 3: LOGGED IN & SHOW SELECTION SCREEN (UNLOCKED GATEWAY) */}
-        {isLoggedIn && (
-          <div className="w-full max-w-lg z-10 flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-300">
-            <div className="md:hidden flex justify-center mb-2">
-              <Logo size="lg" />
-            </div>
-
-            <div className="text-center">
-              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
-                ¿A dónde deseas acceder hoy?
-              </h2>
-              <p className="text-sm text-slate-500 mt-2">
-                Elige la plataforma a la que deseas ingresar con tu sesión
-                activa.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full mt-6">
-              {/* Option 1: Dashboard de Flotas (UNLOCKED) */}
-              <a
-                href={dashboardUrl}
-                className="border border-slate-200 bg-white hover:border-blue-600 hover:shadow-lg rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer group"
+                ¿Eres conductor? Regístrate aquí
+              </Link>
+              <Link
+                href={`/contact${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
+                className="text-xs text-indigo-600 hover:underline font-semibold"
               >
-                <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
-                  <LayoutDashboard className="size-6" />
-                </div>
-                <div className="my-6">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">
-                    Dashboard de Flotas
-                  </h3>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Monitoreo, telemetría y reportes de conducción en tiempo
-                    real.
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
-                  Ingresar
-                </span>
-              </a>
-
-              {/* Option 2: Marketplace (UNLOCKED) */}
-              <a
-                href={marketplaceUrl}
-                className="border border-slate-200 bg-white hover:border-emerald-600 hover:shadow-lg rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer group"
-              >
-                <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
-                  <ShoppingBag className="size-6" />
-                </div>
-                <div className="my-6">
-                  <h3 className="text-lg font-bold text-slate-900 mb-2">
-                    Marketplace
-                  </h3>
-                  <p className="text-slate-500 text-xs leading-relaxed">
-                    Publicar vehículos, buscar alquileres o gestionar anuncios.
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 group-hover:translate-x-1 transition-transform">
-                  Ingresar
-                </span>
-              </a>
+                ¿Eres propietario de flota? Solicita una demostración
+              </Link>
             </div>
-
-            {isLoggedIn && (
-              <button
-                onClick={handleLogout}
-                className="text-xs text-slate-400 hover:text-red-600 font-semibold mt-6 transition-all hover:underline cursor-pointer"
-              >
-                Cerrar sesión e iniciar con otra cuenta
-              </button>
-            )}
-          </div>
-        )}
+          </form>
+        </div>
       </div>
     </div>
   );

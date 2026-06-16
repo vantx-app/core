@@ -73,7 +73,7 @@ export default async function LandingPage() {
         <div>
           <Link
             href="/login"
-            className="px-5 py-2.5 rounded-xl bg-white border border-slate-250 hover:border-slate-400 font-bold text-sm text-slate-700 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-300 inline-block"
+            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-400 font-bold text-sm text-slate-700 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-300 inline-block"
           >
             Acceder
           </Link>
