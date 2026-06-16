@@ -1,11 +1,68 @@
 import React from "react";
+import type { Metadata } from "next";
 import { fetchServer } from "../../../utils/server/api-server";
 import { MarketplaceDriverProfileView } from "../../../components/MarketplaceDriverProfileView";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { maskDriverName } from "../../../utils/client/format";
 
 interface DriverProfilePageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({
+  params,
+}: DriverProfilePageProps): Promise<Metadata> {
+  const { id } = await params;
+  let user = null;
+  let driver = null;
+
+  try {
+    user = await fetchServer("/users/me");
+  } catch (err) {
+    // Guest access
+  }
+
+  try {
+    const endpoint = user ? `/drivers/${id}` : `/drivers/public/${id}`;
+    driver = await fetchServer(endpoint);
+  } catch (err) {
+    // Fail silently to use fallback
+  }
+
+  if (!driver) {
+    return {
+      title: "Conductor No Encontrado",
+      description: "El conductor solicitado no existe o no tienes permisos para verlo.",
+    };
+  }
+
+  const name = maskDriverName(driver, user?.role);
+  const score = driver.globalStats?.globalOverallScore || driver.globalStats?.overallScore;
+  const scoreText = score ? `con un Driver Score verificado de ${score}/100` : "con Driver Score certificado";
+  const experienceText = driver.experienceYears ? ` y ${driver.experienceYears} años de experiencia` : "";
+  const desc = `Perfil profesional del conductor verificado ${name}${experienceText}, disponible en el marketplace de VantX ${scoreText}.`;
+
+  return {
+    title: name,
+    description: desc,
+    openGraph: {
+      title: `${name} | Conductor Certificado | VantX Marketplace`,
+      description: desc,
+      url: `https://vantx.app/marketplace/drivers/${id}`,
+      type: "profile",
+      firstName: driver.firstName || undefined,
+      lastName: driver.lastName || undefined,
+    },
+    twitter: {
+      card: "summary",
+      title: `${name} | Conductor Certificado`,
+      description: desc,
+    },
+    alternates: {
+      canonical: `https://vantx.app/marketplace/drivers/${id}`,
+    },
+  };
 }
 
 export default async function DriverProfilePage({

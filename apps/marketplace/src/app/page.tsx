@@ -1,6 +1,16 @@
 import React from "react";
+import type { Metadata } from "next";
 import { fetchServer } from "../utils/server/api-server";
 import { MarketplaceClientView } from "../components/MarketplaceClientView";
+
+export const metadata: Metadata = {
+  title: "Inicio",
+  description:
+    "Busca y contrata conductores calificados en tiempo real. Filtra por experiencia, ubicación, tipo de licencia y Driver Score verificado.",
+  alternates: {
+    canonical: "https://vantx.app/marketplace",
+  },
+};
 
 export default async function MarketplaceHome() {
   let user = null;

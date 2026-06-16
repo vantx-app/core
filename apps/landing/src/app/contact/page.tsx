@@ -1,10 +1,18 @@
-"use client";
-
 import React from "react";
+import type { Metadata } from "next";
 import { OwnerContactForm } from "@/components/OwnerContactForm";
 import { Logo } from "@vantx/ui";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle, Shield, Sparkles } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "Solicitar Demostración",
+  description:
+    "Lleva tu flota al siguiente nivel. Completa el formulario de contacto para programar una demostración personalizada de telemetría y Driver Score con nuestro equipo.",
+  alternates: {
+    canonical: "https://vantx.app/contact",
+  },
+};
 
 export default function ContactPage() {
   return (
