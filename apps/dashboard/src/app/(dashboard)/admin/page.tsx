@@ -730,7 +730,7 @@ function AdminOverviewTab() {
         icon={Users}
         iconColorClass="bg-emerald-500/10 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white"
         title="Conductores"
-        description="Directorio completo de choferes. Consulta sus identificaciones, estados de verificación de cuenta y sus puntajes de seguridad, eco-conducción y cuidado del motor."
+        description="Directorio completo de choferes. Consulta sus identificaciones, estados de verificación de cuenta y sus puntajes de seguridad, eficiencia de operación y cuidado del motor."
         disabled={!hasOrgContext}
         disabledBadge="Requiere Organización"
         disabledDescription={

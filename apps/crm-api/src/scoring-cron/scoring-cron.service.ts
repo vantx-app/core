@@ -452,4 +452,13 @@ export class ScoringCronService {
       year,
     );
   }
+
+  // Retorna los perfiles de scoring por defecto/públicos (sin orgId)
+  async getPublicRules() {
+    return this.prisma.scoringProfile.findMany({
+      where: { orgId: null },
+      orderBy: { name: 'asc' },
+    });
+  }
 }
+

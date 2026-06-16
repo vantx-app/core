@@ -214,7 +214,7 @@ export function DriverDetailClient({
     },
     {
       key: "ecoScore",
-      header: "Eco-Conducción",
+      header: "Eficiencia",
       render: (snap) => Math.round(snap.ecoScore),
     },
     {
@@ -926,7 +926,7 @@ export function DriverDetailClient({
                           />
                           <ScoreProgressBar
                             score={snap.ecoScore}
-                            label="Eficiencia Ecológica"
+                            label="Eficiencia de Operación"
                           />
                           <ScoreProgressBar
                             score={snap.assetScore}

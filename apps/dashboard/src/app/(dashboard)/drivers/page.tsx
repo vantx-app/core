@@ -186,7 +186,7 @@ function DriversPageContent() {
                 {ecoScore !== null ? Math.round(ecoScore) : "N/A"}
               </span>
               <span className="text-[9px] font-bold uppercase tracking-wider opacity-60">
-                Eco-Conduc.
+                Eficiencia
               </span>
             </div>
 

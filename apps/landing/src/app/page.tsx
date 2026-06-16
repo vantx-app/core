@@ -1,6 +1,8 @@
 import React, { Suspense } from "react";
 import { Logo } from "@vantx/ui";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 import {
   Truck,
   UserCheck,
@@ -11,8 +13,26 @@ import {
 } from "lucide-react";
 import { OwnerContactCard } from "@/components/OwnerContactCard";
 import { LoginRedirectHandler } from "@/components/LoginRedirectHandler";
+import { ScoringRulesInteractive } from "@/components/ScoringRulesInteractive";
 
-export default function LandingPage() {
+async function getScoringProfiles() {
+  const apiUrl = process.env.INTERNAL_API_URL || "http://localhost:8000";
+  try {
+    const res = await fetch(`${apiUrl}/api/scoring/public-rules`, {
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to fetch scoring profiles: ${res.statusText}`);
+    }
+    return res.json();
+  } catch (error) {
+    console.error("Error fetching scoring profiles:", error);
+    return [];
+  }
+}
+
+export default async function LandingPage() {
+  const scoringProfiles = await getScoringProfiles();
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 font-sans antialiased overflow-x-hidden selection:bg-blue-600 selection:text-white relative">
       {/* Dynamic Light Background Gradients */}
@@ -31,6 +51,9 @@ export default function LandingPage() {
           </a>
           <a href="#drivers" className="hover:text-blue-600 transition-colors">
             Conductores
+          </a>
+          <a href="#reglas" className="hover:text-blue-600 transition-colors">
+            Reglas de Scoring
           </a>
           <a href="#hardware" className="hover:text-blue-600 transition-colors">
             Dispositivos IoT
@@ -171,7 +194,7 @@ export default function LandingPage() {
                 </div>
               </div>
               <span className="badge badge-success text-[10px] py-1 bg-emerald-100 border border-emerald-200 text-emerald-700 font-bold rounded px-2">
-                ECO-CONDUCTOR
+                CONDUCTOR EFICIENTE
               </span>
             </div>
 
@@ -273,11 +296,11 @@ export default function LandingPage() {
                   Evaluación de Requisitos
                 </span>
                 <span className="text-sm font-bold text-emerald-950">
-                  Licencia Tipo I &amp; Driver Score &gt; 85 Validados
+                  Licencia Tipo I &amp; Score &gt; 85
                 </span>
               </div>
               <span className="px-2.5 py-1 rounded bg-emerald-500 text-white font-black text-xs uppercase tracking-wider">
-                APTO PARA RUTA
+                APTO
               </span>
             </div>
 
@@ -399,6 +422,9 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+
+      {/* Dynamic Scoring Rules Section */}
+      <ScoringRulesInteractive scoringProfiles={scoringProfiles} />
 
       {/* Feature Section: IoT Integration */}
       <section

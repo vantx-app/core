@@ -145,7 +145,7 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
     },
     {
       key: "eco",
-      header: "Eco-Conduc.",
+      header: "Eficiencia",
       headerClassName: "text-center",
       className: "text-center",
       render: (driver) => {

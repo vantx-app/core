@@ -615,7 +615,7 @@ function ReportsPageContent() {
                                 <div className="flex items-center gap-2">
                                   <Leaf className="size-5 text-emerald-500" />
                                   <span className="text-xs font-black uppercase tracking-wider text-base-content/75">
-                                    Eficiencia Ecológica
+                                    Eficiencia de Operación
                                   </span>
                                 </div>
                                 <ScoreProgressBar

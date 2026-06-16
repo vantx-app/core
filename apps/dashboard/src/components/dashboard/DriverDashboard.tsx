@@ -112,7 +112,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
     },
     {
       key: "ecoScore",
-      header: "Eco-Conducción",
+      header: "Eficiencia",
       render: (snap) => Math.round(snap.ecoScore),
     },
     {
@@ -250,7 +250,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
             <div className="flex items-center gap-2 mb-2">
               <Leaf className="size-5 text-emerald-500" />
               <span className="text-base-content/75 text-xs font-bold uppercase tracking-wider">
-                Eficiencia Ecológica
+                Eficiencia de Operación
               </span>
             </div>
             <RadialScoreGauge
@@ -471,7 +471,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                           />
                           <ScoreProgressBar
                             score={snap.ecoScore}
-                            label="Eficiencia Ecológica"
+                            label="Eficiencia de Operación"
                           />
                           <ScoreProgressBar
                             score={snap.assetScore}

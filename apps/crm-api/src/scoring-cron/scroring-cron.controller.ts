@@ -1,6 +1,7 @@
 // src/scoring/debug-scoring.controller.ts
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Get } from '@nestjs/common';
 import { ScoringCronService } from './scoring-cron.service';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @Controller('scoring')
 export class ScoringController {
@@ -32,4 +33,11 @@ export class ScoringController {
       executionTimeMs: duration,
     };
   }
+
+  @Public()
+  @Get('public-rules')
+  async getPublicRules() {
+    return this.scoringCron.getPublicRules();
+  }
 }
+
