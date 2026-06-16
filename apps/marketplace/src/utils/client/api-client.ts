@@ -98,7 +98,8 @@ api.interceptors.response.use(
         // no forzamos redirección para permitir navegación en modo invitado.
         const isPublicCheck =
           originalRequest.url?.includes("/users/me") ||
-          originalRequest.url?.includes("/drivers");
+          originalRequest.url?.includes("/drivers") ||
+          originalRequest.url?.includes("/vehicles");
 
         if (!isPublicCheck) {
           const landingUrl =

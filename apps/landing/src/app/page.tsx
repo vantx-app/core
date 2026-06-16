@@ -11,7 +11,6 @@ import {
   ChevronRight,
   ArrowDown,
 } from "lucide-react";
-import { OwnerContactCard } from "@/components/OwnerContactCard";
 import { LoginRedirectHandler } from "@/components/LoginRedirectHandler";
 import { ScoringRulesInteractive } from "@/components/ScoringRulesInteractive";
 
@@ -41,28 +40,40 @@ export default async function LandingPage() {
       <div className="absolute bottom-10 left-10 w-[500px] h-[500px] bg-indigo-600/5 rounded-full blur-[90px] transform-gpu will-change-[transform,filter] pointer-events-none" />
 
       {/* Navigation Header */}
-      <header className="relative max-w-7xl mx-auto px-6 py-6 flex items-center justify-between z-20 border-b border-slate-200/60 bg-white/40 backdrop-blur-md sticky top-0 transform-gpu">
+      <header className="relative max-w-7xl mx-auto px-6 py-4 flex items-center justify-between z-20 border-b border-slate-200/50 bg-white/80 backdrop-blur-md sticky top-0 shadow-sm transition-all duration-200 transform-gpu">
         <div className="flex items-center gap-2">
           <Logo size="lg" variant="light" />
         </div>
-        <nav className="hidden md:flex items-center gap-8 text-sm font-semibold text-slate-600">
-          <a href="#features" className="hover:text-blue-600 transition-colors">
+        <nav className="hidden md:flex items-center gap-4 text-sm font-semibold text-slate-700">
+          <a
+            href="#features"
+            className="hover:text-blue-650 hover:bg-slate-100/60 px-3 py-2 rounded-xl transition-all duration-200"
+          >
             Tecnología
           </a>
-          <a href="#drivers" className="hover:text-blue-600 transition-colors">
+          <a
+            href="#drivers"
+            className="hover:text-blue-650 hover:bg-slate-100/60 px-3 py-2 rounded-xl transition-all duration-200"
+          >
             Conductores
           </a>
-          <a href="#reglas" className="hover:text-blue-600 transition-colors">
+          <a
+            href="#reglas"
+            className="hover:text-blue-650 hover:bg-slate-100/60 px-3 py-2 rounded-xl transition-all duration-200"
+          >
             Reglas de Scoring
           </a>
-          <a href="#hardware" className="hover:text-blue-600 transition-colors">
+          <a
+            href="#hardware"
+            className="hover:text-blue-650 hover:bg-slate-100/60 px-3 py-2 rounded-xl transition-all duration-200"
+          >
             Dispositivos IoT
           </a>
         </nav>
         <div>
           <Link
             href="/login"
-            className="px-5 py-2.5 rounded-xl bg-white border border-slate-200 hover:border-slate-350 font-bold text-sm text-slate-700 hover:text-slate-900 shadow-sm transition-all duration-300 inline-block"
+            className="px-5 py-2.5 rounded-xl bg-white border border-slate-250 hover:border-slate-400 font-bold text-sm text-slate-700 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-300 inline-block"
           >
             Acceder
           </Link>
@@ -95,8 +106,28 @@ export default async function LandingPage() {
 
         {/* Hero Split Funnel Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl mx-auto mt-8">
-          {/* Card 1: B2B Fleet Owner (Client component with modal state) */}
-          <OwnerContactCard />
+          {/* Card 1: B2B Fleet Owner (Direct Link to Contact Page) */}
+          <Link
+            href="/contact"
+            className="glass-card p-8 flex flex-col items-center justify-between text-center group cursor-pointer bg-white/70 border-slate-200"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+              <Truck className="size-6" />
+            </div>
+            <div className="my-4">
+              <h3 className="text-lg font-bold text-slate-900 mb-2">
+                Soy Propietario de Flota
+              </h3>
+              <p className="text-slate-650 text-xs leading-relaxed">
+                Monitorea rutas en vivo, comparte enlaces de seguimiento en
+                tiempo real con tus clientes, analiza consumo de combustible y
+                reduce costos operativos.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 group-hover:translate-x-1 transition-transform">
+              Solicitar Demostración <ChevronRight className="size-4" />
+            </span>
+          </Link>
 
           {/* Card 2: B2C Driver (Standard Server Component Link) */}
           <Link
@@ -386,6 +417,16 @@ export default async function LandingPage() {
               cuyos hábitos de conducción y seguridad vial han sido auditados
               directamente por el bus CAN.
             </p>
+
+            <div className="mb-8">
+              <Link
+                href="/marketplace"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md shadow-emerald-600/10 hover:shadow-emerald-600/20 transition-all duration-300"
+              >
+                Explorar Marketplace
+                <ChevronRight className="size-4" />
+              </Link>
+            </div>
 
             <div className="space-y-6">
               <div>

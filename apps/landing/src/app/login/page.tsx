@@ -12,10 +12,12 @@ import {
   EyeOff,
   ShieldAlert,
   Lock,
+  Unlock,
   Mail,
   LayoutDashboard,
   ShoppingBag,
   CheckCircle,
+  ArrowLeft,
 } from "lucide-react";
 
 function LoginContent() {
@@ -28,6 +30,7 @@ function LoginContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+  const [showLoginForm, setShowLoginForm] = useState(false);
 
   const {
     register,
@@ -122,6 +125,7 @@ function LoginContent() {
       });
     }
     setIsLoggedIn(false);
+    setShowLoginForm(false);
   };
 
   if (isCheckingSession) {
@@ -139,10 +143,10 @@ function LoginContent() {
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-12 bg-slate-50 text-slate-800 overflow-x-hidden font-sans">
-      {/* Columna Izquierda: Branding & Decoración Visual */}
+      {/* Left Column: Branding & Visual Telemetry Decoration */}
       <div className="hidden md:flex md:col-span-5 relative overflow-hidden bg-slate-900 text-white p-12 flex-col justify-between">
         {/* Glow */}
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[60px] transform-gpu will-change-[transform,filter] pointer-events-none" />
+        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-blue-500/10 rounded-full blur-[60px] transform-gpu pointer-events-none" />
 
         <div className="z-10 flex items-center gap-2">
           <Logo size="lg" variant="dark" />
@@ -160,7 +164,7 @@ function LoginContent() {
             viajes de conductores y tomar el control de tus operaciones diarias.
           </p>
 
-          {/* Panel decorativo de telemetría mockup */}
+          {/* Decorative telemetry panel mockup */}
           <div className="mt-8 relative border border-white/10 bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-md overflow-hidden transform-gpu">
             <div className="flex justify-between items-center mb-4">
               <span className="text-xs font-semibold text-slate-350">
@@ -203,21 +207,114 @@ function LoginContent() {
         </div>
       </div>
 
-      {/* Columna Derecha: Formulario o Selección */}
+      {/* Right Column: Form, Selection, or Unified Gateway */}
       <div className="col-span-1 md:col-span-7 flex flex-col justify-center items-center p-6 md:p-12 min-h-screen relative bg-slate-50">
-        {!isLoggedIn ? (
-          <div className="w-full max-w-md z-10 flex flex-col gap-6 animate-in fade-in duration-350">
-            {/* Logo visible solo en mobile */}
-            <div className="md:hidden flex justify-center">
+        {/* CASE 1: NOT LOGGED IN & SHOW SELECTION SCREEN (UNIFIED GATEWAY) */}
+        {!isLoggedIn && !showLoginForm && (
+          <div className="w-full max-w-lg z-10 flex flex-col items-center gap-6 animate-in fade-in duration-350">
+            <div className="md:hidden flex justify-center mb-2">
               <Logo size="lg" />
             </div>
 
             <div className="text-center">
+              <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
+                Bienvenido a VantX
+              </h2>
+              <p className="text-sm text-slate-500 mt-2">
+                Elige la plataforma a la que deseas acceder hoy.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full mt-6">
+              {/* Option 1: Dashboard de Flotas (LOCKED for guest users) */}
+              <div
+                onClick={() => setShowLoginForm(true)}
+                className="border border-slate-200 bg-white hover:border-blue-650 hover:shadow-lg rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer group relative overflow-hidden"
+              >
+                <div className="absolute top-3 right-3 p-1 bg-slate-100 text-slate-500 rounded-lg border border-slate-200 flex items-center gap-1 text-[9px] font-bold z-10">
+                  <Lock className="size-3" />
+                  Protegido
+                </div>
+
+                <div className="w-14 h-14 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300">
+                  <LayoutDashboard className="size-6" />
+                </div>
+                <div className="my-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">
+                    Dashboard de Flotas
+                  </h3>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    Monitoreo, telemetría y reportes de conducción en tiempo
+                    real.
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 transition-transform">
+                  Iniciar Sesión
+                </span>
+              </div>
+
+              {/* Option 2: Marketplace (OPEN for guest users) */}
+              <Link
+                href="/marketplace"
+                className="border border-slate-200 bg-white hover:border-emerald-650 hover:shadow-lg rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer group relative overflow-hidden"
+              >
+                <div className="absolute top-3 right-3 p-1 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-250 flex items-center gap-1 text-[9px] font-bold z-10">
+                  <Unlock className="size-3" />
+                  Acceso Libre
+                </div>
+
+                <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all duration-300">
+                  <ShoppingBag className="size-6" />
+                </div>
+                <div className="my-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">
+                    Marketplace
+                  </h3>
+                  <p className="text-slate-500 text-xs leading-relaxed">
+                    Publicar vehículos, buscar alquileres o contratar
+                    conductores.
+                  </p>
+                </div>
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-600 transition-transform">
+                  Explorar como Invitado
+                </span>
+              </Link>
+            </div>
+
+            {/* Link back to home */}
+            <Link
+              href="/"
+              className="text-xs font-bold text-slate-500 hover:text-slate-700 mt-4 transition-colors"
+            >
+              Volver al inicio de la Landing Page
+            </Link>
+          </div>
+        )}
+
+        {/* CASE 2: NOT LOGGED IN & SHOW LOGIN FORM */}
+        {!isLoggedIn && showLoginForm && (
+          <div className="w-full max-w-md z-10 flex flex-col gap-6 animate-in fade-in duration-350">
+            {/* Logo visible only on mobile */}
+            <div className="md:hidden flex justify-center">
+              <Logo size="lg" />
+            </div>
+
+            {/* Back to selection link */}
+            <button
+              onClick={() => setShowLoginForm(false)}
+              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 self-start transition-colors group"
+            >
+              <ArrowLeft className="size-4 group-hover:-translate-x-0.5 transition-transform" />
+              Volver al selector de aplicaciones
+            </button>
+
+            <div className="text-center">
               <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
-                Bienvenido de nuevo
+                Iniciar Sesión en Dashboard
               </h2>
               <p className="text-sm text-slate-500 mt-1">
-                Ingresa tus credenciales para acceder a la plataforma.
+                Ingresa tus credenciales para acceder a tu panel de control de
+                flota.
               </p>
             </div>
 
@@ -336,8 +433,15 @@ function LoginContent() {
               </div>
             </form>
           </div>
-        ) : (
+        )}
+
+        {/* CASE 3: LOGGED IN & SHOW SELECTION SCREEN (UNLOCKED GATEWAY) */}
+        {isLoggedIn && (
           <div className="w-full max-w-lg z-10 flex flex-col items-center gap-6 animate-in fade-in zoom-in-95 duration-300">
+            <div className="md:hidden flex justify-center mb-2">
+              <Logo size="lg" />
+            </div>
+
             <div className="text-center">
               <h2 className="text-3xl font-extrabold tracking-tight text-slate-900">
                 ¿A dónde deseas acceder hoy?
@@ -349,7 +453,7 @@ function LoginContent() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full mt-6">
-              {/* Opción 1: Dashboard de Flotas */}
+              {/* Option 1: Dashboard de Flotas (UNLOCKED) */}
               <a
                 href={dashboardUrl}
                 className="border border-slate-200 bg-white hover:border-blue-600 hover:shadow-lg rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer group"
@@ -371,7 +475,7 @@ function LoginContent() {
                 </span>
               </a>
 
-              {/* Opción 2: Marketplace */}
+              {/* Option 2: Marketplace (UNLOCKED) */}
               <a
                 href={marketplaceUrl}
                 className="border border-slate-200 bg-white hover:border-emerald-600 hover:shadow-lg rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 cursor-pointer group"
@@ -393,12 +497,14 @@ function LoginContent() {
               </a>
             </div>
 
-            <button
-              onClick={handleLogout}
-              className="text-xs text-slate-400 hover:text-red-600 font-semibold mt-6 transition-all hover:underline cursor-pointer"
-            >
-              Cerrar sesión e iniciar con otra cuenta
-            </button>
+            {isLoggedIn && (
+              <button
+                onClick={handleLogout}
+                className="text-xs text-slate-400 hover:text-red-600 font-semibold mt-6 transition-all hover:underline cursor-pointer"
+              >
+                Cerrar sesión e iniciar con otra cuenta
+              </button>
+            )}
           </div>
         )}
       </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import api from "../utils/client/api-client";
 import {
@@ -42,6 +42,13 @@ export function MarketplaceDriverProfileView({
   const [user] = useState<any>(initialUser);
   const [proposing, setProposing] = useState(false);
   const [proposed, setProposed] = useState(false);
+  const [callbackUrl, setCallbackUrl] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setCallbackUrl(window.location.href);
+    }
+  }, []);
 
   const [shareScores, setShareScores] = useState(
     driver.shareScoresPublicly ?? false,
@@ -272,7 +279,7 @@ export function MarketplaceDriverProfileView({
             <div className="w-full mt-2">
               {!user ? (
                 <a
-                  href={`${process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000"}/login`}
+                  href={`${process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000"}/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
                   className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 transition-all flex items-center justify-center gap-1.5 active:scale-95"
                 >
                   <Lock className="size-4" />

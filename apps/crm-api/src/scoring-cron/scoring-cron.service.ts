@@ -461,4 +461,3 @@ export class ScoringCronService {
     });
   }
 }
-

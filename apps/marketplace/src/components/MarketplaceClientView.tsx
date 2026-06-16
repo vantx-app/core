@@ -129,6 +129,7 @@ export function MarketplaceClientView({
   const [driversLoading, setDriversLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("Todos");
   const [zoneFilter, setZoneFilter] = useState("Todas");
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const landingUrl =
     process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
@@ -572,13 +573,13 @@ export function MarketplaceClientView({
                               >
                                 Ver Perfil
                               </Link>
-                              <a
-                                href={`${landingUrl}/login`}
-                                className="flex-1 text-center py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10 flex items-center justify-center gap-1.5"
+                              <button
+                                onClick={() => setIsAuthModalOpen(true)}
+                                className="flex-1 text-center py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10 flex items-center justify-center gap-1.5 cursor-pointer"
                               >
                                 <Lock className="size-3.5" />
                                 Contactar
-                              </a>
+                              </button>
                             </>
                           ) : (
                             <>
@@ -611,6 +612,61 @@ export function MarketplaceClientView({
           derechos reservados.
         </p>
       </footer>
+
+      {/* AUTH REQUIRED MODAL FOR GUESTS */}
+      {isAuthModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 animate-in fade-in duration-200">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+            onClick={() => setIsAuthModalOpen(false)}
+          />
+          {/* Modal Content */}
+          <div className="bg-white border border-slate-200 w-full max-w-md p-6 md:p-8 rounded-3xl relative z-10 animate-in fade-in zoom-in-95 duration-205 text-center shadow-xl">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 mx-auto mb-4">
+              <Lock className="size-6" />
+            </div>
+
+            <h3 className="text-xl font-extrabold text-slate-900 mb-2">
+              Acceso Requerido
+            </h3>
+            <p className="text-slate-500 text-xs leading-relaxed mb-6">
+              Para contactar a un conductor o gestionar ofertas de trabajo,
+              necesitas iniciar sesión o registrar tu cuenta en la plataforma.
+            </p>
+
+            <div className="flex flex-col gap-3">
+              <a
+                href={`${landingUrl}/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
+                className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+              >
+                Iniciar Sesión
+              </a>
+              <div className="grid grid-cols-2 gap-3 mt-1">
+                <a
+                  href={`${landingUrl}/register`}
+                  className="py-2.5 px-3 rounded-xl bg-white border border-slate-200 hover:border-slate-350 text-slate-700 font-bold text-xs transition-all flex items-center justify-center text-center"
+                >
+                  Soy Conductor
+                </a>
+                <a
+                  href={`${landingUrl}/contact`}
+                  className="py-2.5 px-3 rounded-xl bg-white border border-slate-250 hover:border-slate-400 text-slate-800 font-bold text-xs transition-all flex items-center justify-center text-center shadow-sm"
+                >
+                  Soy Propietario
+                </a>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsAuthModalOpen(false)}
+              className="mt-6 text-xs text-slate-400 hover:text-slate-600 transition-colors font-semibold hover:underline"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

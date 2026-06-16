@@ -71,73 +71,74 @@ const SPANISH_PILLARS = {
   },
 };
 
-const SPANISH_RULES: Record<string, { name: string; desc: string; icon: any }> = {
-  OVERSPEEDING: {
-    name: "Exceso de velocidad",
-    desc: "Conducir superando el límite máximo parametrizado para la categoría.",
-    icon: Flame,
-  },
-  HARSH_BRAKING: {
-    name: "Frenado brusco",
-    desc: "Desaceleración repentina del vehículo superior a la fuerza G recomendada.",
-    icon: AlertTriangle,
-  },
-  HARSH_CORNERING: {
-    name: "Giro brusco",
-    desc: "Cambio lateral intempestivo de dirección medido por el acelerómetro.",
-    icon: AlertTriangle,
-  },
-  HARSH_ACCELERATION: {
-    name: "Aceleración brusca",
-    desc: "Incremento excesivo de velocidad en corto tiempo que desperdicia combustible.",
-    icon: Zap,
-  },
-  HIGH_RPM: {
-    name: "Altas RPM",
-    desc: "Operación continuada del motor a revoluciones por encima del torque óptimo.",
-    icon: Settings,
-  },
-  EXCESSIVE_IDLING: {
-    name: "Ralentí excesivo",
-    desc: "Mantener el motor encendido con el vehículo detenido (pérdida de combustible).",
-    icon: Info,
-  },
-  DEVICE_UNPLUGGED: {
-    name: "Dispositivo desconectado",
-    desc: "Detección de sabotaje o desconexión física del hardware Teltonika OBD/CAN.",
-    icon: Wrench,
-  },
-  COLD_ENGINE_STRAIN: {
-    name: "Esfuerzo con motor frío",
-    desc: "Exigir aceleraciones severas antes de que el motor alcance la temperatura operativa.",
-    icon: Settings,
-  },
-  COASTING_IN_NEUTRAL: {
-    name: "Conducción en neutro (coasting)",
-    desc: "Dejar rodar el camión en neutro, lo cual inhabilita el freno de motor y reduce control.",
-    icon: HelpCircle,
-  },
-  ENGINE_LUGGING: {
-    name: "Sobreesfuerzo a bajas RPM (lugging)",
-    desc: "Acelerar fuertemente a RPMs extremadamente bajas, fatigando la transmisión.",
-    icon: Settings,
-  },
-  HIGH_LOAD_STRAIN: {
-    name: "Esfuerzo con alta carga",
-    desc: "Conducción inapropiada que genera sobrecalentamiento bajo carga pesada.",
-    icon: Settings,
-  },
-  CRITICAL_OVERHEATING: {
-    name: "Sobrecalentamiento crítico",
-    desc: "Operación por encima de la temperatura crítica permitida del refrigerante.",
-    icon: Flame,
-  },
-  ACTIVE_FAULT_CODES: {
-    name: "Códigos de falla activos",
-    desc: "Alertas activas del motor (Check Engine, fallas críticas de sensores CAN-bus).",
-    icon: Wrench,
-  },
-};
+const SPANISH_RULES: Record<string, { name: string; desc: string; icon: any }> =
+  {
+    OVERSPEEDING: {
+      name: "Exceso de velocidad",
+      desc: "Conducir superando el límite máximo parametrizado para la categoría.",
+      icon: Flame,
+    },
+    HARSH_BRAKING: {
+      name: "Frenado brusco",
+      desc: "Desaceleración repentina del vehículo superior a la fuerza G recomendada.",
+      icon: AlertTriangle,
+    },
+    HARSH_CORNERING: {
+      name: "Giro brusco",
+      desc: "Cambio lateral intempestivo de dirección medido por el acelerómetro.",
+      icon: AlertTriangle,
+    },
+    HARSH_ACCELERATION: {
+      name: "Aceleración brusca",
+      desc: "Incremento excesivo de velocidad en corto tiempo que desperdicia combustible.",
+      icon: Zap,
+    },
+    HIGH_RPM: {
+      name: "Altas RPM",
+      desc: "Operación continuada del motor a revoluciones por encima del torque óptimo.",
+      icon: Settings,
+    },
+    EXCESSIVE_IDLING: {
+      name: "Ralentí excesivo",
+      desc: "Mantener el motor encendido con el vehículo detenido (pérdida de combustible).",
+      icon: Info,
+    },
+    DEVICE_UNPLUGGED: {
+      name: "Dispositivo desconectado",
+      desc: "Detección de sabotaje o desconexión física del hardware Teltonika OBD/CAN.",
+      icon: Wrench,
+    },
+    COLD_ENGINE_STRAIN: {
+      name: "Esfuerzo con motor frío",
+      desc: "Exigir aceleraciones severas antes de que el motor alcance la temperatura operativa.",
+      icon: Settings,
+    },
+    COASTING_IN_NEUTRAL: {
+      name: "Conducción en neutro (coasting)",
+      desc: "Dejar rodar el camión en neutro, lo cual inhabilita el freno de motor y reduce control.",
+      icon: HelpCircle,
+    },
+    ENGINE_LUGGING: {
+      name: "Sobreesfuerzo a bajas RPM (lugging)",
+      desc: "Acelerar fuertemente a RPMs extremadamente bajas, fatigando la transmisión.",
+      icon: Settings,
+    },
+    HIGH_LOAD_STRAIN: {
+      name: "Esfuerzo con alta carga",
+      desc: "Conducción inapropiada que genera sobrecalentamiento bajo carga pesada.",
+      icon: Settings,
+    },
+    CRITICAL_OVERHEATING: {
+      name: "Sobrecalentamiento crítico",
+      desc: "Operación por encima de la temperatura crítica permitida del refrigerante.",
+      icon: Flame,
+    },
+    ACTIVE_FAULT_CODES: {
+      name: "Códigos de falla activos",
+      desc: "Alertas activas del motor (Check Engine, fallas críticas de sensores CAN-bus).",
+      icon: Wrench,
+    },
+  };
 
 export function ScoringRulesInteractive({ scoringProfiles }: Props) {
   // Categorías de vehículos
@@ -162,11 +163,14 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
     } else if (selectedCategory === "LIGHT_COMMERCIAL") {
       targetName = fuelType === "DIESEL" ? "DEFAULT_LCV_DIESEL" : "DEFAULT_LCV";
     } else if (selectedCategory === "PASSENGER") {
-      targetName = fuelType === "DIESEL" ? "DEFAULT_PASSENGER_DIESEL" : "DEFAULT_PASSENGER";
+      targetName =
+        fuelType === "DIESEL"
+          ? "DEFAULT_PASSENGER_DIESEL"
+          : "DEFAULT_PASSENGER";
     }
 
     const found = scoringProfiles.find(
-      (p) => p.name.toUpperCase() === targetName.toUpperCase()
+      (p) => p.name.toUpperCase() === targetName.toUpperCase(),
     );
 
     // Retorna fallback si no se encuentra
@@ -189,7 +193,10 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
     if (rule.deductionPerEvent !== undefined && rule.deductionPerEvent > 0) {
       return `-${rule.deductionPerEvent} pts / evento`;
     }
-    if (rule.deductionPerSeverityUnit !== undefined && rule.deductionPerSeverityUnit > 0) {
+    if (
+      rule.deductionPerSeverityUnit !== undefined &&
+      rule.deductionPerSeverityUnit > 0
+    ) {
       return `-${rule.deductionPerSeverityUnit} pts / unidad de gravedad`;
     }
     if (rule.deductionFixed !== undefined && rule.deductionFixed > 0) {
@@ -200,7 +207,7 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
 
   const getThresholdText = (rule: Rule) => {
     if (rule.code === "OVERSPEEDING" && rule.threshold) {
-      return `> ${rule.threshold} km/h`;
+      return `Límite de vía + 12 km/h`;
     }
     if (rule.code === "HIGH_RPM" && rule.threshold) {
       return `> ${rule.threshold} RPM`;
@@ -215,7 +222,10 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-6 py-20 z-10 border-t border-slate-200/80" id="reglas">
+    <div
+      className="w-full max-w-7xl mx-auto px-6 py-20 z-10 border-t border-slate-200/80"
+      id="reglas"
+    >
       <div className="text-center max-w-3xl mx-auto mb-16">
         <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-3 py-1 rounded-full border border-blue-200/50">
           Transparencia y Objetividad
@@ -224,7 +234,10 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
           Reglas del Motor de Scoring Dinámico
         </h2>
         <p className="text-slate-600 text-sm leading-relaxed">
-          Nuestros cálculos de desempeño de conductores están parametrizados directamente por tipo de vehículo y tipo de combustible. A continuación, puedes consultar las penalizaciones y ponderaciones dinámicas que rigen el sistema en tiempo real.
+          Nuestros cálculos de desempeño de conductores están parametrizados
+          directamente por tipo de vehículo y tipo de combustible. A
+          continuación, puedes consultar las penalizaciones y ponderaciones
+          dinámicas que rigen el sistema en tiempo real.
         </p>
       </div>
 
@@ -281,7 +294,9 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
 
       {/* Distribución de Pilares (Ponderación) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        {(Object.keys(SPANISH_PILLARS) as Array<keyof typeof SPANISH_PILLARS>).map((key) => {
+        {(
+          Object.keys(SPANISH_PILLARS) as Array<keyof typeof SPANISH_PILLARS>
+        ).map((key) => {
           const pillarInfo = SPANISH_PILLARS[key];
           const dbPillar = pillars[key] || { weight: 0.33, baseScore: 100 };
           const Icon = pillarInfo.icon;
@@ -294,15 +309,24 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
             >
               <div>
                 <div className="flex justify-between items-start mb-4">
-                  <div className={`p-2.5 rounded-xl border ${pillarInfo.colorClass}`}>
+                  <div
+                    className={`p-2.5 rounded-xl border ${pillarInfo.colorClass}`}
+                  >
                     <Icon className="size-5" />
                   </div>
                   <span className="text-2xl font-black text-slate-850">
-                    {weightPercentage}% <span className="text-xs text-slate-400 font-normal">peso</span>
+                    {weightPercentage}%{" "}
+                    <span className="text-xs text-slate-400 font-normal">
+                      peso
+                    </span>
                   </span>
                 </div>
-                <h3 className="text-base font-bold text-slate-900 mb-2">{pillarInfo.name}</h3>
-                <p className="text-slate-500 text-xs leading-relaxed">{pillarInfo.desc}</p>
+                <h3 className="text-base font-bold text-slate-900 mb-2">
+                  {pillarInfo.name}
+                </h3>
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  {pillarInfo.desc}
+                </p>
               </div>
               <div className="mt-6 pt-4 border-t border-slate-100">
                 <div className="flex justify-between text-[10px] font-bold text-slate-400 uppercase mb-1">
@@ -315,8 +339,8 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
                       key === "SAFETY"
                         ? "bg-rose-500"
                         : key === "EFFICIENCY"
-                        ? "bg-emerald-500"
-                        : "bg-indigo-500"
+                          ? "bg-emerald-500"
+                          : "bg-indigo-500"
                     }`}
                     style={{ width: `${weightPercentage}%` }}
                   />
@@ -350,14 +374,19 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
                 desc: "Regla personalizada del motor de telemetría.",
                 icon: HelpCircle,
               };
-              const pillarMeta = SPANISH_PILLARS[rule.pillar as keyof typeof SPANISH_PILLARS] || {
+              const pillarMeta = SPANISH_PILLARS[
+                rule.pillar as keyof typeof SPANISH_PILLARS
+              ] || {
                 name: rule.pillar,
                 colorClass: "bg-slate-100 text-slate-600",
               };
               const RuleIcon = ruleMeta.icon;
 
               return (
-                <div key={rule.code} className="p-6 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div
+                  key={rule.code}
+                  className="p-6 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6"
+                >
                   {/* Regla Detalle */}
                   <div className="flex items-start gap-4 max-w-xl">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
@@ -365,37 +394,49 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
                     </div>
                     <div>
                       <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
-                        <h5 className="text-sm font-bold text-slate-900">{ruleMeta.name}</h5>
-                        <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                          rule.pillar === "SAFETY"
-                            ? "bg-rose-50 text-rose-700 border border-rose-100"
-                            : rule.pillar === "EFFICIENCY"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
-                            : "bg-indigo-50 text-indigo-700 border border-indigo-100"
-                        }`}>
+                        <h5 className="text-sm font-bold text-slate-900">
+                          {ruleMeta.name}
+                        </h5>
+                        <span
+                          className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase ${
+                            rule.pillar === "SAFETY"
+                              ? "bg-rose-50 text-rose-700 border border-rose-100"
+                              : rule.pillar === "EFFICIENCY"
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                                : "bg-indigo-50 text-indigo-700 border border-indigo-100"
+                          }`}
+                        >
                           {pillarMeta.name}
                         </span>
                       </div>
-                      <p className="text-slate-500 text-xs leading-relaxed">{ruleMeta.desc}</p>
+                      <p className="text-slate-500 text-xs leading-relaxed">
+                        {ruleMeta.desc}
+                      </p>
                     </div>
                   </div>
 
                   {/* Parámetros Técnicos */}
                   <div className="grid grid-cols-3 gap-6 text-left md:text-right shrink-0 md:w-80 font-mono">
                     <div>
-                      <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">Umbral</span>
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">
+                        Umbral
+                      </span>
                       <span className="text-xs font-bold text-slate-800">
                         {getThresholdText(rule)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">Deducción</span>
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">
+                        Deducción
+                      </span>
                       <span className="text-xs font-bold text-rose-600">
                         {getDeductionText(rule)}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">Límite Máx</span>
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">
+                        Límite Máx
+                      </span>
                       <span className="text-xs font-bold text-slate-800">
                         {rule.maxDeduction} pts
                       </span>
@@ -408,6 +449,70 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
         </div>
       </div>
 
+      {/* Caso Especial: Exceso de Velocidad */}
+      <div className="mt-6 bg-amber-50/60 border border-amber-200/80 rounded-2xl p-6">
+        <div className="flex gap-3 items-start">
+          <div className="p-2 bg-amber-100 border border-amber-200 text-amber-800 rounded-lg shrink-0">
+            <AlertTriangle className="size-5" />
+          </div>
+          <div>
+            <h5 className="text-sm font-bold text-amber-900 mb-2">
+              💡 Caso Especial: Regulación y Tolerancias de Velocidad
+            </h5>
+            <p className="text-xs text-amber-800 leading-relaxed mb-4">
+              A diferencia de otros parámetros fijos, las infracciones por
+              exceso de velocidad se calculan en base a una lógica espacial y
+              temporal inteligente integrada con HERE Maps y la regulación de
+              tránsito nacional:
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs text-slate-700">
+              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/50">
+                <strong className="text-slate-900 block mb-1">
+                  Límite de Vía Dinámico
+                </strong>
+                Se consulta en tiempo real el límite de la vía exacta donde
+                circula el vehículo, discriminando entre automóviles y
+                transporte de carga pesada.
+              </div>
+              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/50">
+                <strong className="text-slate-900 block mb-1">
+                  Tolerancia de Gracia
+                </strong>
+                El sistema aplica un margen de gracia de{" "}
+                <strong>+12 km/h</strong> sobre el límite de la vía. La
+                penalización se activa únicamente si se supera este umbral.
+              </div>
+              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/50">
+                <strong className="text-slate-900 block mb-1">
+                  Ventana de Desaceleración
+                </strong>
+                Si el límite de la vía cae repentinamente (20 km/h o más), se
+                concede una ventana de gracia de <strong>15 segundos</strong>{" "}
+                para reducir la velocidad sin penalizaciones.
+              </div>
+              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/50">
+                <strong className="text-slate-900 block mb-1">
+                  Duración de Infracción
+                </strong>
+                El exceso de velocidad debe sostenerse de forma continua durante
+                al menos <strong>5 segundos</strong> para ser registrado como un
+                episodio de exceso.
+              </div>
+              <div className="bg-white/80 p-3 rounded-xl border border-amber-200/50 lg:col-span-2">
+                <strong className="text-slate-900 block mb-1">
+                  Límite Respaldo (Panamá Art. 165)
+                </strong>
+                Fuera de rutas digitalizadas o sin señal, aplica el Smart
+                Fallback de tránsito: <strong>90 km/h</strong> en autopistas,{" "}
+                <strong>60 km/h</strong> en avenidas principales,{" "}
+                <strong>50 km/h</strong> en secundarias y{" "}
+                <strong>40 km/h</strong> en zonas residenciales/industriales.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Información de Soporte y Metodología */}
       <div className="mt-12 grid grid-cols-1 lg:grid-cols-2 gap-8 bg-slate-50 border border-slate-200 rounded-2xl p-6 md:p-8">
         <div>
@@ -417,13 +522,34 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
           </h4>
           <div className="space-y-4 text-xs text-slate-600 leading-relaxed">
             <p>
-              Cada conductor inicia su ciclo de evaluación semanal con una puntuación base de <strong>100 puntos</strong> en cada uno de los tres pilares fundamentales.
+              Cada conductor inicia su ciclo de evaluación semanal con una
+              puntuación base de <strong>100 puntos</strong> en cada uno de los
+              tres pilares fundamentales.
             </p>
             <p>
-              A medida que se reciben datos de telemetría a 1Hz desde el bus CAN del vehículo, el sistema evalúa de forma acumulativa los eventos detectados en base a la distancia recorrida (por ejemplo, por cada 100 km) o por ocurrencias específicas.
+              <strong>Normalización y Suavizado (Prior Bayesiano)</strong>: Las
+              penalizaciones por eventos severos (frenadas, aceleraciones y
+              giros bruscos) se normalizan por cada 100 km recorridos. Para
+              evitar que un solo evento en un viaje corto (ej. 2 km) arruine la
+              puntuación, el sistema aplica un "Prior Bayesiano" sumando{" "}
+              <strong>100 km de amortiguación</strong> a la distancia total
+              antes del cálculo. A mayor distancia recorrida, el promedio
+              converge al comportamiento real, premiando la constancia.
             </p>
             <p>
-              Las deducciones calculadas se restan del puntaje del pilar correspondiente. Las deducciones en un mismo pilar tienen límites máximos establecidos (el <strong>Límite Máx</strong>) para evitar que un solo evento aislado penalice desproporcionadamente la nota semanal.
+              <strong>Gravedad Promediada de Eventos</strong>: Ciertas reglas
+              (como los giros y frenadas severas) no solo cuentan las veces que
+              ocurren, sino que miden la <em>fuerza G</em> del sensor
+              (gravedad). Esta intensidad se acumula y se normaliza bajo el
+              mismo prior de distancia para calcular la deducción proporcional
+              al riesgo real del evento.
+            </p>
+            <p>
+              Las deducciones calculadas se restan del puntaje del pilar
+              correspondiente. Las deducciones en un mismo pilar tienen límites
+              máximos establecidos (el <strong>Límite Máx</strong>) para evitar
+              que eventos aislados penalicen desproporcionadamente la nota
+              semanal.
             </p>
           </div>
         </div>
@@ -435,32 +561,47 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
           </h4>
           <div className="space-y-3 text-xs text-slate-600 leading-relaxed">
             <p>
-              El <strong>Score General</strong> es una media ponderada que refleja el equilibrio entre el comportamiento de seguridad vial y la eficiencia:
+              El <strong>Score General</strong> es una media ponderada que
+              refleja el equilibrio entre el comportamiento de seguridad vial y
+              la eficiencia:
             </p>
             <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-2 font-mono text-[11px] text-slate-700">
               <div className="flex justify-between border-b border-slate-100 pb-1">
                 <span>Score General =</span>
                 <span className="font-bold text-blue-600">
-                  (S × W<sub>s</sub>) + (E × W<sub>e</sub>) + (C × W<sub>c</sub>)
+                  (S × W<sub>s</sub>) + (E × W<sub>e</sub>) + (C × W<sub>c</sub>
+                  )
                 </span>
               </div>
               <div className="space-y-1 text-slate-500 text-[10px]">
                 <div className="flex justify-between">
                   <span>S = Seguridad Vial</span>
-                  <span>W<sub>s</sub> = Peso Seguridad ({Math.round((pillars.SAFETY?.weight || 0.4) * 100)}%)</span>
+                  <span>
+                    W<sub>s</sub> = Peso Seguridad (
+                    {Math.round((pillars.SAFETY?.weight || 0.4) * 100)}%)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>E = Eficiencia de Operación</span>
-                  <span>W<sub>e</sub> = Peso Eficiencia ({Math.round((pillars.EFFICIENCY?.weight || 0.1) * 100)}%)</span>
+                  <span>
+                    W<sub>e</sub> = Peso Eficiencia (
+                    {Math.round((pillars.EFFICIENCY?.weight || 0.1) * 100)}%)
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span>C = Cuidado del Activo</span>
-                  <span>W<sub>c</sub> = Peso Cuidado ({Math.round((pillars.ASSET_CARE?.weight || 0.5) * 100)}%)</span>
+                  <span>
+                    W<sub>c</sub> = Peso Cuidado (
+                    {Math.round((pillars.ASSET_CARE?.weight || 0.5) * 100)}%)
+                  </span>
                 </div>
               </div>
             </div>
             <p className="text-[10px] text-slate-400">
-              * Nota: Si un vehículo circula menos de 1.0 km durante el período de evaluación semanal, el sistema mantiene una calificación neutral por defecto para no penalizar la inactividad del conductor.
+              * Nota: Si un vehículo circula menos de 1.0 km durante el período
+              de evaluación semanal, el sistema mantiene una calificación
+              neutral por defecto para no penalizar la inactividad del
+              conductor.
             </p>
           </div>
         </div>

@@ -10,12 +10,21 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "@vantx/ui"],
   },
   async rewrites() {
-    return [
+    const rewritesList = [
       {
         source: "/api/:path*",
         destination: `${apiUrl}/api/:path*`,
       },
     ];
+
+    if (process.env.NODE_ENV !== "production") {
+      rewritesList.push({
+        source: "/marketplace/:path*",
+        destination: "http://localhost:3002/marketplace/:path*",
+      });
+    }
+
+    return rewritesList;
   },
 };
 

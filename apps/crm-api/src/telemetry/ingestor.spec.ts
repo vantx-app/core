@@ -4,13 +4,19 @@ jest.mock('@prisma/client', () => {
   const mockFindFirst = jest.fn();
   const mockCreate = jest.fn();
   const mockUpdate = jest.fn();
+  const mockDelete = jest.fn();
   const mockCreateMany = jest.fn();
   const mockUpsert = jest.fn();
   const mock$transaction = jest.fn().mockImplementation(async (arr) => arr);
 
   const mockInstance = {
     vehicle: { findUnique: mockFindUnique, update: mockUpdateVehicle },
-    trip: { findFirst: mockFindFirst, create: mockCreate, update: mockUpdate },
+    trip: {
+      findFirst: mockFindFirst,
+      create: mockCreate,
+      update: mockUpdate,
+      delete: mockDelete,
+    },
     telemetryLog: { createMany: mockCreateMany },
     vehicleLiveState: { upsert: mockUpsert },
     $transaction: mock$transaction,
@@ -31,7 +37,7 @@ jest.mock('../../../telemetry-ingestor/src/utils/notifyApi', () => ({
 
 import { parseTeltonikaData } from '../../../../packages/telemetry-parser/src/parseTeltonikaData';
 import { processDataBatch } from '../../../telemetry-ingestor/src/utils/processDataBatch';
-import { DEVICE_PROFILES } from '../../../../packages/telemetry-parser/src/device-profiles.config';
+import { DEVICE_PROFILES } from '@vantx/telemetry-parser';
 import { PrismaClient } from '@prisma/client';
 
 // Retrieve the mocked methods safely
