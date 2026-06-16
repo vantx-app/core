@@ -157,8 +157,63 @@ services:
       timeout: 5s
       retries: 5
 
+  # ----------------------------------
+  # AUTOMATED DB BACKUPS (pg_dump cron)
+  # ----------------------------------
+  # Runs pg_dump every 24 h, keeps the last 7 days.
+  # Backups land in ./backups on the host (bind-mount).
+  # ----------------------------------
+  vantx_backup:
+    image: postgres:17-alpine
+    container_name: vantx_backup
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - PGHOST=vantx_db
+      - PGUSER=${DB_USER}
+      - PGPASSWORD=${DB_PASSWORD}
+      - PGDATABASE=${DB_NAME}
+      - BACKUP_RETENTION_DAYS=7
+      - BACKUP_INTERVAL_SECONDS=86400
+    volumes:
+      - ./backups:/backups
+    depends_on:
+      vantx_db:
+        condition: service_healthy
+    entrypoint: [ "/bin/sh", "-c" ]
+    command:
+      - |
+        echo "🗄️  VantX DB Backup service started"
+        echo "    Interval: $${BACKUP_INTERVAL_SECONDS}s | Retention: $${BACKUP_RETENTION_DAYS} days"
+        while true; do
+          STAMP=$$(date +%Y-%m-%d_%H-%M-%S)
+          FILE="/backups/$${PGDATABASE}_$${STAMP}.sql.gz"
+          echo "⏳ [$${STAMP}] Starting backup..."
+          pg_dump -Fc | gzip > "$$FILE"
+          if [ $$? -eq 0 ]; then
+            SIZE=$$(du -h "$$FILE" | cut -f1)
+            echo "✅ [$${STAMP}] Backup complete: $$FILE ($$SIZE)"
+          else
+            echo "❌ [$${STAMP}] Backup FAILED"
+          fi
+          # Prune old backups
+          find /backups -name "*.sql.gz" -mtime +$${BACKUP_RETENTION_DAYS} -delete
+          PRUNED=$$(find /backups -name "*.sql.gz" | wc -l)
+          echo "🧹 [$${STAMP}] Retained backups: $$PRUNED"
+          sleep $${BACKUP_INTERVAL_SECONDS}
+        done
+
 volumes:
   vantx_prod_db_data:
+    external: true
+    name: vantx_vantx_prod_db_data
 
 networks:
   vantx-network:

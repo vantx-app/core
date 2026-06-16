@@ -11,7 +11,7 @@ import Link from "next/link";
 import ShareLocationModal from "./ShareLocationModal";
 import api from "@/utils/client/api-client";
 import { MobileFleetDrawer } from "./MobileFleetDrawer";
-import { formatDate } from "@/utils/client";
+import { formatDate, DEFAULT_MAP_CONFIG } from "@/utils/client";
 import { DetailRow } from "@/components/ui/DetailRow";
 
 // 1. Extraemos y limpiamos el token ANTES de que React haga nada.
@@ -297,9 +297,9 @@ export default function FleetMap() {
     if (!mapContainer.current || map.current) return;
 
     const mapInstance = new mapboxgl.Map({
+      ...DEFAULT_MAP_CONFIG,
       container: mapContainer.current,
       accessToken: process.env.NEXT_PUBLIC_MAPBOX_TOKEN as string,
-      style: "mapbox://styles/mapbox/streets-v12",
       center: [-79.5199, 8.9824], // Panamá
       zoom: 12,
     });
@@ -880,7 +880,7 @@ export default function FleetMap() {
           id="drawer"
           type="checkbox"
           className="drawer-toggle"
-          checked={!isMobile}
+          checked={false}
           readOnly
         />
 

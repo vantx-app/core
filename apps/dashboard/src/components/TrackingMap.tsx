@@ -11,6 +11,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { io, Socket } from "socket.io-client";
 import { ShieldCheck, Navigation, Compass } from "lucide-react";
 import axios from "axios";
+import { DEFAULT_MAP_CONFIG } from "@/utils/client";
 
 // Configure Mapbox Token
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || "";
@@ -112,11 +113,10 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
 
     // A. Init Map
     map.current = new mapboxgl.Map({
+      ...DEFAULT_MAP_CONFIG,
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v12",
       center: [initialLng, initialLat],
       zoom: 15,
-      pitch: 30, // Slight 3D pitch for premium look
     });
 
     // Add navigation controls

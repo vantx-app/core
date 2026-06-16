@@ -33,3 +33,6 @@ coverage/
 # Bmad related files
 _bmad*
 .agent
+
+# Database backups (produced by vantx_backup service)
+backups/

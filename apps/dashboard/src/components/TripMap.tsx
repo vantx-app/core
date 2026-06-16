@@ -4,6 +4,7 @@ import { Coordinate, TripMapProps } from "@/types";
 import { useEffect, useRef } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
+import { DEFAULT_MAP_CONFIG } from "@/utils/client";
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || "";
 mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -29,8 +30,8 @@ export default function TripMap({
         : [-79.5199, 8.9824];
 
     const map = new mapboxgl.Map({
+      ...DEFAULT_MAP_CONFIG,
       container: mapContainer.current,
-      style: "mapbox://styles/mapbox/streets-v12",
       center: initialCenter,
       zoom: 13,
     });

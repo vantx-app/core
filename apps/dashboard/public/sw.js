@@ -49,11 +49,13 @@ self.addEventListener("fetch", (event) => {
 
   // Interceptar navegación de documentos (páginas principales)
   if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request).catch(() => {
-        return caches.match(OFFLINE_URL);
-      }),
-    );
+    if (navigator.onLine) {
+      // Dejar que el navegador maneje la navegación de forma nativa si está online.
+      // Esto evita que el Service Worker bloquee o descarte los encabezados 'Set-Cookie' (como access_token)
+      // devueltos por el middleware de Next.js durante la autenticación/refresco.
+      return;
+    }
+    event.respondWith(caches.match(OFFLINE_URL));
     return;
   }
 
