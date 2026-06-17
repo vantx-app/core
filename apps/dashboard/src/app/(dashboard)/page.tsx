@@ -77,44 +77,6 @@ export default async function DashboardPage({
   }
 
   if (role === ROLES.OWNER || role === ROLES.ADMIN) {
-    const isDriverView = params.view === "driver";
-
-    if (isDriverView) {
-      let driverStats = null;
-      let errorMsg = null;
-      try {
-        driverStats = await fetchServer("/drivers/me/stats");
-      } catch (e) {
-        console.error("Error fetching driver stats:", e);
-        errorMsg =
-          "No se encontró perfil de conductor asociado a este usuario.";
-      }
-
-      if (errorMsg || !driverStats) {
-        return (
-          <div className="p-6 max-w-7xl mx-auto space-y-6">
-            <div className="alert alert-error shadow-lg">
-              <span className="text-white font-semibold">
-                {errorMsg || "Error al cargar perfil de conductor"}
-              </span>
-            </div>
-            <div className="text-center py-8 bg-base-100/50 backdrop-blur-md rounded-2xl border border-base-200">
-              <p className="text-sm text-base-content/60">
-                Asegúrate de tener un perfil de conductor vinculado en la
-                sección de administración de usuarios.
-              </p>
-            </div>
-          </div>
-        );
-      }
-
-      return (
-        <div className="p-6 max-w-7xl mx-auto">
-          <DriverDashboard stats={driverStats} />
-        </div>
-      );
-    }
-
     let vehicles = [];
     let drivers = [];
 

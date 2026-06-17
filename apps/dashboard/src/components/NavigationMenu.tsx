@@ -13,13 +13,11 @@ export function NavigationMenu() {
   const { role } = useAuth();
   const { t } = useTranslation();
 
-  const isDriverView = searchParams.get("view") === "driver";
-  const effectiveRole = isDriverView ? ROLES.DRIVER : role;
   const targetOrgId = searchParams.get("targetOrgId");
 
   const visibleLinks = NAV_LINKS.filter((link) => {
     const rolesToShow = link.menuAllowedRoles || link.allowedRoles;
-    if (!rolesToShow.includes(effectiveRole)) return false;
+    if (!rolesToShow.includes(role)) return false;
     if ("hidden" in link && link.hidden) return false;
     return true;
   });
@@ -36,13 +34,9 @@ export function NavigationMenu() {
               : pathname === link.href || pathname.startsWith(`${link.href}/`);
           const Icon = link.icon;
 
-          const baseHref = targetOrgId
+          const href = targetOrgId
             ? `${link.href}${link.href.includes("?") ? "&" : "?"}targetOrgId=${targetOrgId}`
             : link.href;
-
-          const href = isDriverView
-            ? `${baseHref}${baseHref.includes("?") ? "&" : "?"}view=driver`
-            : baseHref;
 
           const LinkComponent = link.isExternal ? "a" : Link;
 

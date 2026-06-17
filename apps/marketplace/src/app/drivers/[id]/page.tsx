@@ -116,12 +116,6 @@ export default async function DriverProfilePage({
           <p className="text-slate-500 text-sm max-w-md mb-6">
             {errorMsg || "Conductor no encontrado."}
           </p>
-          <Link
-            href="/"
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
-          >
-            <ChevronLeft className="size-4" /> Volver al Marketplace
-          </Link>
         </div>
       ) : (
         <MarketplaceDriverProfileView initialUser={user} driver={driver} />

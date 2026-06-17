@@ -79,17 +79,6 @@ export default function ContactPage() {
             <Logo size="lg" />
           </div>
 
-          {/* Back Button */}
-          <div className="flex justify-start">
-            <Link
-              href="/"
-              className="text-xs font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1.5 transition-colors group"
-            >
-              <ArrowLeft className="size-4 group-hover:-translate-x-1 transition-transform" />
-              Volver al Inicio
-            </Link>
-          </div>
-
           {/* Form wrapper card */}
           <div className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-10 shadow-md">
             <Suspense fallback={<div className="text-center py-8 text-xs text-slate-400">Cargando formulario...</div>}>

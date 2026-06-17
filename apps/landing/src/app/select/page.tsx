@@ -16,7 +16,7 @@ import {
 function SelectContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
@@ -138,7 +138,7 @@ function SelectContent() {
 
       {/* Right Column: Form, Selection, or Unified Gateway */}
       <div className="col-span-1 md:col-span-7 flex flex-col justify-center items-center p-6 md:p-12 min-h-screen relative bg-slate-50">
-        
+
         {/* CASE 1: NOT LOGGED IN & SHOW SELECTION SCREEN (UNIFIED GATEWAY) */}
         {!isLoggedIn && (
           <div className="w-full max-w-lg z-10 flex flex-col items-center gap-6 animate-in fade-in duration-350">
@@ -210,14 +210,6 @@ function SelectContent() {
                 </span>
               </Link>
             </div>
-
-            {/* Link back to home */}
-            <Link
-              href="/"
-              className="text-xs font-bold text-slate-500 hover:text-slate-700 mt-4 transition-colors"
-            >
-              Volver al inicio de la Landing Page
-            </Link>
           </div>
         )}
 

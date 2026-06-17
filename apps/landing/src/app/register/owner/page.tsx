@@ -205,13 +205,6 @@ function OwnerRegisterStepper() {
               <span>Cada enlace solo puede ser utilizado una única vez.</span>
             </div>
           </div>
-
-          <button
-            onClick={() => router.push("/")}
-            className="w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 mt-2 font-semibold text-sm transition-all cursor-pointer"
-          >
-            Volver al Inicio
-          </button>
         </div>
       </div>
     );

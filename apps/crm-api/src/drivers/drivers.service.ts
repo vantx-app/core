@@ -247,6 +247,7 @@ export class DriversService {
     } else if (
       queryingUser &&
       queryingUser.role !== ROLES.SUPER_ADMIN &&
+      queryingUser.sub !== driver.userId &&
       !driver.shareScoresPublicly
     ) {
       // Filter snapshots to only return weeks that overlap with assignment periods in the owner's organization

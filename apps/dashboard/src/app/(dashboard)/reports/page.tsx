@@ -1,7 +1,7 @@
 "use client";
 
 import { ScoreSnapshot, SimpleDriver, VehicleTripsTrip } from "@/types";
-import { useState, useEffect, Suspense, useCallback, useRef } from "react";
+import { useState, useEffect, Suspense, useCallback, useRef, useMemo } from "react";
 import api from "@/utils/client/api-client";
 import TripsHistoryView from "@/components/TripsHistoryView";
 import {
@@ -34,12 +34,14 @@ function ReportsPageContent() {
   const targetOrgId = searchParams.get("targetOrgId");
   const driverIdParam = searchParams.get("driverId");
   const tabParam = searchParams.get("tab");
-  const { role: userRole } = useAuth();
+  const { role: userRole, profile } = useAuth();
 
   const isManagementRole =
     userRole === ROLES.OWNER ||
     userRole === ROLES.ADMIN ||
     userRole === ROLES.SUPER_ADMIN;
+
+  const ownDriverId = profile?.driver?.id;
 
   // Driver states
   const [drivers, setDrivers] = useState<SimpleDriver[]>([]);
@@ -78,6 +80,27 @@ function ReportsPageContent() {
   } | null>(null);
   const lastFetchedTripsDriverIdRef = useRef<string | null>(null);
 
+  // List of selector drivers with owner prepended if applicable
+  const selectorDrivers = useMemo(() => {
+    const list = [...drivers];
+    if (ownDriverId) {
+      const isAlreadyInList = drivers.some((d) => d.id === ownDriverId);
+      if (!isAlreadyInList) {
+        list.unshift({
+          id: ownDriverId,
+          name: `${profile.name} (Mi Perfil)`,
+          nationalId: profile.driver.nationalId,
+        } as SimpleDriver);
+      }
+    }
+    return list;
+  }, [drivers, ownDriverId, profile?.name, profile?.driver?.nationalId]);
+
+  // Whether the currently selected profile is the logged-in user's own driver profile
+  const isOwnDriver = useMemo(() => {
+    return selectedDriverId === "me" || (ownDriverId && selectedDriverId === ownDriverId);
+  }, [selectedDriverId, ownDriverId]);
+
   // Obtener la lista de conductores para selección
   const fetchDrivers = useCallback(async () => {
     if (!isManagementRole) return;
@@ -99,23 +122,23 @@ function ReportsPageContent() {
 
   // Sincronizar el conductor seleccionado basado en la lista de conductores y el parámetro de la URL
   useEffect(() => {
-    if (drivers.length > 0) {
+    if (selectorDrivers.length > 0) {
       const matchingDriver =
         driverIdParam &&
-        drivers.find((d: SimpleDriver) => d.id === driverIdParam);
+        selectorDrivers.find((d: SimpleDriver) => d.id === driverIdParam);
       if (matchingDriver) {
         setSelectedDriverId(matchingDriver.id);
       } else {
-        setSelectedDriverId(drivers[0].id);
+        setSelectedDriverId(selectorDrivers[0].id);
       }
     }
-  }, [drivers, driverIdParam]);
+  }, [selectorDrivers, driverIdParam]);
 
   // Load selected driver snapshots (available weeks)
   const fetchDriverStats = useCallback(async () => {
     // Si es un rol administrativo y el ID es 'me', esperamos a cargar la lista de conductores
-    // y asignar el primero real para evitar llamadas erróneas a /drivers/me
-    if (isManagementRole && selectedDriverId === "me") {
+    // y asignar el primero real para evitar llamadas erróneas a /drivers/me, a menos que el usuario sea conductor
+    if (isManagementRole && selectedDriverId === "me" && !ownDriverId) {
       return;
     }
 
@@ -130,10 +153,9 @@ function ReportsPageContent() {
     lastFetchedTripsDriverIdRef.current = null;
 
     try {
-      const endpoint =
-        selectedDriverId === "me"
-          ? "/drivers/me/stats"
-          : `/drivers/${selectedDriverId}`;
+      const endpoint = isOwnDriver
+        ? "/drivers/me/stats"
+        : `/drivers/${selectedDriverId}`;
       const { data } = await api.get(endpoint);
 
       const snaps = data.scoreSnapshots || [];
@@ -154,7 +176,7 @@ function ReportsPageContent() {
     } finally {
       setIsLoadingDriver(false);
     }
-  }, [selectedDriverId, isManagementRole]);
+  }, [selectedDriverId, isManagementRole, ownDriverId, isOwnDriver]);
 
   useEffect(() => {
     fetchDriverStats();
@@ -178,10 +200,9 @@ function ReportsPageContent() {
     const [year, week] = selectedWeekKey.split("-").map(Number);
     setIsLoadingBreakdown(true);
     try {
-      const endpoint =
-        selectedDriverId === "me"
-          ? `/drivers/me/score-breakdown?year=${year}&week=${week}`
-          : `/drivers/${selectedDriverId}/score-breakdown?year=${year}&week=${week}`;
+      const endpoint = isOwnDriver
+        ? `/drivers/me/score-breakdown?year=${year}&week=${week}`
+        : `/drivers/${selectedDriverId}/score-breakdown?year=${year}&week=${week}`;
 
       const { data } = await api.get(endpoint);
       setBreakdownData(data);
@@ -194,7 +215,7 @@ function ReportsPageContent() {
     } finally {
       setIsLoadingBreakdown(false);
     }
-  }, [selectedWeekKey, selectedDriverId]);
+  }, [selectedWeekKey, selectedDriverId, isOwnDriver]);
 
   useEffect(() => {
     if (activeTab === "breakdown") {
@@ -205,7 +226,8 @@ function ReportsPageContent() {
   // Load Driver trips
   const fetchDriverTrips = useCallback(async () => {
     // Si es un rol administrativo y el ID es 'me', no consultamos viajes hasta tener el conductor real
-    if (isManagementRole && selectedDriverId === "me") {
+    // a menos que el propio usuario sea conductor
+    if (isManagementRole && selectedDriverId === "me" && !ownDriverId) {
       return;
     }
 
@@ -216,10 +238,9 @@ function ReportsPageContent() {
 
     setIsLoadingTrips(true);
     try {
-      const endpoint =
-        selectedDriverId === "me"
-          ? "/drivers/me/trips"
-          : `/drivers/${selectedDriverId}/trips`;
+      const endpoint = isOwnDriver
+        ? "/drivers/me/trips"
+        : `/drivers/${selectedDriverId}/trips`;
 
       const { data } = await api.get(endpoint);
       setDriverTrips(data);
@@ -229,7 +250,7 @@ function ReportsPageContent() {
     } finally {
       setIsLoadingTrips(false);
     }
-  }, [selectedDriverId, isManagementRole]);
+  }, [selectedDriverId, isManagementRole, ownDriverId, isOwnDriver]);
 
   useEffect(() => {
     if (activeTab === "daily") {
@@ -386,7 +407,7 @@ function ReportsPageContent() {
         </div>
 
         {/* Driver Selector for Admins */}
-        {isManagementRole && drivers.length > 0 && (
+        {isManagementRole && selectorDrivers.length > 0 && (
           <div className="form-control min-w-[250px]">
             <label className="label py-1">
               <span className="label-text font-bold text-xs">
@@ -399,7 +420,7 @@ function ReportsPageContent() {
               className="select select-bordered select-sm w-full bg-base-100"
               disabled={isLoadingDriver}
             >
-              {drivers.map((d) => (
+              {selectorDrivers.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name} ({d.nationalId})
                 </option>
