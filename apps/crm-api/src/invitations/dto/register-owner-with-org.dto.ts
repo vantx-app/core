@@ -10,9 +10,9 @@ import {
 
 export class RegisterOwnerWithOrgDto {
   @IsString()
-  @IsNotEmpty()
-  @ApiProperty()
-  token: string;
+  @IsOptional()
+  @ApiPropertyOptional()
+  token?: string;
 
   @IsEmail()
   @IsNotEmpty()

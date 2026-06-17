@@ -6,12 +6,7 @@ import { getCookieSettings } from "@vantx/auth";
 import { Logo } from "@vantx/ui";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import {
-  Lock,
-  Unlock,
-  LayoutDashboard,
-  ShoppingBag,
-} from "lucide-react";
+import { Lock, Unlock, LayoutDashboard, ShoppingBag } from "lucide-react";
 
 function SelectContent() {
   const router = useRouter();
@@ -138,7 +133,6 @@ function SelectContent() {
 
       {/* Right Column: Form, Selection, or Unified Gateway */}
       <div className="col-span-1 md:col-span-7 flex flex-col justify-center items-center p-6 md:p-12 min-h-screen relative bg-slate-50">
-
         {/* CASE 1: NOT LOGGED IN & SHOW SELECTION SCREEN (UNIFIED GATEWAY) */}
         {!isLoggedIn && (
           <div className="w-full max-w-lg z-10 flex flex-col items-center gap-6 animate-in fade-in duration-350">

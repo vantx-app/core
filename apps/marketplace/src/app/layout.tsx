@@ -2,7 +2,9 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_MARKETPLACE_URL || "https://vantx.app/marketplace"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_MARKETPLACE_URL || "https://vantx.app/marketplace",
+  ),
   title: {
     default: "Marketplace de Conductores Certificados | VantX",
     template: "%s | VantX Marketplace",

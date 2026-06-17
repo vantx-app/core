@@ -6,3 +6,4 @@ export { Logo } from "./Logo";
 export type { LogoProps } from "./Logo";
 export { IdDocumentField } from "./IdDocumentField";
 export type { IdDocumentFieldProps } from "./IdDocumentField";
+export * from "./license";

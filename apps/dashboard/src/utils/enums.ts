@@ -19,27 +19,4 @@ export enum DriverDocumentStatus {
   REJECTED = "REJECTED",
 }
 
-/**
- * Panama official driver's license categories (ATTT classification).
- * Used in driver profiles and job listing requirements throughout the platform.
- */
-export const PANAMA_LICENSE_TYPES: { value: string; label: string }[] = [
-  { value: "A", label: "A — Bicicletas" },
-  { value: "B", label: "B — Motocicletas" },
-  { value: "C", label: "C — Automóviles y camionetas particulares" },
-  {
-    value: "D",
-    label: "D — Camiones livianos (hasta 8 ton) y buses particulares",
-  },
-  { value: "E1", label: "E1 — Transporte selectivo (taxis)" },
-  { value: "E2", label: "E2 — Buses comerciales (hasta 16 pasajeros)" },
-  { value: "E3", label: "E3 — Buses comerciales (más de 16 pasajeros)" },
-  {
-    value: "F",
-    label: "F — Camiones de más de 8 ton y buses de más de 16 pasajeros",
-  },
-  { value: "G", label: "G — Vehículos articulados (mulas/mulas cortas)" },
-  { value: "H", label: "H — Transporte de carga peligrosa" },
-  { value: "I", label: "I — Equipo pesado (agrícola y construcción)" },
-  { value: "J", label: "J — Transporte de pasajeros por cable" },
-];
+export { PANAMA_LICENSE_TYPES } from "@vantx/ui";

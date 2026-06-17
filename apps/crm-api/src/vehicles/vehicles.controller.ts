@@ -69,7 +69,9 @@ export class VehiclesController {
   async updateVehicle(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() updateVehicleDto: UpdateVehicleDto,
+    @Req() req: Request & { user: AccessTokenPayload },
   ) {
+    await this.vehiclesService.verifyVehicleAccess(id, req.user);
     const result = await this.vehiclesService.update(id, updateVehicleDto);
     this.cacheService.delByPattern('vehicles:');
     return result;

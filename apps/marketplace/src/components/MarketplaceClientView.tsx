@@ -7,36 +7,9 @@ import { VerificationTab } from "./VerificationTab";
 import { VehicleListingsTab } from "./VehicleListingsTab";
 import { AdminDocumentsReviewTab } from "./AdminDocumentsReviewTab";
 import { MarketplaceDriverProfileView } from "./MarketplaceDriverProfileView";
+import { MyListingsTab } from "./MyListingsTab";
 
-/** Categorías oficiales de la ATTT de Panamá. */
-type PanamaLicenseType =
-  | "A"
-  | "B"
-  | "C"
-  | "D"
-  | "E1"
-  | "E2"
-  | "E3"
-  | "F"
-  | "G"
-  | "H"
-  | "I"
-  | "J";
-
-const LICENSE_TYPE_OPTIONS: { value: PanamaLicenseType; label: string }[] = [
-  { value: "A", label: "A - Motocicletas" },
-  { value: "B", label: "B - Automóviles Particulares" },
-  { value: "C", label: "C - Vehículos Livianos de Uso Comercial" },
-  { value: "D", label: "D - Comercial / Particular" },
-  { value: "E1", label: "E1 - Transporte Selectivo" },
-  { value: "E2", label: "E2 - Buses / Colectivo" },
-  { value: "E3", label: "E3 - Transporte Colectivo de Dos Pisos" },
-  { value: "F", label: "F - Equipo Pesado" },
-  { value: "G", label: "G - Maquinaria Agrícola" },
-  { value: "H", label: "H - Cuadriciclos / Vehículos Especiales" },
-  { value: "I", label: "I - Vehículos de Emergencia" },
-  { value: "J", label: "J - Instructor de Manejo" },
-];
+import { PanamaLicenseType, PANAMA_LICENSE_TYPES } from "@vantx/ui";
 
 import {
   getInitials,
@@ -123,12 +96,16 @@ export function MarketplaceClientView({
   );
   const [drivers, setDrivers] = useState<MarketplaceDriver[]>(initialDrivers);
   const [activeTab, setActiveTab] = useState<
-    "drivers" | "documents" | "vehicles" | "validation" | "profile"
+    | "drivers"
+    | "documents"
+    | "vehicles"
+    | "validation"
+    | "profile"
+    | "my-listings"
   >(initialUser?.role === "DRIVER" ? "vehicles" : "drivers");
 
   const [driversLoading, setDriversLoading] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("Todos");
-  const [zoneFilter, setZoneFilter] = useState("Todas");
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const landingUrl =
@@ -177,13 +154,13 @@ export function MarketplaceClientView({
   useEffect(() => {
     // In initial render we skip fetching because initialDrivers matches initial state.
     // If user changes filters, we query with filters.
-    if (categoryFilter !== "Todos" || zoneFilter !== "Todas") {
+    if (categoryFilter !== "Todos") {
       // In this setup, we do client-side filtering or fetch filtered drivers.
       // Let's implement client-side filtering to make it super fast without extra server load,
       // but if the backend does it, we fetch. Since the original didn't implement backend query param filtering
       // on category/zone (it just loaded all available), we can filter the drivers list client-side!
     }
-  }, [categoryFilter, zoneFilter]);
+  }, [categoryFilter]);
 
   const handleLogout = async () => {
     try {
@@ -239,6 +216,11 @@ export function MarketplaceClientView({
         id: "drivers",
         label: "Conductores Disponibles",
         icon: User,
+      });
+      tabsList.push({
+        id: "my-listings",
+        label: "Mis Publicaciones",
+        icon: Car,
       });
     }
     if (canViewAsDriver) {
@@ -356,10 +338,11 @@ export function MarketplaceClientView({
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id as any)}
-                      className={`flex items-center gap-2 py-4 px-1 text-xs font-extrabold transition-all border-b-2 -mb-[2px] whitespace-nowrap shrink-0 ${isActive
+                      className={`flex items-center gap-2 py-4 px-1 text-xs font-extrabold transition-all border-b-2 -mb-[2px] whitespace-nowrap shrink-0 ${
+                        isActive
                           ? "border-blue-600 text-blue-600"
                           : "border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300"
-                        }`}
+                      }`}
                     >
                       <Icon className="size-4" />
                       {tab.label}
@@ -381,6 +364,7 @@ export function MarketplaceClientView({
               isGuest={!user}
             />
           )}
+          {activeTab === "my-listings" && canViewAsOwner && <MyListingsTab />}
           {activeTab === "documents" && (
             <VerificationTab onSync={syncProfileAndState} />
           )}
@@ -415,28 +399,11 @@ export function MarketplaceClientView({
                         className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
                       >
                         <option value="Todos">Todos</option>
-                        {LICENSE_TYPE_OPTIONS.map(({ value, label }) => (
+                        {PANAMA_LICENSE_TYPES.map(({ value, label }) => (
                           <option key={value} value={value}>
                             {label}
                           </option>
                         ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="text-[10px] font-bold text-slate-400 block mb-1.5 uppercase">
-                        ZONA GEOGRÁFICA
-                      </label>
-                      <select
-                        value={zoneFilter}
-                        onChange={(e) => setZoneFilter(e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
-                      >
-                        <option>Todas</option>
-                        <option>Zona Metropolitana</option>
-                        <option>Zona Norte</option>
-                        <option>Zona Centro</option>
-                        <option>Zona Oeste</option>
                       </select>
                     </div>
                   </div>
@@ -523,10 +490,10 @@ export function MarketplaceClientView({
                               (driver as any).hasHistory !== undefined
                                 ? (driver as any).hasHistory
                                 : !!driver.globalStats &&
-                                (driver.globalStats.globalOverallScore !==
-                                  null ||
-                                  (driver.globalStats as any).overallScore !==
-                                  null);
+                                  (driver.globalStats.globalOverallScore !==
+                                    null ||
+                                    (driver.globalStats as any).overallScore !==
+                                      null);
                             return (
                               <>
                                 <div>
@@ -538,7 +505,7 @@ export function MarketplaceClientView({
                                     {!hasHistory
                                       ? "Sin Historial"
                                       : driver.globalStats
-                                        ?.globalOverallScore != null
+                                            ?.globalOverallScore != null
                                         ? `${driver.globalStats.globalOverallScore} pts`
                                         : "N/A (Privado)"}
                                   </span>
@@ -552,7 +519,7 @@ export function MarketplaceClientView({
                                     {!hasHistory
                                       ? "Sin Historial"
                                       : driver.globalStats?.globalSafetyScore !=
-                                        null
+                                          null
                                         ? `${driver.globalStats.globalSafetyScore}%`
                                         : "N/A (Privado)"}
                                   </span>
@@ -649,7 +616,7 @@ export function MarketplaceClientView({
                   Soy Conductor
                 </a>
                 <a
-                  href={`${landingUrl}/contact?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
+                  href={`${landingUrl}/register/owner?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
                   className="py-2.5 px-3 rounded-xl bg-white border border-slate-200 hover:border-slate-400 text-slate-800 font-bold text-xs transition-all flex items-center justify-center text-center shadow-sm"
                 >
                   Soy Propietario

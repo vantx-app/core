@@ -216,10 +216,11 @@ function LoginContent() {
                 <input
                   type="email"
                   disabled={isSubmitting}
-                  className={`w-full bg-slate-50 border ${errors.email
+                  className={`w-full bg-slate-50 border ${
+                    errors.email
                       ? "border-red-400 focus:border-red-500"
                       : "border-slate-200 focus:border-slate-400"
-                    } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+                  } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
                   placeholder="ejemplo@vantx.app"
                   {...register("email", {
                     required: "El correo es obligatorio",
@@ -247,10 +248,11 @@ function LoginContent() {
                 <input
                   type={showPassword ? "text" : "password"}
                   disabled={isSubmitting}
-                  className={`w-full bg-slate-50 border ${errors.password
+                  className={`w-full bg-slate-50 border ${
+                    errors.password
                       ? "border-red-400 focus:border-red-500"
                       : "border-slate-200 focus:border-slate-400"
-                    } rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
+                  } rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
                   placeholder="••••••••"
                   {...register("password", {
                     required: "La contraseña es obligatoria",
@@ -296,12 +298,21 @@ function LoginContent() {
               >
                 ¿Eres conductor? Regístrate aquí
               </Link>
-              <Link
-                href={`/contact${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
-                className="text-xs text-indigo-600 hover:underline font-semibold"
-              >
-                ¿Eres propietario de flota? Solicita una demostración
-              </Link>
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-4 text-center mt-1">
+                <Link
+                  href={`/register/owner${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
+                  className="text-xs text-blue-600 hover:underline font-semibold"
+                >
+                  ¿Eres propietario? Regístrate gratis en el marketplace
+                </Link>
+                <span className="hidden sm:inline text-slate-300">|</span>
+                <Link
+                  href={`/contact${callbackUrl ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
+                  className="text-xs text-slate-500 hover:text-blue-600 hover:underline transition-colors font-semibold"
+                >
+                  Solicita cotización de telemetría (Dashboard)
+                </Link>
+              </div>
             </div>
           </form>
         </div>

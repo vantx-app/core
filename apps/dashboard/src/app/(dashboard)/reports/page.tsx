@@ -1,7 +1,14 @@
 "use client";
 
 import { ScoreSnapshot, SimpleDriver, VehicleTripsTrip } from "@/types";
-import { useState, useEffect, Suspense, useCallback, useRef, useMemo } from "react";
+import {
+  useState,
+  useEffect,
+  Suspense,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import api from "@/utils/client/api-client";
 import TripsHistoryView from "@/components/TripsHistoryView";
 import {
@@ -98,7 +105,10 @@ function ReportsPageContent() {
 
   // Whether the currently selected profile is the logged-in user's own driver profile
   const isOwnDriver = useMemo(() => {
-    return selectedDriverId === "me" || (ownDriverId && selectedDriverId === ownDriverId);
+    return (
+      selectedDriverId === "me" ||
+      (ownDriverId && selectedDriverId === ownDriverId)
+    );
   }, [selectedDriverId, ownDriverId]);
 
   // Obtener la lista de conductores para selección

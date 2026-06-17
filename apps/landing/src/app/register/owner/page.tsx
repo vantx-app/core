@@ -75,10 +75,7 @@ function OwnerRegisterStepper() {
   // Token Validation on Mount
   useEffect(() => {
     if (!token) {
-      setValidationStatus("invalid");
-      setErrorMessage(
-        "No se ha proporcionado un enlace o token de invitación.",
-      );
+      setValidationStatus("valid");
       return;
     }
 
@@ -134,7 +131,7 @@ function OwnerRegisterStepper() {
     setApiError(null);
     try {
       await api.post("/register/owner-with-org", {
-        token,
+        ...(token ? { token } : {}),
         ...data,
       });
       setIsSuccess(true);

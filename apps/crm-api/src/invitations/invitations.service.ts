@@ -109,23 +109,25 @@ export class InvitationsService {
 
     // 2. Ejecución de la transacción atómica
     await this.prisma.$transaction(async (tx) => {
-      // A. Validar y verificar el token de invitación
-      const invitation = await tx.orgInvitation.findUnique({
-        where: { token: dto.token },
-      });
+      // A. Validar y verificar el token de invitación si fue provisto
+      if (dto.token) {
+        const invitation = await tx.orgInvitation.findUnique({
+          where: { token: dto.token },
+        });
 
-      if (!invitation) {
-        throw new BadRequestException('Enlace de invitación no válido.');
-      }
+        if (!invitation) {
+          throw new BadRequestException('Enlace de invitación no válido.');
+        }
 
-      if (invitation.usedAt) {
-        throw new BadRequestException(
-          'El enlace de invitación ya ha sido utilizado.',
-        );
-      }
+        if (invitation.usedAt) {
+          throw new BadRequestException(
+            'El enlace de invitación ya ha sido utilizado.',
+          );
+        }
 
-      if (invitation.expiresAt < new Date()) {
-        throw new BadRequestException('El enlace de invitación ha expirado.');
+        if (invitation.expiresAt < new Date()) {
+          throw new BadRequestException('El enlace de invitación ha expirado.');
+        }
       }
 
       // B. Crear la Organización
@@ -180,13 +182,15 @@ export class InvitationsService {
         }
       }
 
-      // E. Consumir el token de invitación
-      await tx.orgInvitation.update({
-        where: { token: dto.token },
-        data: {
-          usedAt: new Date(),
-        },
-      });
+      // E. Consumir el token de invitación si fue provisto
+      if (dto.token) {
+        await tx.orgInvitation.update({
+          where: { token: dto.token },
+          data: {
+            usedAt: new Date(),
+          },
+        });
+      }
     });
 
     return { success: true };

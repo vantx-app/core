@@ -37,8 +37,9 @@ export default function ContactPage() {
           </h1>
           <p className="text-slate-350 text-sm leading-relaxed">
             Completa el formulario de la derecha. Un especialista en telemetría
-            de flotas se pondrá en contacto contigo a través de esta plataforma para coordinar una prueba y
-            guiarte en el equipamiento Teltonika idóneo.
+            de flotas se pondrá en contacto contigo a través de esta plataforma
+            para coordinar una prueba y guiarte en el equipamiento Teltonika
+            idóneo.
           </p>
 
           {/* Mini info card */}
@@ -81,7 +82,13 @@ export default function ContactPage() {
 
           {/* Form wrapper card */}
           <div className="bg-white border border-slate-200 rounded-3xl w-full p-6 md:p-10 shadow-md">
-            <Suspense fallback={<div className="text-center py-8 text-xs text-slate-400">Cargando formulario...</div>}>
+            <Suspense
+              fallback={
+                <div className="text-center py-8 text-xs text-slate-400">
+                  Cargando formulario...
+                </div>
+              }
+            >
               <OwnerContactForm />
             </Suspense>
           </div>

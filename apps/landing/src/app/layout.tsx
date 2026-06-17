@@ -2,7 +2,9 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_LANDING_URL || "https://vantx.app"),
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_LANDING_URL || "https://vantx.app",
+  ),
   title: {
     default: "VantX | Telemetría CAN-bus y Conexión de Flotas",
     template: "%s | VantX",

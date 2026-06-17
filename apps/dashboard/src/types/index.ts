@@ -6,34 +6,9 @@ import { ElementType } from "react";
  * Los valores corresponden a las categorías únicas. Los conductores pueden tener
  * múltiples categorías almacenadas como cadena separada por coma (ej. "C, D").
  */
-export type PanamaLicenseType =
-  | "A"
-  | "B"
-  | "C"
-  | "D"
-  | "E1"
-  | "E2"
-  | "E3"
-  | "F"
-  | "G"
-  | "H"
-  | "I"
-  | "J";
-
-export const PANAMA_LICENSE_TYPE_OPTIONS: PanamaLicenseType[] = [
-  "A",
-  "B",
-  "C",
-  "D",
-  "E1",
-  "E2",
-  "E3",
-  "F",
-  "G",
-  "H",
-  "I",
-  "J",
-];
+import type { PanamaLicenseType } from "@vantx/ui";
+export type { PanamaLicenseType };
+export { PANAMA_LICENSE_TYPE_OPTIONS } from "@vantx/ui";
 
 export interface DashboardPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;

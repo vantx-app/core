@@ -6,6 +6,7 @@ import {
   IsUUID,
   IsNumber,
   IsEnum,
+  IsBoolean,
 } from 'class-validator';
 import {
   VehicleStatus,
@@ -80,4 +81,24 @@ export class CreateVehicleDto {
   @IsEnum(FuelType, { message: 'Tipo de combustible no válido.' })
   @ApiPropertyOptional({ enum: FuelType })
   fuelType?: FuelType;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiPropertyOptional()
+  isListed?: boolean;
+
+  @IsOptional()
+  @IsNumber()
+  @ApiPropertyOptional()
+  listingPrice?: number;
+
+  @IsOptional()
+  @IsString()
+  @ApiPropertyOptional()
+  listingDescription?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiPropertyOptional()
+  hasOptionToBuy?: boolean;
 }
