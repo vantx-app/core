@@ -5,6 +5,7 @@ import { ROLES } from "@/utils/enums";
 import { SuperAdminDashboard } from "@/components/dashboard/SuperAdminDashboard";
 import { OwnerDashboard } from "@/components/dashboard/OwnerDashboard";
 import { DriverDashboard } from "@/components/dashboard/DriverDashboard";
+
 export default async function DashboardPage({
   searchParams,
 }: DashboardPageProps) {
@@ -99,11 +100,14 @@ export default async function DashboardPage({
     );
   }
 
-  // Si el rol es DRIVER
   let driverStats = null;
   try {
     driverStats = await fetchServer("/drivers/me/stats");
   } catch (e) {
+    // Si el fetch falla, driverStats queda null y DriverDashboard muestra
+    // un estado de error con botón de recarga (ver Fix 1).
+    // No redirigimos aquí porque causaría un bucle infinito si el backend
+    // está caído persistentemente para un conductor real.
     console.error("Error fetching driver stats:", e);
   }
 

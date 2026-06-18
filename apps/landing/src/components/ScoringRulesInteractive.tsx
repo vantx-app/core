@@ -114,12 +114,12 @@ const SPANISH_RULES: Record<string, { name: string; desc: string; icon: any }> =
       icon: Settings,
     },
     COASTING_IN_NEUTRAL: {
-      name: "Conducción en neutro (coasting)",
+      name: "Conducción en neutro",
       desc: "Dejar rodar el camión en neutro, lo cual inhabilita el freno de motor y reduce control.",
       icon: HelpCircle,
     },
     ENGINE_LUGGING: {
-      name: "Sobreesfuerzo a bajas RPM (lugging)",
+      name: "Sobreesfuerzo a bajas RPM",
       desc: "Acelerar fuertemente a RPMs extremadamente bajas, fatigando la transmisión.",
       icon: Settings,
     },
@@ -145,7 +145,7 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
   const categories = [
     { code: "HEAVY_DUTY", name: "Equipo Pesado (HDV)", icon: Truck },
     { code: "LIGHT_COMMERCIAL", name: "Comercial Ligero (LCV)", icon: Truck },
-    { code: "PASSENGER", name: "Automóviles (Passenger)", icon: Car },
+    { code: "PASSENGER", name: "Automóviles", icon: Car },
     { code: "MACHINERY", name: "Maquinaria Pesada", icon: Settings },
   ];
 
@@ -358,7 +358,7 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
             Reglas de Penalización Aplicadas ({rules.length} activas)
           </h4>
           <span className="badge badge-sm py-1 font-mono text-[9px] bg-slate-250 border-none text-slate-700 uppercase">
-            Engine v{activeProfile?.rulesEngine?.engineVersion || "0.1"}
+            Motor v{activeProfile?.rulesEngine?.engineVersion || "0.1"}
           </span>
         </div>
 

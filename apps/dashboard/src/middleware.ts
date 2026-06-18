@@ -96,6 +96,9 @@ export async function middleware(request: NextRequest) {
         "cookie",
         `access_token=${newToken}; refresh_token=${refreshToken}`,
       );
+      // Eliminamos cualquier x-user-role que pudiera venir del cliente para
+      // evitar spoofing, y lo sobreescribimos con el rol del token validado.
+      requestHeaders.set("x-user-role", getRoleFromToken(newToken));
 
       response = NextResponse.next({
         request: {
@@ -124,11 +127,20 @@ export async function middleware(request: NextRequest) {
       console.error("[Auth] Error crítico en middleware:", error);
 
       // Si es un error de red o de servidor (5xx, timeouts), no borramos sesión ni redirigimos.
+      // Inyectamos el rol derivado del token expirado via header para que los Server Components
+      // no colapsen a ROLES.DRIVER cuando el refresh falla transitoriamente.
       if (
         error?.message === "TRANSIENT_ERROR" ||
         (error instanceof Error && error.message !== "AUTH_FAILED")
       ) {
-        return NextResponse.next();
+        const fallbackHeaders = new Headers(request.headers);
+        const roleFromExpiredToken = accessToken
+          ? getRoleFromToken(accessToken)
+          : null;
+        if (roleFromExpiredToken) {
+          fallbackHeaders.set("x-user-role", roleFromExpiredToken);
+        }
+        return NextResponse.next({ request: { headers: fallbackHeaders } });
       }
 
       const landingUrl =
@@ -143,17 +155,26 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (validAccessToken && protectedRoute) {
+  // Token válido y no expirado: inyectamos el rol via header para que getUserRole()
+  // lo lea de forma confiable. También eliminamos cualquier x-user-role que pudiera
+  // venir del cliente para evitar spoofing.
+  if (validAccessToken) {
     const userRole = getRoleFromToken(validAccessToken);
-    const allowedRoles = protectedRoute.allowedRoles;
 
-    if (!allowedRoles.includes(userRole)) {
-      console.warn(
-        `[RBAC] Acceso denegado: Rol ${userRole} intentó acceder a ${pathname}`,
-      );
-      // Redirigir a una ruta de fallback según tu UX
-      return NextResponse.redirect(new URL("/", request.url));
+    // RBAC: verificar que el rol tenga acceso a la ruta protegida
+    if (protectedRoute) {
+      const allowedRoles = protectedRoute.allowedRoles;
+      if (!allowedRoles.includes(userRole)) {
+        console.warn(
+          `[RBAC] Acceso denegado: Rol ${userRole} intentó acceder a ${pathname}`,
+        );
+        return NextResponse.redirect(new URL("/", request.url));
+      }
     }
+
+    const secureHeaders = new Headers(request.headers);
+    secureHeaders.set("x-user-role", userRole);
+    return NextResponse.next({ request: { headers: secureHeaders } });
   }
 
   return response;

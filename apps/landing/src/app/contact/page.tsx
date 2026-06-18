@@ -8,7 +8,7 @@ import { ArrowLeft, CheckCircle, Shield, Sparkles } from "lucide-react";
 export const metadata: Metadata = {
   title: "Solicitar Demostración",
   description:
-    "Lleva tu flota al siguiente nivel. Completa el formulario de contacto para programar una demostración personalizada de telemetría y Driver Score con nuestro equipo.",
+    "Lleva tu flota al siguiente nivel. Completa el formulario de contacto para programar una demostración personalizada de telemetría y puntaje de conducción con nuestro equipo.",
   alternates: {
     canonical: "https://vantx.app/contact",
   },

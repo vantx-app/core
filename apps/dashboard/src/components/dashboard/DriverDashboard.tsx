@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import {
-  Loader2,
+  AlertCircle,
   Calendar,
   ShieldCheck,
   Leaf,
@@ -33,9 +33,18 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
 
   if (!stats) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 text-center bg-base-100/30 rounded-2xl border border-dashed border-base-300 py-20 animate-pulse">
-        <Loader2 className="size-16 text-primary animate-spin mb-4" />
-        <h3 className="text-lg font-bold">Cargando perfil del conductor...</h3>
+      <div className="flex flex-col items-center justify-center p-12 text-center bg-base-100/30 rounded-2xl border border-dashed border-base-300 py-20">
+        <AlertCircle className="size-16 text-warning mb-4" />
+        <h3 className="text-lg font-bold">No se pudo cargar el perfil</h3>
+        <p className="text-sm text-base-content/50 mt-1">
+          Ocurrió un problema al obtener tus datos. Intenta recargar la página.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="btn btn-primary btn-sm mt-5"
+        >
+          Recargar página
+        </button>
       </div>
     );
   }
