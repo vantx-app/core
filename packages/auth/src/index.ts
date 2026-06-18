@@ -96,3 +96,131 @@ export function parseSetCookie(cookieStr: string): ParsedCookie | null {
 
   return { name, value, options };
 }
+
+export function decodeJWT(token: string): any {
+  try {
+    const payloadBase64 = token.split(".")[1];
+    const base64 = payloadBase64.replace(/-/g, "+").replace(/_/g, "/");
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split("")
+        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+        .join(""),
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error("Error decodificando JWT:", error);
+    return null;
+  }
+}
+
+export function isTokenExpired(token: string): boolean {
+  const decoded = decodeJWT(token);
+  if (!decoded || !decoded.exp) return true;
+
+  const exp = decoded.exp * 1000;
+  return Date.now() >= exp - 30000; // 30 seconds buffer
+}
+
+export function getRoleFromToken(token: string): string {
+  const decoded = decodeJWT(token);
+  return decoded?.role ?? "DRIVER";
+}
+
+/**
+ * Next.js Middleware helper to set request header overrides on the response.
+ * This is a critical workaround for the Next.js bug where setting cookies on
+ * NextResponse.next({ request: { headers } }) causes response cookies to be discarded.
+ */
+export function applyRequestHeadersToResponse(
+  response: { headers: { set: (key: string, value: string) => void } },
+  requestHeaders: Headers
+) {
+  const keys: string[] = [];
+  requestHeaders.forEach((value, key) => {
+    keys.push(key);
+    response.headers.set(`x-middleware-request-${key}`, value);
+  });
+  response.headers.set("x-middleware-override-headers", keys.join(","));
+}
+
+export interface SessionRefreshOptions {
+  refreshToken: string;
+  userAgent: string;
+  internalApiUrl: string;
+}
+
+export interface SessionRefreshResult {
+  success: boolean;
+  errorType?: "AUTH_FAILED" | "TRANSIENT_ERROR";
+  newToken?: string;
+  cookiesToSet?: ParsedCookie[];
+}
+
+export async function refreshSessionInMiddleware(
+  options: SessionRefreshOptions
+): Promise<SessionRefreshResult> {
+  const { refreshToken, userAgent, internalApiUrl } = options;
+  try {
+    const res = await fetch(`${internalApiUrl}/api/auth/refresh`, {
+      method: "POST",
+      headers: {
+        Cookie: `refresh_token=${refreshToken}`,
+        "User-Agent": userAgent,
+      },
+    });
+
+    if (!res.ok) {
+      if (res.status === 401 || res.status === 403) {
+        return { success: false, errorType: "AUTH_FAILED" };
+      }
+      return { success: false, errorType: "TRANSIENT_ERROR" };
+    }
+
+    const data = await res.json();
+    const newToken = data?.accessToken;
+    if (!newToken) {
+      return { success: false, errorType: "AUTH_FAILED" };
+    }
+
+    const cookiesToSet: ParsedCookie[] = [];
+
+    // Propagar cookies del backend
+    let backendCookies: string[] = [];
+    if (typeof res.headers.getSetCookie === "function") {
+      backendCookies = res.headers.getSetCookie();
+    } else {
+      const setCookieHeader = res.headers.get("set-cookie");
+      if (setCookieHeader) {
+        backendCookies = [setCookieHeader];
+      }
+    }
+
+    backendCookies.forEach((cookieStr) => {
+      const parsed = parseSetCookie(cookieStr);
+      if (parsed) {
+        cookiesToSet.push(parsed);
+      }
+    });
+
+    // Inyectar el Access Token con la configuración del monorepo
+    const cookieSettings = getCookieSettings(60 * 15);
+    cookiesToSet.push({
+      name: "access_token",
+      value: newToken,
+      options: {
+        ...cookieSettings,
+        httpOnly: false, // Debe ser legible por JS en el cliente (api-client)
+      },
+    });
+
+    return {
+      success: true,
+      newToken,
+      cookiesToSet,
+    };
+  } catch (error) {
+    console.error("[Auth] Error en refreshSessionInMiddleware:", error);
+    return { success: false, errorType: "TRANSIENT_ERROR" };
+  }
+}

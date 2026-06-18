@@ -1,22 +1,12 @@
-// apps/marketplace/src/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getCookieSettings, parseSetCookie } from "@vantx/auth";
+import { getCookieSettings, isTokenExpired, applyRequestHeadersToResponse, refreshSessionInMiddleware } from "@vantx/auth";
 
 export const config = {
   matcher: [
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json|css|js)$).*)",
   ],
 };
-
-function isTokenExpired(token: string): boolean {
-  try {
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return Date.now() >= payload.exp * 1000;
-  } catch {
-    return true;
-  }
-}
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -35,24 +25,17 @@ export async function middleware(request: NextRequest) {
   // Si el access_token no existe o está expirado, intentamos refrescarlo en el servidor
   if (!accessToken || isTokenExpired(accessToken)) {
     try {
-      const internalApiUrl =
-        process.env.INTERNAL_API_URL || "http://localhost:8000";
-      const res = await fetch(`${internalApiUrl}/api/auth/refresh`, {
-        method: "POST",
-        headers: {
-          Cookie: `refresh_token=${refreshToken}`,
-          "User-Agent": request.headers.get("user-agent") || "VantX-Middleware",
-        },
+      const result = await refreshSessionInMiddleware({
+        refreshToken,
+        userAgent: request.headers.get("user-agent") || "VantX-Middleware",
+        internalApiUrl: process.env.INTERNAL_API_URL || "http://localhost:8000",
       });
 
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          throw new Error("AUTH_FAILED");
-        }
-        throw new Error("TRANSIENT_ERROR");
+      if (!result.success) {
+        throw new Error(result.errorType || "TRANSIENT_ERROR");
       }
 
-      const { accessToken: newToken } = await res.json();
+      const newToken = result.newToken!;
 
       // Clonamos headers para que los Server Components vean el nuevo token en este renderizado
       const requestHeaders = new Headers(request.headers);
@@ -61,27 +44,16 @@ export async function middleware(request: NextRequest) {
         `access_token=${newToken}; refresh_token=${refreshToken}`,
       );
 
-      response = NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
+      // Creamos la respuesta estándar de Next.js
+      response = NextResponse.next();
+
+      // Propagamos de manera robusta las cookies devueltas por el helper
+      result.cookiesToSet?.forEach((cookie) => {
+        response.cookies.set(cookie.name, cookie.value, cookie.options);
       });
 
-      // Propagamos de manera robusta las cookies que retornó el backend usando el nuevo parser
-      const backendCookies = res.headers.getSetCookie();
-      backendCookies.forEach((cookieStr) => {
-        const parsed = parseSetCookie(cookieStr);
-        if (parsed) {
-          response.cookies.set(parsed.name, parsed.value, parsed.options);
-        }
-      });
-
-      // Inyectamos el access_token en el navegador del cliente
-      const cookieSettings = getCookieSettings(60 * 15);
-      response.cookies.set("access_token", newToken, {
-        ...cookieSettings,
-        httpOnly: false, // Legible por JS en el cliente (api-client)
-      });
+      // WORKAROUND CRÍTICO: Aplicamos la cabecera de anulación para que Next.js no descarte las cookies
+      applyRequestHeadersToResponse(response, requestHeaders);
 
       return response;
     } catch (error: any) {

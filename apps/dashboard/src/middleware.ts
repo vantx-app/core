@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getRoleFromToken, isTokenExpired, NAV_LINKS } from "./utils/client";
-import { getCookieSettings, parseSetCookie } from "@vantx/auth";
+import { getCookieSettings, applyRequestHeadersToResponse, refreshSessionInMiddleware } from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -65,28 +65,17 @@ export async function middleware(request: NextRequest) {
 
   if (!accessToken || isTokenExpired(accessToken)) {
     try {
-      // OJO AQUÍ: Asegúrate que INTERNAL_API_URL apunte al nombre del servicio Docker (ej: http://backend:8000)
-      // Si usas 127.0.0.1 aquí dentro de Docker, Next.js se llamará a sí mismo y el fetch fallará.
-      const res = await fetch(
-        `${process.env.INTERNAL_API_URL}/api/auth/refresh`,
-        {
-          method: "POST",
-          headers: {
-            Cookie: `refresh_token=${refreshToken}`,
-            "User-Agent":
-              request.headers.get("user-agent") || "VantX-Middleware",
-          },
-        },
-      );
+      const result = await refreshSessionInMiddleware({
+        refreshToken,
+        userAgent: request.headers.get("user-agent") || "VantX-Middleware",
+        internalApiUrl: process.env.INTERNAL_API_URL || "http://localhost:8000",
+      });
 
-      if (!res.ok) {
-        if (res.status === 401 || res.status === 403) {
-          throw new Error("AUTH_FAILED");
-        }
-        throw new Error("TRANSIENT_ERROR");
+      if (!result.success) {
+        throw new Error(result.errorType || "TRANSIENT_ERROR");
       }
 
-      const { accessToken: newToken } = await res.json();
+      const newToken = result.newToken!;
       validAccessToken = newToken;
 
       // FIX 2: Clonamos los headers del request para inyectar el nuevo token.
@@ -101,27 +90,16 @@ export async function middleware(request: NextRequest) {
       requestHeaders.set("x-user-role", getRoleFromToken(newToken));
       requestHeaders.set("Authorization", `Bearer ${newToken}`);
 
-      response = NextResponse.next({
-        request: {
-          headers: requestHeaders,
-        },
+      // Creamos la respuesta estándar de Next.js
+      response = NextResponse.next();
+
+      // Propagamos de manera robusta las cookies devueltas por el helper
+      result.cookiesToSet?.forEach((cookie) => {
+        response.cookies.set(cookie.name, cookie.value, cookie.options);
       });
 
-      // Propagamos de manera robusta las cookies del backend usando el nuevo parser
-      const backendCookies = res.headers.getSetCookie();
-      backendCookies.forEach((cookieStr) => {
-        const parsed = parseSetCookie(cookieStr);
-        if (parsed) {
-          response.cookies.set(parsed.name, parsed.value, parsed.options);
-        }
-      });
-
-      // Inyectamos el Access Token con la configuración del monorepo
-      const cookieSettings = getCookieSettings(60 * 15);
-      response.cookies.set("access_token", newToken, {
-        ...cookieSettings,
-        httpOnly: false, // Debe ser legible por JS en el cliente (api-client)
-      });
+      // WORKAROUND CRÍTICO: Aplicamos la cabecera de anulación para que Next.js no descarte las cookies
+      applyRequestHeadersToResponse(response, requestHeaders);
 
       return response;
     } catch (error: any) {
