@@ -33,6 +33,7 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 # Copy standalone build and static assets
+COPY --from=builder /app/apps/landing/public ./apps/landing/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/landing/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/landing/.next/static ./apps/landing/.next/static
 
