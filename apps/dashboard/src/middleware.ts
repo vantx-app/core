@@ -99,6 +99,7 @@ export async function middleware(request: NextRequest) {
       // Eliminamos cualquier x-user-role que pudiera venir del cliente para
       // evitar spoofing, y lo sobreescribimos con el rol del token validado.
       requestHeaders.set("x-user-role", getRoleFromToken(newToken));
+      requestHeaders.set("Authorization", `Bearer ${newToken}`);
 
       response = NextResponse.next({
         request: {
@@ -174,6 +175,7 @@ export async function middleware(request: NextRequest) {
 
     const secureHeaders = new Headers(request.headers);
     secureHeaders.set("x-user-role", userRole);
+    secureHeaders.set("Authorization", `Bearer ${validAccessToken}`);
     return NextResponse.next({ request: { headers: secureHeaders } });
   }
 

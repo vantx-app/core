@@ -1,8 +1,31 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 
 export async function fetchServer(endpoint: string, options: RequestInit = {}) {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("access_token")?.value;
+  // Intentamos obtener el token desde la cabecera Authorization enviada por el middleware
+  const headerStore = await headers();
+  const authHeader = headerStore.get("Authorization");
+  let token = null;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    token = authHeader.substring(7);
+  }
+
+  // Si no está en Authorization, intentamos extraerlo de la cookie inyectada en request headers
+  if (!token) {
+    const cookieHeader = headerStore.get("cookie");
+    if (cookieHeader) {
+      const match = cookieHeader.match(/(?:^|;\s*)access_token=([^;]*)/);
+      if (match) {
+        token = match[1];
+      }
+    }
+  }
+
+  // Fallback a las cookies normales
+  if (!token) {
+    const cookieStore = await cookies();
+    token = cookieStore.get("access_token")?.value;
+  }
 
   // Si no hay token y se consulta /users/me, es un invitado
   if (endpoint === "/users/me" && !token) {
@@ -14,21 +37,21 @@ export async function fetchServer(endpoint: string, options: RequestInit = {}) {
   console.log(`🚀 Intentando fetch a: ${url}`);
 
   // Preparamos cabeceras limpias
-  const headers: Record<string, string> = {
+  const requestHeaders: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
 
   // Solo adjuntamos Authorization si tenemos un token real
   if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
+    requestHeaders["Authorization"] = `Bearer ${token}`;
   }
 
   try {
     const response = await fetch(url, {
       ...options,
       cache: "no-store", // Evitamos que Next.js cachee telemetría o datos dinámicos
-      headers,
+      headers: requestHeaders,
     });
 
     if (response.status === 401) {
