@@ -108,56 +108,47 @@ export default async function HowItWorksPage() {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Step 1 */}
-          <div className="glass-card p-8 bg-white/90 border-slate-200 relative">
-            <div className="w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg mb-5">
-              1
-            </div>
-            <div className="p-2.5 bg-blue-600/10 border border-blue-600/20 rounded-xl text-blue-600 inline-flex mb-4">
-              <Cpu className="size-5" />
-            </div>
+          <div className="glass-card p-8 bg-white/90 border-slate-200 relative flex flex-col">
             <h3 className="text-base font-bold text-slate-900 mb-2">
               Instala el hardware
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-slate-500 leading-relaxed mb-6">
               Los dispositivos Teltonika (FMC003, FMC150 + ECAN02) se instalan
               en el vehículo y comienzan a leer el bus CAN sin intervenir el
               cableado.
             </p>
+            <div className="mt-auto w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg">
+              1
+            </div>
           </div>
 
           {/* Step 2 */}
-          <div className="glass-card p-8 bg-white/90 border-slate-200 relative">
-            <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg mb-5">
-              2
-            </div>
-            <div className="p-2.5 bg-indigo-600/10 border border-indigo-600/20 rounded-xl text-indigo-600 inline-flex mb-4">
-              <Database className="size-5" />
-            </div>
+          <div className="glass-card p-8 bg-white/90 border-slate-200 relative flex flex-col">
             <h3 className="text-base font-bold text-slate-900 mb-2">
               Los datos fluyen en tiempo real
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-slate-500 leading-relaxed mb-6">
               Velocidad, fuerza G, consumo de combustible, ralentí y códigos de
               falla se transmiten a 1 Hz hacia nuestro motor de telemetría.
             </p>
+            <div className="mt-auto w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg">
+              2
+            </div>
           </div>
 
           {/* Step 3 */}
-          <div className="glass-card p-8 bg-white/90 border-slate-200 relative">
-            <div className="w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-black text-lg mb-5">
-              3
-            </div>
-            <div className="p-2.5 bg-emerald-600/10 border border-emerald-600/20 rounded-xl text-emerald-600 inline-flex mb-4">
-              <Shield className="size-5" />
-            </div>
+          <div className="glass-card p-8 bg-white/90 border-slate-200 relative flex flex-col">
             <h3 className="text-base font-bold text-slate-900 mb-2">
               Puntaje publicado semanalmente
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-slate-500 leading-relaxed mb-6">
               El motor de reglas calcula el puntaje de conducción de cada
               conductor — visible para ellos y para los propietarios de flota en
               el mercado.
             </p>
+            <div className="mt-auto w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-black text-lg">
+              3
+            </div>
           </div>
         </div>
       </section>

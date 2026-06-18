@@ -197,7 +197,9 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
       rule.deductionPerSeverityUnit !== undefined &&
       rule.deductionPerSeverityUnit > 0
     ) {
-      return `-${rule.deductionPerSeverityUnit} pts / unidad de gravedad`;
+      const unit =
+        rule.code === "HIGH_RPM" ? "RPM de exceso" : "mG de intensidad";
+      return `-${rule.deductionPerSeverityUnit} pts / ${unit}`;
     }
     if (rule.deductionFixed !== undefined && rule.deductionFixed > 0) {
       return `-${rule.deductionFixed} pts (Fijo)`;
