@@ -7,6 +7,9 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/api/"],
     },
-    sitemap: "https://vantx.app/sitemap.xml",
+    sitemap: [
+      "https://vantx.app/sitemap.xml",
+      "https://vantx.app/marketplace/sitemap.xml",
+    ],
   };
 }

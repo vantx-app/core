@@ -519,14 +519,34 @@ export default async function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 py-12 text-center text-sm text-slate-500 bg-white relative z-10">
-        <p>
-          &copy; {new Date().getFullYear()} VantX App. Todos los derechos
-          reservados.
-        </p>
-        <p className="text-slate-400 text-xs mt-2">
-          Tecnología de Telemetría para Flotas Logísticas.
-        </p>
+      <footer className="border-t border-slate-200 py-12 bg-white relative z-10">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-2">
+            <Logo size="md" variant="light" />
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-semibold text-slate-650">
+            <Link href="/how-it-works" className="hover:text-blue-650 transition-colors">
+              ¿Cómo Funciona?
+            </Link>
+            <Link href="/marketplace" className="hover:text-blue-650 transition-colors">
+              Marketplace
+            </Link>
+            <Link href="/select" className="hover:text-blue-650 transition-colors">
+              Acceso Portal
+            </Link>
+            <Link href="/contact" className="hover:text-blue-650 transition-colors">
+              Contacto
+            </Link>
+          </div>
+        </div>
+        <div className="border-t border-slate-100 mt-8 pt-8 text-center text-xs text-slate-400 max-w-6xl mx-auto px-6">
+          <p>
+            &copy; {new Date().getFullYear()} VantX App. Todos los derechos reservados.
+          </p>
+          <p className="mt-1">
+            Tecnología de Telemetría para Flotas Logísticas.
+          </p>
+        </div>
       </footer>
 
       <Suspense fallback={null}>

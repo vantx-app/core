@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   title: "Vantx | Gestión de Flotas y Marketplace de Conductores",
   description:
     "Telemetría IoT en tiempo real y asignación inteligente de vehículos.",
-  manifest: "/dashboard/manifest.json",
+  manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   icons: {
     icon: "/icons/icon-32x32.png",
     shortcut: "/favicon.ico",
-    apple: "/icons/icon-apple-touch-icon.png",
+    apple: "/icons/apple-touch-icon.png",
   },
 };
 
