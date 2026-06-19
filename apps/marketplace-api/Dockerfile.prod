@@ -41,4 +41,4 @@ COPY --from=builder /app/packages/database/prisma ./packages/database/prisma
 EXPOSE 8001
 
 # Start production server
-CMD ["sh", "-c", "node apps/marketplace-api/dist/src/main.js"]
+CMD ["sh", "-c", "node apps/marketplace-api/dist/main.js"]

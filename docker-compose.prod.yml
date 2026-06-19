@@ -10,10 +10,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 200M
+          memory: 192M
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=128
       - PORT=3000
       - HOSTNAME=0.0.0.0
       - INTERNAL_API_URL=http://vantx_server:8000
@@ -33,10 +34,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 200M
+          memory: 256M
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=192
       - PORT=3001
       - HOSTNAME=0.0.0.0
       - INTERNAL_API_URL=http://vantx_server:8000
@@ -56,10 +58,11 @@ services:
     deploy:
       resources:
         limits:
-          memory: 200M
+          memory: 192M
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=128
       - PORT=3002
       - HOSTNAME=0.0.0.0
       - CRM_API_URL=http://vantx_server:8000
@@ -81,7 +84,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 300M
+          memory: 256M
     logging:
       driver: "json-file"
       options:
@@ -92,7 +95,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - NODE_OPTIONS=--max-old-space-size=256
+      - NODE_OPTIONS=--max-old-space-size=192
       - MARKETPLACE_API_PORT=8001
     ports:
       - "127.0.0.1:8001:8001"
@@ -111,7 +114,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 750M
+          memory: 450M
     logging:
       driver: "json-file"
       options:
@@ -122,7 +125,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-      - NODE_OPTIONS=--max-old-space-size=512
+      - NODE_OPTIONS=--max-old-space-size=300
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -140,7 +143,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 500M
+          memory: 256M
     logging:
       driver: "json-file"
       options:
@@ -151,6 +154,7 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=192
       - INGESTOR_PORT=9000
       - INGESTOR_HOST=0.0.0.0
       - API_HOST=vantx_server
@@ -171,7 +175,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 400M
+          memory: 250M
     restart: unless-stopped
     env_file:
       - .env
@@ -203,7 +207,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 64M
     restart: unless-stopped
     env_file:
       - .env
