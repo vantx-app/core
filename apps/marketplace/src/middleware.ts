@@ -13,6 +13,20 @@ export async function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("access_token")?.value;
   const refreshToken = request.cookies.get("refresh_token")?.value;
 
+  // Resolución robusta del host del cliente (evitando 0.0.0.0 cuando Next.js corre en un contenedor con HOSTNAME=0.0.0.0)
+  let host =
+    request.headers.get("x-forwarded-host") ||
+    request.headers.get("host") ||
+    request.nextUrl.host;
+  if (host.startsWith("0.0.0.0")) {
+    host = host.replace("0.0.0.0", "localhost");
+  }
+
+  let protocol =
+    request.headers.get("x-forwarded-proto") ||
+    request.nextUrl.protocol;
+  protocol = protocol.replace(/:$/, "");
+
   // Solo nos interesa la página principal u otras vistas del Marketplace
   if (pathname !== "/" && !pathname.startsWith("/drivers/"))
     return NextResponse.next();
@@ -40,7 +54,10 @@ export async function middleware(request: NextRequest) {
       // Redireccionamiento de Escritura (Redirect-to-Self):
       // Creamos una respuesta de redirección a la misma URL para forzar al navegador
       // a guardar las cookies de manera persistente antes de renderizar.
+      // Modificamos el protocolo y el host para asegurar que coincida con el cliente público (evita subdominios de Docker)
       const redirectUrl = request.nextUrl.clone();
+      redirectUrl.protocol = protocol;
+      redirectUrl.host = host;
       response = NextResponse.redirect(redirectUrl);
  
       // Propagamos de manera robusta las cookies devueltas por el helper
@@ -50,6 +67,9 @@ export async function middleware(request: NextRequest) {
  
       // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
       response.headers.set("x-middleware-cache", "no-cache");
+      // Evitamos agresivamente que el navegador o WebView del PWA cachee la respuesta de redirección 307
+      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+      response.headers.set("Pragma", "no-cache");
  
       return response;
     } catch (error: any) {
