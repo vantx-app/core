@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getCookieSettings, isTokenExpired, applyRequestHeadersToResponse, refreshSessionInMiddleware } from "@vantx/auth";
+import { getCookieSettings, isTokenExpired, refreshSessionInMiddleware } from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -37,24 +37,20 @@ export async function middleware(request: NextRequest) {
 
       const newToken = result.newToken!;
 
-      // Clonamos headers para que los Server Components vean el nuevo token en este renderizado
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set(
-        "cookie",
-        `access_token=${newToken}; refresh_token=${refreshToken}`,
-      );
-
-      // Creamos la respuesta estándar de Next.js
-      response = NextResponse.next();
-
+      // Redireccionamiento de Escritura (Redirect-to-Self):
+      // Creamos una respuesta de redirección a la misma URL para forzar al navegador
+      // a guardar las cookies de manera persistente antes de renderizar.
+      const redirectUrl = request.nextUrl.clone();
+      response = NextResponse.redirect(redirectUrl);
+ 
       // Propagamos de manera robusta las cookies devueltas por el helper
       result.cookiesToSet?.forEach((cookie) => {
         response.cookies.set(cookie.name, cookie.value, cookie.options);
       });
-
-      // WORKAROUND CRÍTICO: Aplicamos la cabecera de anulación para que Next.js no descarte las cookies
-      applyRequestHeadersToResponse(response, requestHeaders);
-
+ 
+      // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
+      response.headers.set("x-middleware-cache", "no-cache");
+ 
       return response;
     } catch (error: any) {
       console.error(

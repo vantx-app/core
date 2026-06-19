@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getRoleFromToken, isTokenExpired, NAV_LINKS } from "./utils/client";
-import { getCookieSettings, applyRequestHeadersToResponse, refreshSessionInMiddleware } from "@vantx/auth";
+import { getCookieSettings, refreshSessionInMiddleware } from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -78,28 +78,19 @@ export async function middleware(request: NextRequest) {
       const newToken = result.newToken!;
       validAccessToken = newToken;
 
-      // FIX 2: Clonamos los headers del request para inyectar el nuevo token.
-      // Así, los Server Components de Next.js en ESTE renderizado verán el token actualizado.
-      const requestHeaders = new Headers(request.headers);
-      requestHeaders.set(
-        "cookie",
-        `access_token=${newToken}; refresh_token=${refreshToken}`,
-      );
-      // Eliminamos cualquier x-user-role que pudiera venir del cliente para
-      // evitar spoofing, y lo sobreescribimos con el rol del token validado.
-      requestHeaders.set("x-user-role", getRoleFromToken(newToken));
-      requestHeaders.set("Authorization", `Bearer ${newToken}`);
-
-      // Creamos la respuesta estándar de Next.js
-      response = NextResponse.next();
+      // Redireccionamiento de Escritura (Redirect-to-Self):
+      // Creamos una respuesta de redirección a la misma URL para forzar al navegador
+      // a guardar las cookies de manera persistente antes de renderizar.
+      const redirectUrl = request.nextUrl.clone();
+      response = NextResponse.redirect(redirectUrl);
 
       // Propagamos de manera robusta las cookies devueltas por el helper
       result.cookiesToSet?.forEach((cookie) => {
         response.cookies.set(cookie.name, cookie.value, cookie.options);
       });
 
-      // WORKAROUND CRÍTICO: Aplicamos la cabecera de anulación para que Next.js no descarte las cookies
-      applyRequestHeadersToResponse(response, requestHeaders);
+      // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
+      response.headers.set("x-middleware-cache", "no-cache");
 
       return response;
     } catch (error: any) {
