@@ -1,0 +1,97 @@
+{
+  "repository_type": "monorepo",
+  "parts": [
+    {
+      "part_id": "crm-api",
+      "name": "@vantx/crm-api",
+      "path": "apps/crm-api",
+      "project_type_id": "backend"
+    },
+    {
+      "part_id": "dashboard",
+      "name": "@vantx/dashboard",
+      "path": "apps/dashboard",
+      "project_type_id": "web"
+    },
+    {
+      "part_id": "landing",
+      "name": "@vantx/landing",
+      "path": "apps/landing",
+      "project_type_id": "web"
+    },
+    {
+      "part_id": "marketplace",
+      "name": "@vantx/marketplace",
+      "path": "apps/marketplace",
+      "project_type_id": "web"
+    },
+    {
+      "part_id": "marketplace-api",
+      "name": "@vantx/marketplace-api",
+      "path": "apps/marketplace-api",
+      "project_type_id": "backend"
+    },
+    {
+      "part_id": "telemetry-ingestor",
+      "name": "@vantx/telemetry-ingestor",
+      "path": "apps/telemetry-ingestor",
+      "project_type_id": "backend"
+    },
+    {
+      "part_id": "ui",
+      "name": "@vantx/ui",
+      "path": "packages/ui",
+      "project_type_id": "library"
+    },
+    {
+      "part_id": "database",
+      "name": "@vantx/database",
+      "path": "packages/database",
+      "project_type_id": "data"
+    },
+    {
+      "part_id": "telemetry-parser",
+      "name": "@vantx/telemetry-parser",
+      "path": "packages/telemetry-parser",
+      "project_type_id": "library"
+    },
+    {
+      "part_id": "auth",
+      "name": "@vantx/auth",
+      "path": "packages/auth",
+      "project_type_id": "library"
+    }
+  ],
+  "integration_points": [
+    {
+      "from": "dashboard",
+      "to": "crm-api",
+      "type": "HTTP/REST / WebSockets",
+      "details": "Dashboard client invokes CRM API endpoints and establishes socket telemetry streams"
+    },
+    {
+      "from": "marketplace",
+      "to": "marketplace-api",
+      "type": "HTTP/REST",
+      "details": "Marketplace client invokes marketplace API endpoints"
+    },
+    {
+      "from": "telemetry-ingestor",
+      "to": "database",
+      "type": "Prisma",
+      "details": "Parses Teltonika raw data and updates live vehicle state and logs to Postgres"
+    },
+    {
+      "from": "crm-api",
+      "to": "database",
+      "type": "Prisma",
+      "details": "Shared database access using the @vantx/database client library"
+    },
+    {
+      "from": "marketplace-api",
+      "to": "database",
+      "type": "Prisma",
+      "details": "Shared database access using the @vantx/database client library"
+    }
+  ]
+}
