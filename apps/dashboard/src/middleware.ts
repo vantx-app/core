@@ -24,10 +24,17 @@ export async function middleware(request: NextRequest) {
     host = host.replace("0.0.0.0", "localhost");
   }
 
-  let protocol =
-    request.headers.get("x-forwarded-proto") ||
-    request.nextUrl.protocol;
-  protocol = protocol.replace(/:$/, "");
+  const isLocalhost =
+    host.startsWith("localhost") ||
+    host.startsWith("127.0.0.1") ||
+    host.startsWith("0.0.0.0");
+
+  // En producción, forzamos HTTPS para evitar rechazos de cookies seguras si el proxy no propaga x-forwarded-proto.
+  let protocol = "https";
+  if (isLocalhost) {
+    const protoHeader = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol;
+    protocol = protoHeader.replace(/:$/, "");
+  }
 
   // Redirigir usuarios autenticados fuera de las páginas de auth
   const isAuthRoute = pathname === "/login" || pathname === "/register";
@@ -38,7 +45,7 @@ export async function middleware(request: NextRequest) {
   if (pathname === "/login") {
     const landingUrl =
       process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
-    const currentUrl = `${request.nextUrl.protocol}//${host}/`;
+    const currentUrl = `${protocol}://${host}/`;
     const callbackUrl =
       request.nextUrl.searchParams.get("callbackUrl") || currentUrl;
     return NextResponse.redirect(
@@ -58,7 +65,7 @@ export async function middleware(request: NextRequest) {
   if (!refreshToken) {
     const landingUrl =
       process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
-    const currentUrl = `${request.nextUrl.protocol}//${host}${pathname}${search}`;
+    const currentUrl = `${protocol}://${host}${pathname}${search}`;
     const callbackUrl = encodeURIComponent(currentUrl);
     return NextResponse.redirect(
       new URL(`${landingUrl}/login?callbackUrl=${callbackUrl}`),

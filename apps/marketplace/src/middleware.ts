@@ -22,10 +22,17 @@ export async function middleware(request: NextRequest) {
     host = host.replace("0.0.0.0", "localhost");
   }
 
-  let protocol =
-    request.headers.get("x-forwarded-proto") ||
-    request.nextUrl.protocol;
-  protocol = protocol.replace(/:$/, "");
+  const isLocalhost =
+    host.startsWith("localhost") ||
+    host.startsWith("127.0.0.1") ||
+    host.startsWith("0.0.0.0");
+
+  // En producción, forzamos HTTPS para evitar rechazos de cookies seguras si el proxy no propaga x-forwarded-proto.
+  let protocol = "https";
+  if (isLocalhost) {
+    const protoHeader = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol;
+    protocol = protoHeader.replace(/:$/, "");
+  }
 
   // Solo nos interesa la página principal u otras vistas del Marketplace
   if (pathname !== "/" && !pathname.startsWith("/drivers/"))
