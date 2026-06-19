@@ -17,6 +17,12 @@ export class DriversService {
       },
       include: {
         globalStats: true,
+        documents: {
+          select: {
+            type: true,
+            status: true,
+          },
+        },
       },
     });
 
@@ -28,6 +34,12 @@ export class DriversService {
       where: { id },
       include: {
         globalStats: true,
+        documents: {
+          select: {
+            type: true,
+            status: true,
+          },
+        },
         scoreSnapshots: {
           orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }],
           take: 12,
@@ -62,6 +74,7 @@ export class DriversService {
       licenseType: driver.licenseType,
       shareScoresPublicly: share,
       hasHistory,
+      documents: driver.documents || [],
       globalStats: driver.globalStats
         ? {
             globalOverallScore: share

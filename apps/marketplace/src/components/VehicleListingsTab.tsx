@@ -242,7 +242,7 @@ export function VehicleListingsTab({
                   {isLocked ? (
                     isGuest ? (
                       <a
-                        href={`${landingUrl}/login`}
+                        href={`${landingUrl}/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
                         className="w-full text-center py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10 flex items-center justify-center gap-1.5"
                       >
                         <Lock className="size-3.5" />

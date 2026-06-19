@@ -98,14 +98,13 @@ api.interceptors.response.use(
         // no forzamos redirección para permitir navegación en modo invitado.
         const isPublicCheck =
           originalRequest.url?.includes("/users/me") ||
-          originalRequest.url?.includes("/drivers") ||
-          originalRequest.url?.includes("/vehicles");
+          originalRequest.url?.includes("/public");
 
         if (!isPublicCheck) {
           const landingUrl =
             process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
           if (typeof window !== "undefined") {
-            window.location.href = `${landingUrl}/login?expired=true`;
+            window.location.href = `${landingUrl}/login?expired=true&callbackUrl=${encodeURIComponent(window.location.href)}`;
           }
         }
 

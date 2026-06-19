@@ -314,7 +314,7 @@ export function MarketplaceClientView({
               </div>
             ) : (
               <a
-                href={`${landingUrl}/login`}
+                href={`${landingUrl}/login?callbackUrl=${encodeURIComponent(typeof window !== "undefined" ? window.location.href : "")}`}
                 className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition-all shadow-sm"
               >
                 Iniciar Sesión
