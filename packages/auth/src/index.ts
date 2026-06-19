@@ -128,10 +128,27 @@ export function getRoleFromToken(token: string): string {
 }
 
 
+export interface ParsedHost {
+  hostname: string;
+  port: string;
+}
+
+export function parseHostHeader(host: string): ParsedHost {
+  let hostname = host;
+  let port = "";
+  if (host.includes(":")) {
+    const parts = host.split(":");
+    hostname = parts[0];
+    port = parts[1];
+  }
+  return { hostname, port };
+}
+
 export interface SessionRefreshOptions {
   refreshToken: string;
   userAgent: string;
   internalApiUrl: string;
+  host?: string;
 }
 
 export interface SessionRefreshResult {
@@ -144,7 +161,7 @@ export interface SessionRefreshResult {
 export async function refreshSessionInMiddleware(
   options: SessionRefreshOptions
 ): Promise<SessionRefreshResult> {
-  const { refreshToken, userAgent, internalApiUrl } = options;
+  const { refreshToken, userAgent, internalApiUrl, host } = options;
   try {
     const res = await fetch(`${internalApiUrl}/api/auth/refresh`, {
       method: "POST",
@@ -180,15 +197,29 @@ export async function refreshSessionInMiddleware(
       }
     }
 
+    const isLocalhost =
+      host &&
+      (host.startsWith("localhost") ||
+        host.startsWith("127.0.0.1") ||
+        host.startsWith("0.0.0.0"));
+
     backendCookies.forEach((cookieStr) => {
       const parsed = parseSetCookie(cookieStr);
       if (parsed) {
+        if (isLocalhost) {
+          delete parsed.options.domain;
+          parsed.options.secure = false;
+        }
         cookiesToSet.push(parsed);
       }
     });
 
     // Inyectar el Access Token con la configuración del monorepo
     const cookieSettings = getCookieSettings(60 * 15);
+    if (isLocalhost) {
+      delete cookieSettings.domain;
+      cookieSettings.secure = false;
+    }
     cookiesToSet.push({
       name: "access_token",
       value: newToken,

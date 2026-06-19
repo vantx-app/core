@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getRoleFromToken, isTokenExpired, NAV_LINKS } from "./utils/client";
-import { getCookieSettings, refreshSessionInMiddleware } from "@vantx/auth";
+import { getCookieSettings, refreshSessionInMiddleware, parseHostHeader } from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -74,6 +74,7 @@ export async function middleware(request: NextRequest) {
         refreshToken,
         userAgent: request.headers.get("user-agent") || "VantX-Middleware",
         internalApiUrl: process.env.INTERNAL_API_URL || "http://localhost:8000",
+        host,
       });
 
       if (!result.success) {
@@ -89,10 +90,15 @@ export async function middleware(request: NextRequest) {
       // Modificamos el protocolo y el host para asegurar que coincida con el cliente público (evita subdominios de Docker)
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.protocol = protocol;
-      redirectUrl.host = host;
+
+      // Separamos el host en hostname y puerto para NextURL usando la función helper compartida
+      const { hostname, port } = parseHostHeader(host);
+      redirectUrl.hostname = hostname;
+      redirectUrl.port = port;
+
       response = NextResponse.redirect(redirectUrl);
 
-      // Propagamos de manera robusta las cookies devueltas por el helper
+      // Propagamos de manera robusta las cookies devueltas por el helper (ya auto-corregidas para localhost si aplica)
       result.cookiesToSet?.forEach((cookie) => {
         response.cookies.set(cookie.name, cookie.value, cookie.options);
       });
