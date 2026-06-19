@@ -56,7 +56,7 @@ export default async function MarketplaceHome() {
   } else {
     // Guest view
     try {
-      initialDrivers = await fetchServer("/drivers/public");
+      initialDrivers = await fetchServer("/marketplace/drivers/public");
     } catch (err) {
       console.error(
         "Marketplace: error fetching public drivers list on server:",

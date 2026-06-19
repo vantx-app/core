@@ -77,19 +77,6 @@ export class VehiclesController {
     return result;
   }
 
-  @Get('marketplace')
-  async getMarketplaceListings(
-    @Req() req: Request & { user: AccessTokenPayload },
-  ) {
-    return this.vehiclesService.findMarketplaceListings(req.user);
-  }
-
-  @Public()
-  @Get('marketplace/public')
-  async getPublicMarketplaceListings() {
-    return this.vehiclesService.findMarketplaceListings();
-  }
-
   @Get(':id')
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,

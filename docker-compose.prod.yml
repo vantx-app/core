@@ -62,11 +62,43 @@ services:
       - NODE_ENV=production
       - PORT=3002
       - HOSTNAME=0.0.0.0
-      - INTERNAL_API_URL=http://vantx_server:8000
+      - CRM_API_URL=http://vantx_server:8000
+      - MARKETPLACE_API_URL=http://vantx_marketplace_api:8001
     ports:
       - "127.0.0.1:3002:3002"
     depends_on:
       - vantx_server
+      - vantx_marketplace_api
+
+  # ----------------------------------
+  # MARKETPLACE API (NestJS API)
+  # ----------------------------------
+  vantx_marketplace_api:
+    image: ghcr.io/vantx-app/marketplace-api:latest
+    container_name: vantx_marketplace_api
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 300M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - NODE_OPTIONS=--max-old-space-size=256
+      - MARKETPLACE_API_PORT=8001
+    ports:
+      - "127.0.0.1:8001:8001"
+    depends_on:
+      vantx_db:
+        condition: service_healthy
 
   # ----------------------------------
   # BACKEND (NestJS API)

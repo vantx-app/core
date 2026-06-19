@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
       const result = await refreshSessionInMiddleware({
         refreshToken,
         userAgent: request.headers.get("user-agent") || "VantX-Middleware",
-        internalApiUrl: process.env.INTERNAL_API_URL || "http://localhost:8000",
+        internalApiUrl: process.env.CRM_API_URL || "http://localhost:8000",
       });
 
       if (!result.success) {

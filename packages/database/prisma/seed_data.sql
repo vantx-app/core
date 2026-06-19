@@ -84,7 +84,7 @@ ALTER TABLE public."ScoringProfile" ENABLE TRIGGER ALL;
 
 ALTER TABLE public."Vehicle" DISABLE TRIGGER ALL;
 
-INSERT INTO public."Vehicle" ("id", "orgId", "imei", "alias", "plateNumber", "vin", "make", "model", "year", "status", "scoringProfileId", "createdAt") VALUES ('a33739e8-e620-48d2-bef0-b1c2f83d039a', 'ada2c63b-3369-47e3-9934-6cc8d6498fb3', '865124071453916', 'Unidad 1', 'EC7850', '3N1CN8AE2ZL111904', 'Nissan', 'Versa', 2023, 'ACTIVE', 'f5098e80-8846-4674-96fc-42ca8b46f52c', '2026-05-17 19:53:35.046');
+INSERT INTO public."Vehicle" ("id", "orgId", "imei", "alias", "plateNumber", "vin", "make", "model", "year", "status", "scoringProfileId", "createdAt", "isListed") VALUES ('a33739e8-e620-48d2-bef0-b1c2f83d039a', 'ada2c63b-3369-47e3-9934-6cc8d6498fb3', '865124071453916', 'Unidad 1', 'EC7850', '3N1CN8AE2ZL111904', 'Nissan', 'Versa', 2023, 'ACTIVE', 'f5098e80-8846-4674-96fc-42ca8b46f52c', '2026-05-17 19:53:35.046', true);
 
 ALTER TABLE public."Vehicle" ENABLE TRIGGER ALL;
 

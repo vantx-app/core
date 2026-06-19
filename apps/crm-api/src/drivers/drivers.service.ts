@@ -88,54 +88,6 @@ export class DriversService {
     } as FormattedDriver<T>;
   }
 
-  maskDriverForPublic(driver: any) {
-    const fName = driver.firstName || 'Conductor';
-    const lInitial = driver.lastName ? `${driver.lastName[0]}.` : '';
-    const maskedName = `${fName} ${lInitial}`.trim();
-    const share = driver.shareScoresPublicly ?? true;
-    const hasHistory =
-      !!driver.globalStats &&
-      (driver.globalStats.totalKm > 0 || driver.globalStats.totalSnapshots > 0);
-    return {
-      id: driver.id,
-      name: maskedName,
-      firstName: fName,
-      lastName: lInitial ? `${lInitial}` : null,
-      nationalId: '***-***-***',
-      phone: null,
-      status: driver.status,
-      licenseType: driver.licenseType,
-      shareScoresPublicly: share,
-      hasHistory,
-      globalStats: driver.globalStats
-        ? {
-            globalOverallScore: share
-              ? (driver.globalStats.globalOverallScore ??
-                driver.globalStats.overallScore ??
-                null)
-              : null,
-            globalSafetyScore: share
-              ? (driver.globalStats.globalSafetyScore ??
-                driver.globalStats.safetyScore ??
-                null)
-              : null,
-            globalEcoScore: share
-              ? (driver.globalStats.globalEcoScore ??
-                driver.globalStats.ecoScore ??
-                null)
-              : null,
-            globalAssetScore: share
-              ? (driver.globalStats.globalAssetScore ??
-                driver.globalStats.assetScore ??
-                null)
-              : null,
-          }
-        : null,
-      scoreSnapshots: share ? driver.scoreSnapshots || [] : [],
-      documents: driver.documents || [],
-    };
-  }
-
   async findAll(onlyAvailable?: boolean) {
     const cacheKey = `drivers:all:${onlyAvailable ? 'available' : 'all'}`;
     let drivers =

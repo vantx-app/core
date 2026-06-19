@@ -139,7 +139,7 @@ export function MarketplaceClientView({
         resolvedUser?.role === "ADMIN" ||
         resolvedUser?.role === "SUPER_ADMIN";
 
-      const url = isOwner ? "/drivers?available=true" : "/drivers/public";
+      const url = isOwner ? "/drivers?available=true" : "/marketplace/drivers/public";
       const { data } = await api.get<MarketplaceDriver[]>(url);
       setDrivers(data);
     } catch (err) {

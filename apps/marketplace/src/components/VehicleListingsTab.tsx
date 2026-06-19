@@ -54,8 +54,8 @@ export function VehicleListingsTab({
       setLoading(true);
       setError(null);
       const endpoint = isGuest
-        ? "/vehicles/marketplace/public"
-        : "/vehicles/marketplace";
+        ? "/marketplace/vehicles/public"
+        : "/marketplace/vehicles";
       const { data } = await api.get(endpoint);
       setListings(data);
     } catch (err: any) {

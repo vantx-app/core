@@ -2,7 +2,7 @@ import { MetadataRoute } from "next";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = "https://vantx.app/marketplace";
-  const apiUrl = process.env.INTERNAL_API_URL || "http://localhost:8000";
+  const apiUrl = process.env.MARKETPLACE_API_URL || "http://localhost:8001";
 
   const staticRoutes = [
     {
@@ -14,7 +14,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   ];
 
   try {
-    const res = await fetch(`${apiUrl}/api/drivers/public`, {
+    const res = await fetch(`${apiUrl}/api/marketplace/drivers/public`, {
       next: { revalidate: 3600 },
     });
     if (res.ok) {
