@@ -15,10 +15,13 @@ This guide describes local environment setup, build pipelines, and workspace CLI
 ## 2. Environment Configuration
 
 Copy the template environment file to `.env` in the root:
+
 ```bash
 cp .env.template .env
 ```
+
 Ensure `DATABASE_URL` is set to point to your local PostgreSQL instance:
+
 ```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/vantx_db?schema=public"
 ```

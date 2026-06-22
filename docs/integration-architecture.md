@@ -29,6 +29,7 @@ sequenceDiagram
 ```
 
 ### **1.1 Cookie Security Requirements**
+
 - **HttpOnly:** Must be set to `true` to block JavaScript access (`document.cookie`), preventing XSS token harvesting.
 - **Secure:** Must be set to `true` (enforces HTTPS) in production, but configured as `secure: false` in native localhost dev environments.
 - **Domain:** Scoped explicitly to `.vantx.app` so all subdomains can access it.
@@ -38,7 +39,7 @@ sequenceDiagram
 
 ## 2. Docker Network Architecture
 
-In production (`docker-compose.prod.yml`), the services are organized under a single bridge network called `vantx-network`. 
+In production (`docker-compose.prod.yml`), the services are organized under a single bridge network called `vantx-network`.
 
 - **Internal Service Names:** Next.js frontend apps communicate with the backend using the internal Docker hostnames.
   - Landing, Dashboard, and Marketplace environment variables point to `INTERNAL_API_URL=http://vantx_server:8000`.

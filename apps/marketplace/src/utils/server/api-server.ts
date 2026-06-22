@@ -11,8 +11,8 @@ export async function fetchServer(endpoint: string, options: RequestInit = {}) {
 
   const isMarketplaceEndpoint = endpoint.startsWith("/marketplace");
   const baseApiUrl = isMarketplaceEndpoint
-    ? (process.env.MARKETPLACE_API_URL || "http://localhost:8001")
-    : (process.env.CRM_API_URL || "http://localhost:8000");
+    ? process.env.MARKETPLACE_API_URL || "http://localhost:8001"
+    : process.env.CRM_API_URL || "http://localhost:8000";
 
   const url = `${baseApiUrl}/api${endpoint}`;
 

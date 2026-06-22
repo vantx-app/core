@@ -1,0 +1,14 @@
+model MapLink {
+  linkId          String   @id
+  functionalClass Int
+  speedLimit      Int
+  geometry        String
+  minLat          Float
+  maxLat          Float
+  minLng          Float
+  maxLng          Float
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([minLat, maxLat, minLng, maxLng])
+}

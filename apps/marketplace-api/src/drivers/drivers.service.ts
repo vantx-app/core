@@ -1,5 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { Injectable, NotFoundException } from "@nestjs/common";
+import { PrismaService } from "../prisma.service";
 
 @Injectable()
 export class DriversService {
@@ -8,7 +8,7 @@ export class DriversService {
   async findPublicAvailableDrivers() {
     const dbDrivers = await this.prisma.driver.findMany({
       where: {
-        status: 'ACTIVE',
+        status: "ACTIVE",
         assignments: {
           none: {
             to: null,
@@ -41,22 +41,22 @@ export class DriversService {
           },
         },
         scoreSnapshots: {
-          orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }],
+          orderBy: [{ year: "desc" }, { weekNumber: "desc" }],
           take: 12,
         },
       },
     });
 
-    if (!driver || driver.status !== 'ACTIVE') {
-      throw new NotFoundException('Conductor no encontrado o no disponible.');
+    if (!driver || driver.status !== "ACTIVE") {
+      throw new NotFoundException("Conductor no encontrado o no disponible.");
     }
 
     return this.maskDriverForPublic(driver);
   }
 
   private maskDriverForPublic(driver: any) {
-    const fName = driver.firstName || 'Conductor';
-    const lInitial = driver.lastName ? `${driver.lastName[0]}.` : '';
+    const fName = driver.firstName || "Conductor";
+    const lInitial = driver.lastName ? `${driver.lastName[0]}.` : "";
     const maskedName = `${fName} ${lInitial}`.trim();
     const share = driver.shareScoresPublicly ?? true;
     const hasHistory =
@@ -68,7 +68,7 @@ export class DriversService {
       name: maskedName,
       firstName: fName,
       lastName: lInitial ? `${lInitial}` : null,
-      nationalId: '***-***-***',
+      nationalId: "***-***-***",
       phone: null,
       status: driver.status,
       licenseType: driver.licenseType,

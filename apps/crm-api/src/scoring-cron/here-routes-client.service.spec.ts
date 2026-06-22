@@ -2,12 +2,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { HereRoutesClientService } from './here-routes-client.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
+import { PrismaService } from '../prisma.service';
 import { of, throwError } from 'rxjs';
 
 describe('HereRoutesClientService', () => {
   let service: HereRoutesClientService;
   let configMock: any;
   let httpMock: any;
+  let prismaMock: any;
 
   beforeEach(async () => {
     configMock = {
@@ -21,11 +23,19 @@ describe('HereRoutesClientService', () => {
       get: jest.fn(),
     };
 
+    prismaMock = {
+      mapLink: {
+        findMany: jest.fn().mockResolvedValue([]),
+        upsert: jest.fn().mockResolvedValue({}),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         HereRoutesClientService,
         { provide: ConfigService, useValue: configMock },
         { provide: HttpService, useValue: httpMock },
+        { provide: PrismaService, useValue: prismaMock },
       ],
     }).compile();
 
@@ -90,20 +100,18 @@ describe('HereRoutesClientService', () => {
     expect(service['consecutiveErrors']).toBe(0);
   });
 
-  it('debe parsear y decodificar correctamente la respuesta de HERE Routing', async () => {
-    // Mock de la respuesta HTTP con un polyline codificado válido y spans en m/s
+  it('debe parsear y decodificar correctamente la respuesta de HERE Map Attributes API', async () => {
+    // Mock de la respuesta HTTP con ROAD_GEOM_FC2 y coordenadas en Panamá
     const mockResponse = {
       data: {
-        routes: [
+        Layers: [
           {
-            sections: [
+            LayerName: 'ROAD_GEOM_FC2',
+            Attributes: [
               {
-                polyline:
-                  'BGgn6lRjk613E3N3DnkBjN_EU7B3DUjDkN7pB8Q_EwMzFwvB3X0jBnQ8pBnVwHT0K0PzKzPvHU7pBoVge4wBkhBjSkInB0F4D4N0UoG8GsJoB8Q3Dwb3DsTjD7GjwB7GnfvW3wB7GnkBsE3NgF_OkDsE0UoL6T2R',
-                spans: [
-                  { offset: 0, maxSpeed: 11.1111116, functionalClass: 2 }, // ~40 km/h
-                  { offset: 24, maxSpeed: 16.6666679, functionalClass: 1 }, // ~60 km/h
-                ],
+                LINK_ID: '12345',
+                LAT: '900830,400',
+                LON: '-7952460,-400',
               },
             ],
           },
@@ -122,14 +130,13 @@ describe('HereRoutesClientService', () => {
     );
 
     expect(result).not.toBeNull();
+    // FC2 se mapea a 80 km/h en Panamá
     expect(result!.spans).toEqual([
-      { geometryOffset: 0, speedLimit: 40, functionalClass: 2 },
-      { geometryOffset: 24, speedLimit: 60, functionalClass: 1 },
+      { geometryOffset: 0, speedLimit: 80, functionalClass: 2 },
     ]);
-    // El decoder oficial decodifica y el servicio convierte a [lng, lat]
-    expect(result!.geometry.length).toBeGreaterThan(0);
-    expect(result!.geometry[0]).toEqual(
-      expect.arrayContaining([expect.any(Number), expect.any(Number)]),
-    );
+    expect(result!.geometry.length).toBe(2);
+    expect(result!.geometry[0]).toEqual([-79.5246, 9.0083]);
+    expect(result!.geometry[1]).toEqual([-79.5286, 9.0123]);
+    expect(prismaMock.mapLink.upsert).toHaveBeenCalledTimes(1);
   });
 });

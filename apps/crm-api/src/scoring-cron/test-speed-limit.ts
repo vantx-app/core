@@ -6,6 +6,10 @@ import {
   downsampleByDistance,
   splitIntoChunks,
   decodeFlexiblePolyline,
+  encodeFlexiblePolyline,
+  uniformThin,
+  calculateHeading,
+  getAngleDiff,
   RouteSpanWithSpeedLimit,
 } from './route-utils';
 
@@ -21,6 +25,7 @@ interface TelemetryLogLocal {
   tripId: string;
   status: string;
   movement: boolean;
+  angle: number;
 }
 
 // Cargar variables de entorno manualmente
@@ -113,6 +118,7 @@ function parseTelemetryCSV(filePath: string): TelemetryLogLocal[] {
   const tripIdIndex = headers.indexOf('tripId');
   const statusIndex = headers.indexOf('status');
   const movementIndex = headers.indexOf('movement');
+  const angleIndex = headers.indexOf('angle');
 
   const logs: TelemetryLogLocal[] = [];
 
@@ -158,83 +164,202 @@ function parseTelemetryCSV(filePath: string): TelemetryLogLocal[] {
       tripId: getVal(tripIdIndex),
       status: getVal(statusIndex),
       movement: getVal(movementIndex) === 't',
+      angle: parseInt(getVal(angleIndex), 10) || 0,
     });
   }
 
   return logs;
 }
 
-// Llamar a HERE Routing API
-async function callHereRoutingLocal(
-  apiKey: string,
-  chunk: { lat: number; lng: number }[],
+// Obtener límites de velocidad acumulados para toda la ruta usando la API de Atributos de Mapa (Map Attributes API v8)
+async function getRouteSpeedLimits(
+  coordinates: { lat: number; lng: number; speed?: number; angle?: number }[],
   travelMode: 'Car' | 'Truck',
+  apiKey: string,
 ): Promise<{ spans: any[]; geometry: [number, number][] } | null> {
-  const origin = chunk[0];
-  const destination = chunk[chunk.length - 1];
-  const waypoints = chunk.length > 2 ? chunk.slice(1, -1) : null;
+  if (coordinates.length < 2) {
+    return null;
+  }
 
-  const url = 'https://router.hereapi.com/v8/routes';
+  // Capping inteligente a 1200 puntos
+  let processedCoords = coordinates;
+  if (coordinates.length > 1200) {
+    console.log(
+      `[HERE] Mitigación de tamaño activa: Reduciendo uniformemente de ${coordinates.length} a 1200 puntos.`,
+    );
+    processedCoords = uniformThin(coordinates, 1200);
+  }
+
+  const polylineForHere = processedCoords.map(
+    (c) => [c.lat, c.lng] as [number, number],
+  );
+  const encodedPolyline = encodeFlexiblePolyline(polylineForHere);
+
+  const url = 'https://smap.hereapi.com/v8/maps/attributes/path';
   const queryParams = new URLSearchParams();
   queryParams.append('apikey', apiKey);
-  queryParams.append('transportMode', travelMode.toLowerCase());
-  queryParams.append('origin', `${origin.lat},${origin.lng}`);
-  queryParams.append('destination', `${destination.lat},${destination.lng}`);
-  queryParams.append('return', 'polyline');
-  queryParams.append('spans', 'maxSpeed,functionalClass');
-  queryParams.append('departureTime', 'any');
-
-  if (waypoints) {
-    for (const wp of waypoints) {
-      queryParams.append('via', `${wp.lat},${wp.lng}!passThrough=true`);
-    }
-  }
+  queryParams.append('attributes', 'ROAD_GEOM_FCn(*)');
+  queryParams.append('flexiblePolyline', encodedPolyline);
 
   try {
     const response = await axios.get(`${url}?${queryParams.toString()}`, {
-      timeout: 10000,
+      timeout: 15000,
     });
 
     const data = response.data;
-    if (!data.routes || data.routes.length === 0) {
-      console.log('[HERE] La respuesta de HERE Routing no contiene rutas.');
-      return null;
-    }
+    const layers = data.Layers || data.layers || [];
+    const parsedLinks: {
+      linkId: string;
+      functionalClass: number;
+      speedLimit: number;
+      points: [number, number][];
+    }[] = [];
 
-    const route = data.routes[0];
-    if (!route.sections || route.sections.length === 0) {
-      console.log('[HERE] La ruta de HERE no contiene secciones.');
-      return null;
-    }
+    for (const layer of layers) {
+      const layerName = layer.LayerName || layer.layerName || '';
+      const fcMatch = layerName.match(/FC(\d+)/i);
+      const fc = fcMatch ? parseInt(fcMatch[1], 10) : 3;
 
-    const section = route.sections[0];
-    const encodedPolyline = section.polyline;
-    if (!encodedPolyline) {
-      console.log('[HERE] La sección de HERE no contiene polyline.');
-      return null;
-    }
+      // Mapeo oficial de límites de velocidad de Panamá (PANAMA_LEGAL_CEILINGS)
+      const speedLimit =
+        fc === 1
+          ? 100 // Autopistas / Corredores
+          : fc === 2
+            ? 80 // Carreteras
+            : fc === 3
+              ? 60 // Avenidas Principales
+              : fc === 4
+                ? 60
+                : 40; // FC5: Calles Residenciales / Urbanas comerciales
 
-    const decoded = decodeFlexiblePolyline(encodedPolyline);
-    const geometry = decoded.polyline.map(
-      ([lat, lng]) => [lng, lat] as [number, number],
-    );
+      const rows = layer.Attributes || layer.attributes || [];
+      for (const row of rows) {
+        const linkId = String(row.LINK_ID || row.link_id);
+        const latStr = String(row.LAT || row.lat || '');
+        const lonStr = String(row.LON || row.lon || '');
+        if (!latStr || !lonStr) continue;
 
-    const spans: any[] = [];
-    if (section.spans) {
-      for (const span of section.spans) {
-        const rawSpeed = span.maxSpeed;
-        const speedLimit = rawSpeed ? Math.round(rawSpeed * 3.6) : null;
-        spans.push({
-          geometryOffset: span.offset ?? 0,
+        // Decodificar deltas de la geometría del enlace
+        const latTokens = latStr.split(',');
+        const lonTokens = lonStr.split(',');
+        const pts: [number, number][] = [];
+        let currentLat = 0;
+        let currentLon = 0;
+
+        for (let i = 0; i < latTokens.length; i++) {
+          const dLat = parseInt(latTokens[i], 10);
+          const dLon = parseInt(lonTokens[i], 10);
+          currentLat += dLat;
+          currentLon += dLon;
+          pts.push([currentLon / 100000.0, currentLat / 100000.0]); // [lng, lat]
+        }
+
+        parsedLinks.push({
+          linkId,
+          functionalClass: fc,
           speedLimit,
-          functionalClass: span.functionalClass,
+          points: pts,
         });
       }
     }
 
-    return { spans, geometry };
+    console.log(
+      `[HERE] Se obtuvieron ${parsedLinks.length} enlaces desde la API.`,
+    );
+
+    // Reconstruir la geometría y spans del viaje usando la misma lógica de snapping
+    const snappedGeometry: [number, number][] = [];
+    const spans: any[] = [];
+    let lastLinkId: string | null = null;
+
+    for (let i = 0; i < coordinates.length; i++) {
+      const pt = coordinates[i];
+      let bestScore = Infinity;
+      let closestPt: [number, number] | null = null;
+      let matchedLink: (typeof parsedLinks)[0] | null = null;
+      let bestDist = Infinity;
+
+      for (const link of parsedLinks) {
+        for (let idx = 0; idx < link.points.length; idx++) {
+          const linkPt = link.points[idx];
+          const dist = haversineDistance(pt.lat, pt.lng, linkPt[1], linkPt[0]);
+
+          let anglePenalty = 0;
+          let speedPenalty = 0;
+
+          if (
+            pt.speed !== undefined &&
+            pt.angle !== undefined &&
+            pt.speed > 15
+          ) {
+            let segmentHeading = 0;
+            if (idx < link.points.length - 1) {
+              const nextPt = link.points[idx + 1];
+              segmentHeading = calculateHeading(
+                linkPt[1],
+                linkPt[0],
+                nextPt[1],
+                nextPt[0],
+              );
+            } else if (idx > 0) {
+              const prevPt = link.points[idx - 1];
+              segmentHeading = calculateHeading(
+                prevPt[1],
+                prevPt[0],
+                linkPt[1],
+                linkPt[0],
+              );
+            }
+
+            const diffNormal = getAngleDiff(pt.angle, segmentHeading);
+            const diffReverse = getAngleDiff(
+              pt.angle,
+              (segmentHeading + 180) % 360,
+            );
+            const minDiff = Math.min(diffNormal, diffReverse);
+
+            if (minDiff > 45) {
+              anglePenalty = 0.05; // Penalización de 50 metros
+            }
+          }
+
+          if (pt.speed !== undefined && pt.speed > 55) {
+            if (link.speedLimit <= 40) {
+              speedPenalty = 0.05; // Penalización de 50 metros si va rápido en calle residencial
+            }
+          }
+
+          const score = dist + anglePenalty + speedPenalty;
+          if (score < bestScore) {
+            bestScore = score;
+            bestDist = dist;
+            closestPt = linkPt;
+            matchedLink = link;
+          }
+        }
+      }
+
+      if (closestPt) {
+        snappedGeometry.push(closestPt);
+      } else {
+        snappedGeometry.push([pt.lng, pt.lat]);
+      }
+
+      if (matchedLink && matchedLink.linkId !== lastLinkId) {
+        spans.push({
+          geometryOffset: i,
+          speedLimit: matchedLink.speedLimit,
+          functionalClass: matchedLink.functionalClass,
+        });
+        lastLinkId = matchedLink.linkId;
+      }
+    }
+
+    return { spans, geometry: snappedGeometry };
   } catch (error: any) {
-    console.error(`[HERE] Error al llamar a HERE Routing: ${error.message}`);
+    console.error(
+      `[HERE] Error al llamar a HERE Map Attributes: ${error.message}`,
+    );
     if (error.response) {
       console.error(
         `[HERE] Detalles del error: ${JSON.stringify(error.response.data)}`,
@@ -242,76 +367,6 @@ async function callHereRoutingLocal(
     }
     return null;
   }
-}
-
-// Obtener límites de velocidad acumulados para toda la ruta (manejando downsampling y chunks)
-async function getRouteSpeedLimits(
-  coordinates: { lat: number; lng: number }[],
-  travelMode: 'Car' | 'Truck',
-  apiKey: string,
-): Promise<{ spans: any[]; geometry: [number, number][] } | null> {
-  let tripDistanceKm = 0;
-  for (let i = 1; i < coordinates.length; i++) {
-    tripDistanceKm += haversineDistance(
-      coordinates[i - 1].lat,
-      coordinates[i - 1].lng,
-      coordinates[i].lat,
-      coordinates[i].lng,
-    );
-  }
-
-  let maxDownsampledPoints = 75;
-  if (tripDistanceKm >= 30 && tripDistanceKm <= 100) {
-    maxDownsampledPoints = 150;
-  } else if (tripDistanceKm > 100) {
-    maxDownsampledPoints = 225;
-  }
-
-  const sampled = downsampleByDistance(coordinates, 0.3, maxDownsampledPoints);
-  console.log(
-    `[HERE] Coordenadas originales: ${coordinates.length}, Downsampled: ${sampled.length} (Max Limit: ${maxDownsampledPoints}, Dist: ${tripDistanceKm.toFixed(2)} km)`,
-  );
-
-  if (sampled.length < 2) {
-    console.log('[HERE] Insuficientes puntos después del downsampling.');
-    return null;
-  }
-
-  const chunks = splitIntoChunks(sampled, 75);
-  console.log(`[HERE] Dividido en ${chunks.length} chunks para la API.`);
-
-  const allSpans: any[] = [];
-  const allGeometry: [number, number][] = [];
-
-  for (let idx = 0; idx < chunks.length; idx++) {
-    console.log(`[HERE] Consultando chunk ${idx + 1}/${chunks.length}...`);
-    const result = await callHereRoutingLocal(apiKey, chunks[idx], travelMode);
-
-    if (!result) {
-      console.log(
-        '[HERE] Falló la consulta del chunk. Abortando integración de HERE.',
-      );
-      return null;
-    }
-
-    const currentOffset = allGeometry.length > 0 ? allGeometry.length - 1 : 0;
-
-    for (const span of result.spans) {
-      allSpans.push({
-        geometryOffset: span.geometryOffset + currentOffset,
-        speedLimit: span.speedLimit,
-        functionalClass: span.functionalClass,
-      });
-    }
-
-    if (allGeometry.length > 0 && result.geometry.length > 0) {
-      allGeometry.push(...result.geometry.slice(1));
-    } else {
-      allGeometry.push(...result.geometry);
-    }
-  }
-
-  return { spans: allSpans, geometry: allGeometry };
 }
 
 // Snapping y lógica de exceso de velocidad
@@ -414,9 +469,9 @@ async function run() {
   console.log(`- Velocidad promedio: ${avgSpeed.toFixed(1)} km/h`);
 
   // Validación rápida previa a llamadas de API (igual que el servicio)
-  if (!validLogs.some((log) => log.speed > 42)) {
+  if (!validLogs.some((log) => log.speed > 40)) {
     console.log(
-      '[INFO] La velocidad máxima no superó los 42 km/h. Exceso de velocidad: 0',
+      '[INFO] La velocidad máxima no superó los 40 km/h. Exceso de velocidad: 0',
     );
     process.exit(0);
   }
@@ -440,6 +495,8 @@ async function run() {
     const coordinates = validLogs.map((l) => ({
       lat: l.latitude,
       lng: l.longitude,
+      speed: l.speed,
+      angle: l.angle,
     }));
     routeResult = await getRouteSpeedLimits(coordinates, params.mode, apiKey);
     if (routeResult) {
@@ -466,8 +523,8 @@ async function run() {
 
   for (const log of validLogs) {
     const logTime = new Date(log.timestamp);
-    // Margen de gracia de 12 km/h para Panamá
-    const isSpeeding = log.speed > params.fallback + 12;
+    // Margen de gracia de 10 km/h para Panamá
+    const isSpeeding = log.speed > params.fallback + 10;
 
     if (isSpeeding) {
       if (!fallbackEpisodeStart) {
@@ -511,6 +568,7 @@ async function run() {
   let limitChanges = 0;
   let lastLimit: number | null = null;
   let decelerationGraceWindowEnd = 0;
+  let lastValidOnRouteSpeedLimit = params.fallback; // Inertial Fallback
 
   let currentEpisodeStart: Date | null = null;
   let lastSpeedingTimestamp: Date | null = null;
@@ -542,7 +600,8 @@ async function run() {
 
       // Off route si la distancia es > 50 metros (0.05 km)
       if (snapDist > 0.05) {
-        limitToUse = params.fallback;
+        // Fuera de ruta (> 50m), usar Inertial Fallback (heredar el último límite válido en ruta)
+        limitToUse = lastValidOnRouteSpeedLimit;
         isOffRoute = true;
         offRoutePoints++;
       } else {
@@ -551,23 +610,21 @@ async function run() {
         originalLimit = speedLimit;
         functionalClass = fc;
 
-        if (speedLimit !== null) {
-          // Mantener el límite legal real del mapa (no elevar ni truncar hacia arriba)
-          limitToUse = speedLimit;
+        // Smart Fallback Ingestion para Panamá (ignorar speedLimit de HERE y usar estrictamente el FC)
+        if (fc === 1) {
+          limitToUse = 100;
+        } else if (fc === 2) {
+          limitToUse = 80;
+        } else if (fc === 3) {
+          limitToUse = 60;
+        } else if (fc === 4) {
+          limitToUse = 60;
+        } else if (fc === 5) {
+          limitToUse = 40;
         } else {
-          // Smart Fallback Ingestion para Panamá
-          if (fc === 1) {
-            limitToUse = 90;
-          } else if (fc === 2) {
-            limitToUse = 60;
-          } else if (fc === 3) {
-            limitToUse = 50;
-          } else if (fc === 4 || fc === 5) {
-            limitToUse = 40;
-          } else {
-            limitToUse = params.fallback;
-          }
+          limitToUse = params.fallback;
         }
+        lastValidOnRouteSpeedLimit = limitToUse; // Actualizar último límite válido en ruta
       }
 
       // Lógica de transición espacial: Ventana de gracia por desaceleración rápida (drop >= 20 km/h)
@@ -581,8 +638,8 @@ async function run() {
       lastLimit = limitToUse;
 
       const inDecelWindow = logTime.getTime() <= decelerationGraceWindowEnd;
-      // Umbral de exceso con margen de gracia de 12 km/h
-      const threshold = limitToUse + 12;
+      // Umbral de exceso con margen de gracia de 10 km/h
+      const threshold = limitToUse + 10;
       const isSpeeding = !inDecelWindow && log.speed > threshold;
 
       if (isSpeeding) {
@@ -668,11 +725,11 @@ async function run() {
     console.log(`Duración de Severidad (seg):   ${hereSeverity.toFixed(3)}`);
 
     console.log(
-      '\n--- Infracciones con Límite Real Detectadas (Episodios >= 5s, +12 km/h buffer) ---',
+      '\n--- Infracciones con Límite Real Detectadas (Episodios >= 5s, +10 km/h buffer) ---',
     );
     if (violations.length === 0) {
       console.log(
-        '✅ Ningún exceso de velocidad registrado bajo los límites reales de la ruta (+12 km/h buffer).',
+        '    Ningún exceso de velocidad registrado bajo los límites reales de la ruta (+10 km/h buffer).',
       );
     } else {
       console.log(

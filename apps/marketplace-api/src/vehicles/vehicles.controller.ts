@@ -1,9 +1,9 @@
-import { Controller, Get, Req } from '@nestjs/common';
-import { Request } from 'express';
-import { VehiclesService, AccessTokenPayload } from './vehicles.service';
-import { Public } from '../common/decorators/public.decorator';
+import { Controller, Get, Req } from "@nestjs/common";
+import { Request } from "express";
+import { VehiclesService, AccessTokenPayload } from "./vehicles.service";
+import { Public } from "../common/decorators/public.decorator";
 
-@Controller('vehicles')
+@Controller("vehicles")
 export class VehiclesController {
   constructor(private readonly vehiclesService: VehiclesService) {}
 
@@ -15,7 +15,7 @@ export class VehiclesController {
   }
 
   @Public()
-  @Get('public')
+  @Get("public")
   async getPublicMarketplaceListings() {
     return this.vehiclesService.findMarketplaceListings();
   }

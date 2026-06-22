@@ -13,7 +13,7 @@ import { JwtStrategy } from "./auth/strategies/jwt.strategy";
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    PassportModule.register({ defaultStrategy: 'jwt' }),
+    PassportModule.register({ defaultStrategy: "jwt" }),
     VehiclesModule,
     DriversModule,
   ],

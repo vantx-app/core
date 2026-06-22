@@ -218,3 +218,85 @@ export function decodeFlexiblePolyline(encoded: string) {
     polyline: res,
   };
 }
+
+const ENCODING_TABLE =
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+
+function encodeUnsignedNumber(val: number): string {
+  let res = '';
+  let numVal = val;
+  while (numVal > 0x1f) {
+    const pos = (numVal & 0x1f) | 0x20;
+    res += ENCODING_TABLE[pos];
+    numVal >>>= 5;
+  }
+  return res + ENCODING_TABLE[numVal];
+}
+
+function encodeScaledValue(value: number): string {
+  let numVal = value;
+  const negative = numVal < 0;
+  numVal <<= 1;
+  if (negative) {
+    numVal = ~numVal;
+  }
+  return encodeUnsignedNumber(numVal);
+}
+
+function encodeHeader(
+  precision: number,
+  thirdDim: number,
+  thirdDimPrecision: number,
+): string {
+  if (precision < 0 || precision > 15) {
+    throw new Error('precision out of range. Should be between 0 and 15');
+  }
+  const res = (thirdDimPrecision << 7) | (thirdDim << 4) | precision;
+  return encodeUnsignedNumber(FORMAT_VERSION) + encodeUnsignedNumber(res);
+}
+
+export function encodeFlexiblePolyline(
+  polyline: [number, number][],
+  precision = 5,
+): string {
+  const multiplierDegree = Math.pow(10, precision);
+  const encodedHeaderList = encodeHeader(precision, 0, 0);
+  const encodedCoords: string[] = [];
+
+  let lastLat = 0;
+  let lastLng = 0;
+
+  for (const location of polyline) {
+    const lat = Math.round(location[0] * multiplierDegree);
+    encodedCoords.push(encodeScaledValue(lat - lastLat));
+    lastLat = lat;
+
+    const lng = Math.round(location[1] * multiplierDegree);
+    encodedCoords.push(encodeScaledValue(lng - lastLng));
+    lastLng = lng;
+  }
+
+  return [encodedHeaderList, ...encodedCoords].join('');
+}
+
+export function calculateHeading(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const lat1Rad = (lat1 * Math.PI) / 180;
+  const lat2Rad = (lat2 * Math.PI) / 180;
+  const y = Math.sin(dLon) * Math.cos(lat2Rad);
+  const x =
+    Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+    Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+  const brng = (Math.atan2(y, x) * 180) / Math.PI;
+  return (brng + 360) % 360;
+}
+
+export function getAngleDiff(angle1: number, angle2: number): number {
+  const diff = Math.abs(angle1 - angle2) % 360;
+  return diff > 180 ? 360 - diff : diff;
+}

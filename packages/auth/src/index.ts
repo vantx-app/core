@@ -127,7 +127,6 @@ export function getRoleFromToken(token: string): string {
   return decoded?.role ?? "DRIVER";
 }
 
-
 export interface ParsedHost {
   hostname: string;
   port: string;
@@ -159,7 +158,7 @@ export interface SessionRefreshResult {
 }
 
 export async function refreshSessionInMiddleware(
-  options: SessionRefreshOptions
+  options: SessionRefreshOptions,
 ): Promise<SessionRefreshResult> {
   const { refreshToken, userAgent, internalApiUrl, host } = options;
   try {

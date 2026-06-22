@@ -1,5 +1,5 @@
-import { Injectable, ForbiddenException } from '@nestjs/common';
-import { PrismaService } from '../prisma.service';
+import { Injectable, ForbiddenException } from "@nestjs/common";
+import { PrismaService } from "../prisma.service";
 
 export type AccessTokenPayload = {
   sub: string;
@@ -13,7 +13,7 @@ export class VehiclesService {
 
   async findMarketplaceListings(user?: AccessTokenPayload) {
     // 1. Si es un chofer, verificar si ya tiene un vehículo asignado
-    if (user && user.role === 'DRIVER') {
+    if (user && user.role === "DRIVER") {
       const activeAssignment = await this.prisma.assignment.findFirst({
         where: {
           driver: {
@@ -25,7 +25,7 @@ export class VehiclesService {
 
       if (activeAssignment) {
         throw new ForbiddenException(
-          'Los conductores con un vehículo asignado no pueden explorar otros vehículos en el mercado.',
+          "Los conductores con un vehículo asignado no pueden explorar otros vehículos en el mercado.",
         );
       }
     }
@@ -39,7 +39,7 @@ export class VehiclesService {
             to: null,
           },
         },
-        status: 'ACTIVE',
+        status: "ACTIVE",
       },
       select: {
         id: true,
@@ -56,7 +56,7 @@ export class VehiclesService {
             name: true,
             users: {
               where: {
-                role: 'OWNER',
+                role: "OWNER",
               },
               select: {
                 email: true,
@@ -87,13 +87,13 @@ export class VehiclesService {
     }
 
     // 3. Si el rol es DRIVER, verificar su estado de activación
-    if (user.role === 'DRIVER') {
+    if (user.role === "DRIVER") {
       const driver = await this.prisma.driver.findUnique({
         where: { userId: user.sub },
         select: { status: true },
       });
 
-      const isDriverActive = driver?.status === 'ACTIVE';
+      const isDriverActive = driver?.status === "ACTIVE";
 
       // Si no está activo, ocultamos los detalles de la oferta/contacto
       return vehicles.map((v) => {
@@ -107,7 +107,7 @@ export class VehiclesService {
             fuelType: v.fuelType,
             listingPrice: v.listingPrice,
             listingDescription:
-              'Debes completar tu verificación de documentos para ver la descripción completa y contactar al dueño.',
+              "Debes completar tu verificación de documentos para ver la descripción completa y contactar al dueño.",
             hasOptionToBuy: v.hasOptionToBuy,
             isLocked: true, // Flag frontend
           };

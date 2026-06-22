@@ -231,9 +231,9 @@ describe('ScoringCronService', () => {
       const baseTime = new Date('2026-06-12T12:00:00Z');
       const logs = [
         { timestamp: new Date(baseTime.getTime() + 0), speed: 80 } as any,
-        { timestamp: new Date(baseTime.getTime() + 10000), speed: 125 } as any, // 13 over fallback 110 + 12 grace (starts episode)
-        { timestamp: new Date(baseTime.getTime() + 20000), speed: 123 } as any, // 11 over fallback 110 + 12 grace (continues episode)
-        { timestamp: new Date(baseTime.getTime() + 30000), speed: 110 } as any, // 110 <= 122 (below threshold)
+        { timestamp: new Date(baseTime.getTime() + 10000), speed: 125 } as any, // 15 over fallback 110 + 10 grace (starts episode)
+        { timestamp: new Date(baseTime.getTime() + 20000), speed: 123 } as any, // 13 over fallback 110 + 10 grace (continues episode)
+        { timestamp: new Date(baseTime.getTime() + 30000), speed: 110 } as any, // 110 <= 120 (below threshold)
       ];
       const result = (service as any).fallbackOverspeeding(logs, 110);
       expect(result.overspeedCount).toBe(1);
@@ -297,7 +297,7 @@ describe('ScoringCronService', () => {
         {
           latitude: 9.991,
           longitude: -79.991,
-          speed: 125, // > 110 + 12 grace
+          speed: 125, // > 110 + 10 grace
           timestamp: new Date('2026-06-12T12:00:00Z'),
           angle: 90,
         } as any,
@@ -321,11 +321,11 @@ describe('ScoringCronService', () => {
       ).toHaveBeenCalled();
     });
 
-    it('evaluateOverspeedingWithHereRoutes debe usar los límites de velocidad de HERE API con buffer de 12km/h', async () => {
+    it('evaluateOverspeedingWithHereRoutes debe usar los límites de velocidad de HERE API con buffer de 10km/h', async () => {
       hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [
-          { geometryOffset: 0, speedLimit: 80 },
-          { geometryOffset: 1, speedLimit: 50 },
+          { geometryOffset: 0, speedLimit: 80, functionalClass: 2 },
+          { geometryOffset: 1, speedLimit: 50, functionalClass: 3 },
         ],
         geometry: [
           [-79.991, 9.991],
@@ -337,7 +337,7 @@ describe('ScoringCronService', () => {
         {
           latitude: 9.991,
           longitude: -79.991,
-          speed: 95, // exceeds 80 + 12 = 92
+          speed: 95, // exceeds 80 + 10 = 90
           timestamp: new Date('2026-06-12T12:00:00Z'),
           angle: 90,
         } as any,
@@ -351,7 +351,7 @@ describe('ScoringCronService', () => {
         {
           latitude: 9.998,
           longitude: -79.998,
-          speed: 58, // 58 < 50 + 12 = 62 (below threshold)
+          speed: 58, // 58 < 50 + 10 = 60 (below threshold)
           timestamp: new Date('2026-06-12T12:00:10Z'),
           angle: 90,
         } as any,
@@ -371,7 +371,7 @@ describe('ScoringCronService', () => {
 
     it('evaluateOverspeedingWithHereRoutes debe enviar TravelMode Truck para HEAVY_DUTY y machinery', async () => {
       hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [{ geometryOffset: 0, speedLimit: 60 }],
+        spans: [{ geometryOffset: 0, speedLimit: 60, functionalClass: 3 }],
         geometry: [
           [-79.991, 9.991],
           [-79.998, 9.998],
@@ -382,7 +382,7 @@ describe('ScoringCronService', () => {
         {
           latitude: 9.991,
           longitude: -79.991,
-          speed: 75, // exceeds 60 + 12 = 72
+          speed: 75, // exceeds 60 + 10 = 70
           timestamp: new Date('2026-06-12T12:00:00Z'),
           angle: 90,
         } as any,
@@ -449,14 +449,14 @@ describe('ScoringCronService', () => {
         VehicleCategory.MACHINERY,
       );
 
-      // speedLimit es null → usa fallbackOverspeedThreshold (110) → threshold = 122
+      // speedLimit es null → usa fallbackOverspeedThreshold (110) → threshold = 120
       expect(result.overspeedCount).toBe(0);
       expect(result.overspeedSeverity).toBe(0);
     });
 
     it('evaluateOverspeedingWithHereRoutes debe usar fallback cuando el GPS está Off Route (> 20m del punto más cercano)', async () => {
       hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [{ geometryOffset: 0, speedLimit: 30 }],
+        spans: [{ geometryOffset: 0, speedLimit: 30, functionalClass: 5 }],
         geometry: [
           [-79.534, 8.994],
           [-79.53, 8.99],
@@ -479,9 +479,57 @@ describe('ScoringCronService', () => {
         VehicleCategory.PASSENGER,
       );
 
-      // Off Route → usa fallbackOverspeedThreshold (110) → threshold = 122 → 80 < 122 → sin infracción
+      // Off Route → usa lastValidOnRouteSpeedLimit (inicializado en 110) → threshold = 120 → 80 < 120 → sin infracción
       expect(result.overspeedCount).toBe(0);
       expect(result.overspeedSeverity).toBe(0);
+    });
+
+    it('evaluateOverspeedingWithHereRoutes debe usar Inertial Fallback para puntos Off Route (heredar límite del último punto válido)', async () => {
+      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+        spans: [{ geometryOffset: 0, speedLimit: 40, functionalClass: 5 }],
+        geometry: [
+          [-79.991, 9.991],
+          [-79.998, 9.998],
+        ],
+      });
+
+      const logs = [
+        {
+          latitude: 9.991,
+          longitude: -79.991,
+          speed: 50,
+          timestamp: new Date('2026-06-12T12:00:00Z'),
+        } as any, // On Route: snaps to geometry[0], speedLimit = 50. lastValidOnRouteSpeedLimit becomes 50
+        {
+          latitude: 9.0, // way off route
+          longitude: -79.0,
+          speed: 65, // exceeds 50 + 10 = 60 (Inertial Fallback limit = 50)
+          timestamp: new Date('2026-06-12T12:00:05Z'),
+        } as any,
+        {
+          latitude: 9.0, // way off route
+          longitude: -79.0,
+          speed: 65,
+          timestamp: new Date('2026-06-12T12:00:10Z'),
+        } as any,
+        {
+          latitude: 9.0, // way off route
+          longitude: -79.0,
+          speed: 50, // below 50 + 10 = 60
+          timestamp: new Date('2026-06-12T12:00:15Z'),
+        } as any,
+      ];
+
+      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
+        logs,
+        110, // fallbackThreshold is 110, but since we had an on-route point of 50, off-route points must inherit 50
+        VehicleCategory.PASSENGER,
+      );
+
+      // Si heredó 50: speed 65 > 50 + 10 = 60. Se inicia y continúa el episodio (duración 5s >= 5s), count = 1.
+      // Si usara fallback general 110: speed 65 <= 110 + 10 = 120, count = 0.
+      expect(result.overspeedCount).toBe(1);
+      expect(result.overspeedSeverity).toBe(10);
     });
 
     it('evaluateOverspeedingWithHereRoutes debe aplicar Smart Fallback cuando speedLimit es null basado en FC', async () => {
@@ -493,18 +541,18 @@ describe('ScoringCronService', () => {
         ],
       });
 
-      // Límite FC1 = 90. Threshold = 102.
+      // Límite FC1 = 100. Threshold = 110.
       const logs = [
         {
           latitude: 9.991,
           longitude: -79.991,
-          speed: 105,
+          speed: 115,
           timestamp: new Date('2026-06-12T12:00:00Z'),
         },
         {
           latitude: 9.991,
           longitude: -79.991,
-          speed: 105,
+          speed: 115,
           timestamp: new Date('2026-06-12T12:00:05Z'),
         },
         {
@@ -526,8 +574,8 @@ describe('ScoringCronService', () => {
     it('evaluateOverspeedingWithHereRoutes debe suspender la evaluación durante la ventana de gracia de desaceleración (drop >= 20 km/h)', async () => {
       hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [
-          { geometryOffset: 0, speedLimit: 100 },
-          { geometryOffset: 1, speedLimit: 60 },
+          { geometryOffset: 0, speedLimit: 100, functionalClass: 1 },
+          { geometryOffset: 1, speedLimit: 60, functionalClass: 3 },
         ],
         geometry: [
           [-79.991, 9.991],
@@ -585,7 +633,7 @@ describe('ScoringCronService', () => {
 
     it('evaluateOverspeedingWithHereRoutes debe descartar episodios con duración menor a 5 segundos', async () => {
       hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [{ geometryOffset: 0, speedLimit: 50 }],
+        spans: [{ geometryOffset: 0, speedLimit: 50, functionalClass: 5 }],
         geometry: [
           [-79.991, 9.991],
           [-79.998, 9.998],

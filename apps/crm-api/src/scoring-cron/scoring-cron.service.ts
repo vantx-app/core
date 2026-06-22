@@ -168,8 +168,8 @@ export class ScoringCronService {
     const COOLDOWN_MS = 30 * 1000; // Cooldown de 30 segundos
 
     for (const log of logs) {
-      // Umbral con margen de gracia de 12 km/h para Panamá
-      const isSpeeding = log.speed > fallbackThreshold + 12;
+      // Umbral con margen de gracia de 10 km/h para Panamá
+      const isSpeeding = log.speed > fallbackThreshold + 10;
 
       if (isSpeeding) {
         if (!currentEpisodeStart) {
@@ -228,10 +228,10 @@ export class ScoringCronService {
       return { overspeedCount: 0, overspeedSeverity: 0 };
     }
 
-    // Si la velocidad máxima registrada no superó los 42 km/h,
+    // Si la velocidad máxima registrada no superó los 40 km/h,
     // es matemáticamente imposible que haya un exceso de velocidad,
-    // incluso en zonas escolares de 30 km/h con el buffer de 12 km/h.
-    if (!validLogs.some((log) => log.speed > 42)) {
+    // incluso en zonas escolares de 30 km/h con el buffer de 10 km/h.
+    if (!validLogs.some((log) => log.speed > 40)) {
       return { overspeedCount: 0, overspeedSeverity: 0 };
     }
 
@@ -255,6 +255,8 @@ export class ScoringCronService {
     const coordinates = validLogs.map((log) => ({
       lat: log.latitude,
       lng: log.longitude,
+      speed: log.speed,
+      angle: log.angle,
     }));
 
     const routeResult =
@@ -277,6 +279,7 @@ export class ScoringCronService {
 
     let lastSpeedLimit: number | null = null;
     let decelerationGraceWindowEnd = 0; // Marca de tiempo en ms
+    let lastValidOnRouteSpeedLimit = fallbackOverspeedThreshold; // Inertial Fallback
 
     for (const log of validLogs) {
       const { index: closestIdx, distanceKm: snapDist } =
@@ -285,29 +288,27 @@ export class ScoringCronService {
       let limitToUse: number;
 
       if (snapDist > 0.05) {
-        // Fuera de ruta (> 50m), usar límite fallback general
-        limitToUse = fallbackOverspeedThreshold;
+        // Fuera de ruta (> 50m), usar Inertial Fallback (heredar el último límite válido en ruta)
+        limitToUse = lastValidOnRouteSpeedLimit;
       } else {
-        const { speedLimit, functionalClass: fc } =
+        const { functionalClass: fc } =
           this.getSpeedLimitAndClassForGeometryIndex(closestIdx, spans);
 
-        if (speedLimit !== null) {
-          // Mantener el límite legal real del mapa (no elevar ni truncar hacia arriba)
-          limitToUse = speedLimit;
+        // Smart Fallback Ingestion: Asignar base conservadora basada en Reglamento de Tránsito de Panamá (ignorar speedLimit de HERE)
+        if (fc === 1) {
+          limitToUse = 100; // Autopistas / Corredores
+        } else if (fc === 2) {
+          limitToUse = 80; // Carreteras / Vías Interurbanas
+        } else if (fc === 3) {
+          limitToUse = 60; // Avenidas Urbanas Principales
+        } else if (fc === 4) {
+          limitToUse = 60; // Vías Colectoras
+        } else if (fc === 5) {
+          limitToUse = 40; // Calles Residenciales / Urbanas comerciales
         } else {
-          // Smart Fallback Ingestion: Asignar base conservadora basada en Reglamento de Tránsito de Panamá
-          if (fc === 1) {
-            limitToUse = 90; // Autopistas / Corredores
-          } else if (fc === 2) {
-            limitToUse = 60; // Avenidas Urbanas Principales
-          } else if (fc === 3) {
-            limitToUse = 50; // Arterias Secundarias / Conectores
-          } else if (fc === 4 || fc === 5) {
-            limitToUse = 40; // Calles Locales / Residenciales / Industriales
-          } else {
-            limitToUse = fallbackOverspeedThreshold;
-          }
+          limitToUse = fallbackOverspeedThreshold;
         }
+        lastValidOnRouteSpeedLimit = limitToUse; // Actualizar último límite válido en ruta
       }
 
       // Lógica de transición espacial: Ventana de gracia por desaceleración rápida (drop >= 20 km/h)
@@ -319,8 +320,8 @@ export class ScoringCronService {
       const inDecelWindow =
         log.timestamp.getTime() <= decelerationGraceWindowEnd;
 
-      // Umbral de velocidad con margen de gracia de 12 km/h
-      const threshold = limitToUse + 12;
+      // Umbral de velocidad con margen de gracia de 10 km/h
+      const threshold = limitToUse + 10;
       const isSpeeding = !inDecelWindow && log.speed > threshold;
 
       if (isSpeeding) {

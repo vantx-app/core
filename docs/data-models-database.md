@@ -33,17 +33,21 @@ The database models are organized into specific context files inside `packages/d
 ## 2. Core Entities Details
 
 ### **2.1 User & Organization**
+
 - **User:** Represents system actors. Has an `email`, `password` (bcrypt hash), `role` (`DRIVER`, `ADMIN`, `FLEET_OWNER`), and is linked optionally to an `Organization`.
 - **Organization:** Owns vehicles, manages invitations, and hosts fleet managers.
 
 ### **2.2 Driver**
+
 - Linked 1-to-1 with `User`. Holds `nationalId`, `licenseType`, `status` (`ACTIVE`, `INACTIVE`), onboarding `DriverDocument` files, and safety telemetry `DriverGlobalStats`.
 
 ### **2.3 Vehicle**
+
 - Contains vehicle identification (`plateNumber`, `vin`, `make`, `model`).
 - Configures hardware bindings: `imei` (GSM tracker IMEI) and `deviceModel` (e.g., `FMC003`, `FMC150`, `FMC650`).
 - Market properties: `isListed` (boolean), `listingPrice`, `listingDescription`, `hasOptionToBuy`.
 - Linked 1-to-1 with `VehicleLiveState` (updated constantly by the ingestor) and many `TelemetryLog` records.
 
 ### **2.4 Assignment**
+
 - Links a `Driver` to a `Vehicle` with custom active statuses, representing who is currently operating which vehicle.

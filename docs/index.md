@@ -17,30 +17,36 @@ This directory serves as the primary entry point for AI-assisted development and
 ### Applications (apps/)
 
 #### crm-api
+
 - **Type:** Backend API (NestJS 11)
 - **Root:** [apps/crm-api/](file:///Users/personal/Projects/vantx-core/apps/crm-api)
 - **Port:** 8000
 
 #### dashboard
+
 - **Type:** Web Frontend (Next.js App Router)
 - **Root:** [apps/dashboard/](file:///Users/personal/Projects/vantx-core/apps/dashboard)
 - **Port:** 3001
 
 #### landing
+
 - **Type:** Web Frontend (Next.js SEO site)
 - **Root:** [apps/landing/](file:///Users/personal/Projects/vantx-core/apps/landing)
 - **Port:** 3000
 
 #### marketplace
+
 - **Type:** Web Frontend (Next.js matching UI)
 - **Root:** [apps/marketplace/](file:///Users/personal/Projects/vantx-core/apps/marketplace)
 - **Port:** 3002
 
 #### marketplace-api
+
 - **Type:** Backend API (NestJS matching service)
 - **Root:** [apps/marketplace-api/](file:///Users/personal/Projects/vantx-core/apps/marketplace-api)
 
 #### telemetry-ingestor
+
 - **Type:** Telemetry receiver service (Node.js)
 - **Root:** [apps/telemetry-ingestor/](file:///Users/personal/Projects/vantx-core/apps/telemetry-ingestor)
 - **Port:** 9000 (TCP/UDP)
@@ -48,18 +54,22 @@ This directory serves as the primary entry point for AI-assisted development and
 ### Packages (packages/)
 
 #### ui
+
 - **Type:** Shared UI Library (Tailwind + daisyUI)
 - **Root:** [packages/ui/](file:///Users/personal/Projects/vantx-core/packages/ui)
 
 #### database
+
 - **Type:** Shared database client (Prisma Schema Folder)
 - **Root:** [packages/database/](file:///Users/personal/Projects/vantx-core/packages/database)
 
 #### telemetry-parser
+
 - **Type:** Shared Teltonika Frame codec parser
 - **Root:** [packages/telemetry-parser/](file:///Users/personal/Projects/vantx-core/packages/telemetry-parser)
 
 #### auth
+
 - **Type:** Shared token session verify & cookies
 - **Root:** [packages/auth/](file:///Users/personal/Projects/vantx-core/packages/auth)
 
@@ -74,6 +84,7 @@ This directory serves as the primary entry point for AI-assisted development and
 - [Development & Onboarding Guide](./development-guide.md)
 
 ### Detailed Architecture Guides
+
 - [CRM API Architecture](./architecture-crm-api.md)
 - [Dashboard Architecture](./architecture-dashboard.md)
 - [Marketplace Architecture](./architecture-marketplace.md)
@@ -82,6 +93,7 @@ This directory serves as the primary entry point for AI-assisted development and
 - [Marketplace API Architecture](./architecture-marketplace-api.md)
 
 ### API Contracts
+
 - [CRM API Contracts](./api-contracts-crm-api.md)
 - [Marketplace API Contracts](./api-contracts-marketplace-api.md)
 
@@ -97,11 +109,14 @@ This directory serves as the primary entry point for AI-assisted development and
 ## 5. Getting Started
 
 To spin up all services in development mode, run:
+
 ```bash
 npm install
 npm run dev
 ```
+
 For production deployment, utilize:
+
 ```bash
 docker compose -f docker-compose.prod.yml up -d
 ```

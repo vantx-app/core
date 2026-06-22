@@ -24,7 +24,9 @@ export async function generateMetadata({
   }
 
   try {
-    const endpoint = user ? `/drivers/${id}` : `/marketplace/drivers/public/${id}`;
+    const endpoint = user
+      ? `/drivers/${id}`
+      : `/marketplace/drivers/public/${id}`;
     driver = await fetchServer(endpoint);
   } catch (err) {
     // Fail silently to use fallback
@@ -88,7 +90,9 @@ export default async function DriverProfilePage({
 
   // 2. Fetch target driver details
   try {
-    const endpoint = user ? `/drivers/${id}` : `/marketplace/drivers/public/${id}`;
+    const endpoint = user
+      ? `/drivers/${id}`
+      : `/marketplace/drivers/public/${id}`;
     driver = await fetchServer(endpoint);
   } catch (err: any) {
     console.error(

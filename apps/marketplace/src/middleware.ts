@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getCookieSettings, isTokenExpired, refreshSessionInMiddleware, parseHostHeader, getRoleFromToken } from "@vantx/auth";
+import {
+  getCookieSettings,
+  isTokenExpired,
+  refreshSessionInMiddleware,
+  parseHostHeader,
+  getRoleFromToken,
+} from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -30,7 +36,8 @@ export async function middleware(request: NextRequest) {
   // En producción, forzamos HTTPS para evitar rechazos de cookies seguras si el proxy no propaga x-forwarded-proto.
   let protocol = "https";
   if (isLocalhost) {
-    const protoHeader = request.headers.get("x-forwarded-proto") || request.nextUrl.protocol;
+    const protoHeader =
+      request.headers.get("x-forwarded-proto") || request.nextUrl.protocol;
     protocol = protoHeader.replace(/:$/, "");
   }
 
@@ -102,7 +109,10 @@ export async function middleware(request: NextRequest) {
       // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
       response.headers.set("x-middleware-cache", "no-cache");
       // Evitamos agresivamente que el navegador o WebView del PWA cachee la respuesta
-      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+      response.headers.set(
+        "Cache-Control",
+        "no-store, no-cache, must-revalidate, max-age=0",
+      );
       response.headers.set("Pragma", "no-cache");
     }
   }

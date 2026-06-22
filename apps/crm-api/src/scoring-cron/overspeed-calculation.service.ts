@@ -18,8 +18,8 @@ export class OverspeedCalculationService {
     const COOLDOWN_MS = 30 * 1000; // Cooldown de 30 segundos
 
     for (const log of logs) {
-      // Umbral con margen de gracia de 12 km/h para Panamá
-      const isSpeeding = log.speed > fallbackThreshold + 12;
+      // Umbral con margen de gracia de 10 km/h para Panamá
+      const isSpeeding = log.speed > fallbackThreshold + 10;
 
       if (isSpeeding) {
         if (!currentEpisodeStart) {
