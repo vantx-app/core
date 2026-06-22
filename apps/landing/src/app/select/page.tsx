@@ -49,7 +49,7 @@ function SelectContent() {
         domain: deleteSettings.domain,
       });
     }
-    setIsLoggedIn(false);
+    router.push("/login");
   };
 
   if (isCheckingSession) {

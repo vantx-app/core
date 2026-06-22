@@ -74,6 +74,7 @@ export async function middleware(request: NextRequest) {
 
   let validAccessToken = accessToken;
   let response = NextResponse.next();
+  let cookiesToSet: any[] | undefined = undefined;
 
   if (!accessToken || isTokenExpired(accessToken)) {
     try {
@@ -90,33 +91,7 @@ export async function middleware(request: NextRequest) {
 
       const newToken = result.newToken!;
       validAccessToken = newToken;
-
-      // Redireccionamiento de Escritura (Redirect-to-Self):
-      // Creamos una respuesta de redirección a la misma URL para forzar al navegador
-      // a guardar las cookies de manera persistente antes de renderizar.
-      // Modificamos el protocolo y el host para asegurar que coincida con el cliente público (evita subdominios de Docker)
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.protocol = protocol;
-
-      // Separamos el host en hostname y puerto para NextURL usando la función helper compartida
-      const { hostname, port } = parseHostHeader(host);
-      redirectUrl.hostname = hostname;
-      redirectUrl.port = port;
-
-      response = NextResponse.redirect(redirectUrl);
-
-      // Propagamos de manera robusta las cookies devueltas por el helper (ya auto-corregidas para localhost si aplica)
-      result.cookiesToSet?.forEach((cookie) => {
-        response.cookies.set(cookie.name, cookie.value, cookie.options);
-      });
-
-      // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
-      response.headers.set("x-middleware-cache", "no-cache");
-      // Evitamos agresivamente que el navegador o WebView del PWA cachee la respuesta de redirección 307
-      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-      response.headers.set("Pragma", "no-cache");
-
-      return response;
+      cookiesToSet = result.cookiesToSet;
     } catch (error: any) {
       console.error("[Auth] Error crítico en middleware:", error);
 
@@ -149,7 +124,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Token válido y no expirado: inyectamos el rol via header para que getUserRole()
+  // Token válido (o recién refrescado): inyectamos el rol via header para que getUserRole()
   // lo lea de forma confiable. También eliminamos cualquier x-user-role que pudiera
   // venir del cliente para evitar spoofing.
   if (validAccessToken) {
@@ -169,7 +144,19 @@ export async function middleware(request: NextRequest) {
     const secureHeaders = new Headers(request.headers);
     secureHeaders.set("x-user-role", userRole);
     secureHeaders.set("Authorization", `Bearer ${validAccessToken}`);
-    return NextResponse.next({ request: { headers: secureHeaders } });
+    response = NextResponse.next({ request: { headers: secureHeaders } });
+
+    // Si refrescamos el token, propagamos las nuevas cookies en el response 200 OK
+    if (cookiesToSet) {
+      cookiesToSet.forEach((cookie) => {
+        response.cookies.set(cookie.name, cookie.value, cookie.options);
+      });
+      // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
+      response.headers.set("x-middleware-cache", "no-cache");
+      // Evitamos agresivamente que el navegador o WebView del PWA cachee la respuesta
+      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+      response.headers.set("Pragma", "no-cache");
+    }
   }
 
   return response;

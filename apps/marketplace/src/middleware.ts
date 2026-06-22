@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getCookieSettings, isTokenExpired, refreshSessionInMiddleware, parseHostHeader } from "@vantx/auth";
+import { getCookieSettings, isTokenExpired, refreshSessionInMiddleware, parseHostHeader, getRoleFromToken } from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -41,7 +41,9 @@ export async function middleware(request: NextRequest) {
   // Si no hay refresh_token, es un invitado, seguimos adelante sin autenticar
   if (!refreshToken) return NextResponse.next();
 
+  let validAccessToken = accessToken;
   let response = NextResponse.next();
+  let cookiesToSet: any[] | undefined = undefined;
 
   // Si el access_token no existe o está expirado, intentamos refrescarlo en el servidor
   if (!accessToken || isTokenExpired(accessToken)) {
@@ -58,33 +60,8 @@ export async function middleware(request: NextRequest) {
       }
 
       const newToken = result.newToken!;
-
-      // Redireccionamiento de Escritura (Redirect-to-Self):
-      // Creamos una respuesta de redirección a la misma URL para forzar al navegador
-      // a guardar las cookies de manera persistente antes de renderizar.
-      // Modificamos el protocolo y el host para asegurar que coincida con el cliente público (evita subdominios de Docker)
-      const redirectUrl = request.nextUrl.clone();
-      redirectUrl.protocol = protocol;
-
-      // Separamos el host en hostname y puerto para NextURL usando la función helper compartida
-      const { hostname, port } = parseHostHeader(host);
-      redirectUrl.hostname = hostname;
-      redirectUrl.port = port;
-
-      response = NextResponse.redirect(redirectUrl);
- 
-      // Propagamos de manera robusta las cookies devueltas por el helper (ya auto-corregidas para localhost si aplica)
-      result.cookiesToSet?.forEach((cookie) => {
-        response.cookies.set(cookie.name, cookie.value, cookie.options);
-      });
- 
-      // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
-      response.headers.set("x-middleware-cache", "no-cache");
-      // Evitamos agresivamente que el navegador o WebView del PWA cachee la respuesta de redirección 307
-      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
-      response.headers.set("Pragma", "no-cache");
- 
-      return response;
+      validAccessToken = newToken;
+      cookiesToSet = result.cookiesToSet;
     } catch (error: any) {
       console.error(
         "[Auth] Error crítico en middleware de marketplace:",
@@ -106,6 +83,27 @@ export async function middleware(request: NextRequest) {
       response.cookies.delete({ name: "access_token", ...deleteSettings });
       response.cookies.delete({ name: "refresh_token", ...deleteSettings });
       return response;
+    }
+  }
+
+  // Inyectamos las cabeceras del rol y token si el access_token es válido (o recién refrescado)
+  if (validAccessToken) {
+    const userRole = getRoleFromToken(validAccessToken);
+    const secureHeaders = new Headers(request.headers);
+    secureHeaders.set("x-user-role", userRole);
+    secureHeaders.set("Authorization", `Bearer ${validAccessToken}`);
+    response = NextResponse.next({ request: { headers: secureHeaders } });
+
+    // Si refrescamos el token, propagamos las nuevas cookies en el response 200 OK
+    if (cookiesToSet) {
+      cookiesToSet.forEach((cookie) => {
+        response.cookies.set(cookie.name, cookie.value, cookie.options);
+      });
+      // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
+      response.headers.set("x-middleware-cache", "no-cache");
+      // Evitamos agresivamente que el navegador o WebView del PWA cachee la respuesta
+      response.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+      response.headers.set("Pragma", "no-cache");
     }
   }
 

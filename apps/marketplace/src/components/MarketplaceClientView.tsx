@@ -184,7 +184,7 @@ export function MarketplaceClientView({
           domain: deleteSettings.domain,
         });
       }
-      window.location.href = `${landingUrl}/login`;
+      window.location.href = `${landingUrl}/login?callbackUrl=${encodeURIComponent(window.location.origin + "/marketplace")}`;
     } catch (err) {
       console.error("Logout error:", err);
     }

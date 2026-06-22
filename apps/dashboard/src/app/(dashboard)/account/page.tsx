@@ -19,6 +19,8 @@ import {
 
 export default function AccountPage() {
   const router = useRouter();
+  const landingUrl =
+    process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -72,9 +74,7 @@ export default function AccountPage() {
             domain: deleteSettings.domain,
           });
         }
-        const landingUrl =
-          process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
-        window.location.href = `${landingUrl}/login`;
+        window.location.href = `${landingUrl}/login?callbackUrl=${encodeURIComponent(window.location.origin + "/dashboard")}`;
       } else {
         alert("Error al cerrar sesión");
       }
