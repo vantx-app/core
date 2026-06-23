@@ -17,6 +17,7 @@ import {
 
 export class CreateVehicleDto {
   @IsUUID()
+  @IsOptional()
   @ApiProperty()
   orgId: string;
 

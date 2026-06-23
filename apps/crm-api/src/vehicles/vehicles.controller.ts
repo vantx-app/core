@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -44,6 +45,10 @@ export class VehiclesController {
 
     if (user.role !== ROLES.SUPER_ADMIN) {
       createVehicleDto.orgId = user.orgId;
+    } else if (!createVehicleDto.orgId) {
+      throw new BadRequestException(
+        'Se requiere orgId al crear un vehículo como SUPER_ADMIN.',
+      );
     }
 
     const result = await this.vehiclesService.create(createVehicleDto);
