@@ -364,6 +364,7 @@ export function MarketplaceClientView({
             <VehicleListingsTab
               isDriverActive={isDriverActive}
               isGuest={!user}
+              onVerify={() => setActiveTab("documents")}
             />
           )}
           {activeTab === "my-listings" && canViewAsOwner && <MyListingsTab />}
@@ -557,8 +558,11 @@ export function MarketplaceClientView({
                               >
                                 Ver Perfil
                               </Link>
-                              <button className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10">
-                                Proponer Contrato
+                              <button
+                                disabled
+                                className="flex-1 py-2.5 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs border border-slate-200 cursor-not-allowed transition-all"
+                              >
+                                Proponer Contrato (Próximamente)
                               </button>
                             </>
                           )}

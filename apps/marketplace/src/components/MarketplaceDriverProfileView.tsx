@@ -287,26 +287,11 @@ export function MarketplaceDriverProfileView({
                 </a>
               ) : isOwner ? (
                 <button
-                  onClick={handleProposeContract}
-                  disabled={proposing || proposed}
-                  className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-100 disabled:text-slate-400 text-white font-bold text-xs transition-all shadow-md active:scale-95 shadow-blue-600/10 flex items-center justify-center gap-1.5"
+                  disabled
+                  className="w-full py-3 rounded-xl bg-slate-100 text-slate-400 font-bold text-xs border border-slate-200 cursor-not-allowed flex items-center justify-center gap-1.5"
                 >
-                  {proposing ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Enviando oferta...
-                    </>
-                  ) : proposed ? (
-                    <>
-                      <Briefcase className="size-4" />
-                      Propuesta Enviada
-                    </>
-                  ) : (
-                    <>
-                      <Briefcase className="size-4" />
-                      Proponer Contrato de Flota
-                    </>
-                  )}
+                  <Briefcase className="size-4" />
+                  Proponer Contrato (Próximamente)
                 </button>
               ) : user?.driver?.id === driver.id ||
                 user?.id === driver.userId ? (

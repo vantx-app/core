@@ -36,11 +36,13 @@ export interface VehicleListing {
 export interface VehicleListingsTabProps {
   isDriverActive: boolean;
   isGuest?: boolean;
+  onVerify?: () => void;
 }
 
 export function VehicleListingsTab({
   isDriverActive,
   isGuest = false,
+  onVerify,
 }: VehicleListingsTabProps) {
   const [listings, setListings] = useState<VehicleListing[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,18 +177,16 @@ export function VehicleListingsTab({
                   {isLocked && (
                     <div className="absolute top-4 right-4 p-1.5 bg-amber-50 text-amber-700 rounded-lg border border-amber-200/50 flex items-center gap-1 text-[10px] font-bold z-10 shadow-sm">
                       <Lock className="size-3" />
-                      {isGuest
-                        ? "Iniciar Sesión Requerido"
-                        : "Verificación Requerida"}
+                      {!isGuest && <span>Verificación Requerida</span>}
                     </div>
                   )}
 
                   <div className="space-y-1">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {getCategoryText(vehicle.category)} &bull;{" "}
+                      {getCategoryText(vehicle.category)} •{" "}
                       {getFuelText(vehicle.fuelType)}
                       {vehicle.organization?.name &&
-                        ` &bull; ${vehicle.organization.name}`}
+                        ` • ${vehicle.organization.name}`}
                     </span>
                     <h4 className="font-extrabold text-lg text-slate-900 leading-tight">
                       {vehicle.make} {vehicle.model}
@@ -249,10 +249,13 @@ export function VehicleListingsTab({
                         Iniciar Sesión para Contactar
                       </a>
                     ) : (
-                      <div className="w-full text-center py-2.5 bg-slate-100 rounded-xl border border-slate-200 text-xs text-slate-500 font-semibold flex items-center justify-center gap-1.5">
+                      <button
+                        onClick={onVerify}
+                        className="w-full py-2.5 bg-blue-50 hover:bg-blue-100 rounded-xl border border-blue-200 text-xs text-blue-700 font-bold flex items-center justify-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                      >
                         <Lock className="size-3.5" />
                         Desbloquear con tu Verificación
-                      </div>
+                      </button>
                     )
                   ) : (
                     <>

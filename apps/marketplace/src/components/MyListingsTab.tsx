@@ -29,6 +29,14 @@ interface Vehicle {
   listingPrice: number | null;
   listingDescription: string | null;
   hasOptionToBuy: boolean;
+  assignments?: {
+    driver: {
+      id: string;
+      firstName: string | null;
+      lastName: string | null;
+      nationalId: string;
+    };
+  }[];
 }
 
 interface VehicleFormValues {
@@ -273,7 +281,7 @@ export function MyListingsTab() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="space-y-0.5">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {getCategoryText(vehicle.category)} &bull;{" "}
+                      {getCategoryText(vehicle.category)} •{" "}
                       {getFuelText(vehicle.fuelType)}
                     </span>
                     <h4 className="font-extrabold text-lg text-slate-900 leading-tight">
@@ -299,15 +307,28 @@ export function MyListingsTab() {
                   </div>
 
                   {/* Badge de Listado */}
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[9px] font-extrabold border ${
-                      vehicle.isListed
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-slate-200 border-slate-200 text-slate-500"
-                    }`}
-                  >
-                    {vehicle.isListed ? "Listado" : "Borrador"}
-                  </span>
+                  {(() => {
+                    const activeDriver = vehicle.assignments?.[0]?.driver;
+                    if (vehicle.isListed) {
+                      if (activeDriver) {
+                        return (
+                          <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-amber-50 text-amber-700 border-amber-200">
+                            Listado (Oculto)
+                          </span>
+                        );
+                      }
+                      return (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                          Listado
+                        </span>
+                      );
+                    }
+                    return (
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-slate-200 border-slate-200 text-slate-500">
+                        Borrador
+                      </span>
+                    );
+                  })()}
                 </div>
 
                 {/* Precios y Detalles */}
@@ -333,6 +354,30 @@ export function MyListingsTab() {
                     )}
                   </div>
                 )}
+
+                {/* Warning: Active driver assignment warning */}
+                {(() => {
+                  const activeDriver = vehicle.assignments?.[0]?.driver;
+                  if (vehicle.isListed && activeDriver) {
+                    const driverName = activeDriver.firstName && activeDriver.lastName
+                      ? `${activeDriver.firstName} ${activeDriver.lastName}`
+                      : activeDriver.nationalId;
+                    return (
+                      <div className="mt-3 p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-2 text-left">
+                        <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                        <div>
+                          <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">
+                            Vehículo Oculto en el Mercado
+                          </p>
+                          <p className="text-[10px] text-amber-700 leading-relaxed mt-0.5">
+                            Asignado actualmente a <span className="font-bold">{driverName}</span>. No será visible para otros conductores hasta que sea desvinculado.
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
               </div>
 
               {/* Botones de Acción */}
@@ -538,6 +583,30 @@ export function MyListingsTab() {
               {/* Parámetros de Publicación */}
               {watchedIsListed && (
                 <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-4 animate-in slide-in-from-top-3 duration-250">
+                  {/* Warning: Active driver assignment warning */}
+                  {(() => {
+                    const activeDriver = editingVehicle?.assignments?.[0]?.driver;
+                    if (activeDriver) {
+                      const driverName = activeDriver.firstName && activeDriver.lastName
+                        ? `${activeDriver.firstName} ${activeDriver.lastName}`
+                        : activeDriver.nationalId;
+                      return (
+                        <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-2.5">
+                          <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                          <div>
+                            <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">
+                              Nota de Disponibilidad
+                            </p>
+                            <p className="text-[10px] text-amber-700 leading-relaxed mt-0.5">
+                              Este vehículo tiene asignado al conductor <span className="font-bold">{driverName}</span>. Si activas la oferta, se guardará como "Listado", pero no se mostrará a otros conductores en el mercado hasta que se libere la asignación actual.
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  })()}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Precio de listado */}
                     <div>

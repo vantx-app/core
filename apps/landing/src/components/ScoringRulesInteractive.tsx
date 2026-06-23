@@ -417,7 +417,7 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
                   </div>
 
                   {/* Parámetros Técnicos */}
-                  <div className="grid grid-cols-3 gap-6 text-left md:text-right shrink-0 md:w-[420px] font-mono">
+                  <div className="grid grid-cols-3 gap-6 text-center md:text-right shrink-0 md:w-[420px] font-mono">
                     <div>
                       <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">
                         Condición
