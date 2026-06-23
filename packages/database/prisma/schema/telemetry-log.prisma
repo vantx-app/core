@@ -1,5 +1,5 @@
 model TelemetryLog {
-  id                String                @id @default(uuid()) @db.Uuid
+  id                String                @default(uuid()) @db.Uuid
   vehicleId         String                @db.Uuid
   timestamp         DateTime
   latitude          Float
@@ -35,5 +35,6 @@ model TelemetryLog {
   trip              Trip?                 @relation(fields: [tripId], references: [id])
   vehicle           Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
+  @@id([id, timestamp])
   @@index([vehicleId, timestamp(sort: Desc)])
 }
