@@ -46,6 +46,7 @@ import {
   formatHours,
   getScoreTextColor,
   groupDailyReportsByVehicle,
+  getDriverStatusBadgeClass,
 } from "@/utils/client";
 import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
 import { DriverAvatar } from "@/components/ui/DriverAvatar";
@@ -445,7 +446,7 @@ export function DriverDetailClient({
                   {displayName}
                 </h1>
                 <span
-                  className={`badge ${driver.status === "ACTIVE" ? "badge-success text-white" : "badge-neutral"} badge-sm font-bold`}
+                  className={`badge badge-sm ${getDriverStatusBadgeClass(driver.status)}`}
                 >
                   {driver.status === "ACTIVE"
                     ? "Activo"

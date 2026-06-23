@@ -71,7 +71,7 @@ export const getDocStatusText = (driver: any, type: string): string => {
   if (status === "PENDING_VALIDATION" || status === "PENDING_MANUAL_REVIEW")
     return "Pendiente Revisión";
   if (status === "REJECTED") return "Rechazado";
-  return "No Subido";
+  return "Sin Verificar";
 };
 
 export const getCategoryText = (cat: string): string => {

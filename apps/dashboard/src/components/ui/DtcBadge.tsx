@@ -16,7 +16,7 @@ export function DtcBadge({ count, showOk = true }: DtcBadgeProps) {
 
   if (showOk) {
     return (
-      <span className="badge badge-success badge-sm text-white font-bold gap-1">
+      <span className="badge badge-sm bg-base-200 text-base-content/75 border-base-300 font-bold gap-1">
         <CheckCircle2 className="size-3" />
         OK
       </span>

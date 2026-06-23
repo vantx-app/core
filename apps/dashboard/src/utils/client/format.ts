@@ -14,9 +14,9 @@ export const getScoreBadgeColor = (
   if (score == null || isNaN(score))
     return "badge-ghost text-base-content/50 border-base-200/80";
   const rounded = Math.round(score);
-  if (rounded >= 85) return "bg-base-200 text-base-content/70 border-base-300 font-semibold";
-  if (rounded >= 70) return "badge-warning text-white bg-amber-500 border-none";
-  return "badge-error text-white bg-rose-500 border-none";
+  if (rounded >= 85) return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 border font-semibold";
+  if (rounded >= 70) return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 border font-semibold";
+  return "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20 border font-semibold";
 };
 
 export const getScoreTextColor = (score: number | null | undefined): string => {
@@ -41,12 +41,12 @@ export const getVehicleStatusBadgeClass = (status: string): string => {
   switch (status) {
     case "ONLINE":
     case "ACTIVE":
-      return "badge-success text-white bg-emerald-500 border-none";
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 border font-semibold";
     case "MAINTENANCE":
     case "IN_MAINTENANCE":
-      return "badge-warning text-white bg-amber-500 border-none";
+      return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 border font-semibold";
     case "DECOMMISSIONED":
-      return "badge-neutral text-white";
+      return "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 border font-semibold";
     default:
       return "badge-ghost";
   }
@@ -125,13 +125,13 @@ export const formatDateOnly = (dateString: string | Date): string => {
 export const getDriverDocStatusBadgeClass = (status: string): string => {
   switch (status) {
     case "APPROVED":
-      return "bg-emerald-800/10 text-emerald-800 border-emerald-500/20 dark:text-emerald-300 dark:border-emerald-500/40 font-bold px-3 py-1";
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 border font-bold px-3 py-1";
     case "PENDING_VALIDATION":
-      return "bg-blue-800/10 text-blue-800 border-blue-500/20 dark:text-blue-300 dark:border-blue-500/40 font-bold px-3 py-1 animate-pulse";
+      return "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20 border font-bold px-3 py-1 animate-pulse";
     case "PENDING_MANUAL_REVIEW":
-      return "bg-amber-800/10 text-amber-800 border-amber-500/20 dark:text-amber-300 dark:border-amber-500/40 font-bold px-3 py-1";
+      return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 border font-bold px-3 py-1";
     case "REJECTED":
-      return "bg-red-800/10 text-red-800 border-red-500/20 dark:text-red-300 dark:border-red-500/40 font-bold px-3 py-1";
+      return "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20 border font-bold px-3 py-1";
     default:
       return "bg-base-200 text-base-content/60 font-bold px-3 py-1";
   }
@@ -158,13 +158,13 @@ export const getDriverDocStatusText = (status: string): string => {
 export const getMarketplaceAppStatusBadgeClass = (status: string): string => {
   switch (status) {
     case "PENDING":
-      return "badge-warning text-white bg-amber-500 border-none";
+      return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 border font-semibold";
     case "APPROVED":
-      return "badge-success text-white bg-emerald-500 border-none";
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 border font-semibold";
     case "REJECTED":
-      return "badge-error text-white bg-rose-500 border-none";
+      return "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20 border font-semibold";
     case "WITHDRAWN":
-      return "badge-ghost text-base-content/60";
+      return "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 border font-semibold";
     default:
       return "badge-ghost";
   }
@@ -191,13 +191,13 @@ export const getMarketplaceAppStatusText = (status: string): string => {
 export const getListingStatusBadgeClass = (status: string): string => {
   switch (status) {
     case "ACTIVE":
-      return "badge-success text-white bg-emerald-500 border-none";
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 border font-semibold";
     case "FILLED":
-      return "badge-info text-white bg-blue-500 border-none";
+      return "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20 border font-semibold";
     case "PAUSED":
-      return "badge-warning text-white bg-amber-500 border-none";
+      return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 border font-semibold";
     case "INACTIVE":
-      return "badge-ghost text-base-content/60";
+      return "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 border font-semibold";
     default:
       return "badge-ghost";
   }
@@ -289,11 +289,11 @@ export const getInitials = (name: string): string => {
 export const getDriverStatusBadgeClass = (status: string): string => {
   switch (status) {
     case "ACTIVE":
-      return "badge-success gap-1 text-white text-[10px] font-bold py-1 px-2.5";
+      return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 border gap-1 text-[10px] font-bold py-1 px-2.5";
     case "INACTIVE":
-      return "badge-neutral gap-1 text-[10px] font-bold py-1 px-2.5";
+      return "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20 border gap-1 text-[10px] font-bold py-1 px-2.5";
     default:
-      return "badge-error gap-1 text-[10px] font-bold py-1 px-2.5";
+      return "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20 border gap-1 text-[10px] font-bold py-1 px-2.5";
   }
 };
 

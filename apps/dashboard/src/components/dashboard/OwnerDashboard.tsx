@@ -23,7 +23,7 @@ import {
   OwnerDashboardProps,
   TableColumn,
 } from "@/types";
-import { getScoreBadgeColor } from "@/utils/client";
+import { getScoreBadgeColor, getVehicleStatusBadgeClass } from "@/utils/client";
 import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
 import { ScoreProgressBar } from "@/components/ui/ScoreProgressBar";
 import { MovementStatusBadge } from "@/components/ui/MovementStatusBadge";
@@ -276,12 +276,7 @@ export function OwnerDashboard({
       header: "Estado",
       render: (v) => (
         <span
-          className={`badge badge-sm font-bold text-white ${v.status === "ACTIVE"
-            ? "badge-success"
-            : v.status === "IN_MAINTENANCE"
-              ? "badge-warning"
-              : "badge-neutral"
-            }`}
+          className={`badge badge-sm ${getVehicleStatusBadgeClass(v.status)}`}
         >
           {v.status === "ACTIVE"
             ? "Activo"
