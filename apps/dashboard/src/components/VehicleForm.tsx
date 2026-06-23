@@ -21,6 +21,11 @@ const ImeiScannerModal = dynamic(
   { ssr: false },
 );
 
+const ImeiWarningModal = dynamic(
+  () => import("@/components/ImeiWarningModal"),
+  { ssr: false },
+);
+
 export default function VehicleForm({
   vehicleId,
   targetOrgId,
@@ -36,11 +41,15 @@ export default function VehicleForm({
 
   const [originalOdometer, setOriginalOdometer] = useState<string>("");
   const [fetchedLastOdometer, setFetchedLastOdometer] = useState<number>(0);
+  const [originalImei, setOriginalImei] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
   const [selectedOrgName, setSelectedOrgName] = useState("");
 
   const [organizations, setOrganizations] = useState<NewVehiclePageOrg[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
+
+  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
+  const [warningModalMode, setWarningModalMode] = useState<"create_no_imei" | "update_imei" | null>(null);
 
   const {
     register,
@@ -109,9 +118,10 @@ export default function VehicleForm({
           const displayOdo = String(Math.round(initialOdo + lastOdo));
           setOriginalOdometer(displayOdo);
 
+          setOriginalImei(data.imei || null);
           reset({
             alias: data.alias || "",
-            imei: data.imei || "",
+            imei: "",
             plateNumber: data.plateNumber || "",
             make: data.make || "",
             model: data.model || "",
@@ -145,8 +155,9 @@ export default function VehicleForm({
       };
 
       if (!vehicleId) {
-        // Create Mode
-        payload.imei = data.imei || undefined;
+        // Modo creación
+        const trimmedImei = data.imei?.trim();
+        payload.imei = trimmedImei || undefined;
         payload.initialOdometer = data.currentOdometer
           ? Number(data.currentOdometer)
           : 0;
@@ -157,18 +168,35 @@ export default function VehicleForm({
             return;
           }
           payload.orgId = data.orgId;
-        } else {
-          payload.orgId = "00000000-0000-0000-0000-000000000000";
+        }
+        // Nota: para roles OWNER/ADMIN, el backend asigna orgId desde el token JWT.
+
+        if (!trimmedImei) {
+          // Sin dispositivo — solicitar confirmación antes de crear
+          setPendingPayload(payload);
+          setWarningModalMode("create_no_imei");
+          return;
         }
 
         await api.post("/vehicles", payload);
       } else {
-        // Edit Mode
+        // Modo edición
         if (data.currentOdometer !== originalOdometer) {
           payload.initialOdometer = data.currentOdometer
             ? Number(data.currentOdometer) - fetchedLastOdometer
             : 0;
         }
+
+        const trimmedImei = data.imei?.trim();
+        if (trimmedImei) {
+          // Usuario ingresó un nuevo IMEI — solicitar confirmación
+          payload.imei = trimmedImei;
+          setPendingPayload(payload);
+          setWarningModalMode("update_imei");
+          return;
+        }
+
+        // Sin cambio de IMEI — no incluir en el payload
         await api.patch(`/vehicles/${vehicleId}`, payload);
       }
 
@@ -179,6 +207,32 @@ export default function VehicleForm({
         .response?.data?.message;
       setError(message || "Error al guardar el vehículo.");
     }
+  };
+
+  const handleModalConfirm = async () => {
+    if (!pendingPayload) return;
+    try {
+      if (warningModalMode === "update_imei" && vehicleId) {
+        await api.patch(`/vehicles/${vehicleId}`, pendingPayload);
+      } else {
+        await api.post("/vehicles", pendingPayload);
+      }
+      setPendingPayload(null);
+      setWarningModalMode(null);
+      onSuccess();
+    } catch (err) {
+      console.error(err);
+      setPendingPayload(null);
+      setWarningModalMode(null);
+      const message = (err as { response?: { data?: { message?: string } } })
+        .response?.data?.message;
+      setError(message || "Error al guardar el vehículo.");
+    }
+  };
+
+  const handleModalCancel = () => {
+    setPendingPayload(null);
+    setWarningModalMode(null);
   };
 
   if (loading) {
@@ -265,36 +319,32 @@ export default function VehicleForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
             type="text"
-            label="IMEI del Dispositivo GPS (Opcional)"
+            label={
+              vehicleId
+                ? "Nuevo IMEI del Dispositivo GPS"
+                : "IMEI del Dispositivo GPS (Opcional)"
+            }
             placeholder="Ej. 863242045551234"
             className="font-mono pr-12 md:pr-4"
-            disabled={isSubmitting || !!vehicleId}
+            disabled={isSubmitting}
             rightIcon={
-              !vehicleId ? (
-                <button
-                  type="button"
-                  onClick={() => setIsScannerOpen(true)}
-                  className="btn btn-ghost btn-circle btn-sm text-primary hover:bg-primary/10 transition-all duration-200 md:hidden"
-                  title="Escanear IMEI"
-                  disabled={isSubmitting}
-                >
-                  <Camera className="size-4" />
-                </button>
-              ) : undefined
+              <button
+                type="button"
+                onClick={() => setIsScannerOpen(true)}
+                className="btn btn-ghost btn-circle btn-sm text-primary hover:bg-primary/10 transition-all duration-200 md:hidden"
+                title="Escanear IMEI"
+                disabled={isSubmitting}
+              >
+                <Camera className="size-4" />
+              </button>
             }
-            helperText="Código único del dispositivo GPS."
+            helperText={
+              vehicleId
+                ? "Dejar vacío para mantener el dispositivo actual."
+                : "Código único del dispositivo GPS."
+            }
             {...register("imei")}
-            wrapperClassName={!vehicleId && !watchedImei ? "mb-2" : ""}
           />
-          {!vehicleId && !watchedImei && (
-            <div className="col-span-1 md:col-span-2">
-              <Alert
-                variant="warning"
-                title="Sin dispositivo de telemetría"
-                message="El vehículo se creará sin rastreo GPS activo. La telemetría y viajes no estarán disponibles hasta vincular un dispositivo."
-              />
-            </div>
-          )}
 
           <Input
             type="text"
@@ -402,13 +452,20 @@ export default function VehicleForm({
         </div>
       </form>
 
-      {!vehicleId && (
-        <ImeiScannerModal
-          isOpen={isScannerOpen}
-          onClose={() => setIsScannerOpen(false)}
-          onScanSuccess={(scannedImei) => setValue("imei", scannedImei)}
-        />
-      )}
+      <ImeiScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={(scannedImei) => setValue("imei", scannedImei)}
+      />
+
+      <ImeiWarningModal
+        isOpen={warningModalMode !== null}
+        mode={warningModalMode}
+        currentImei={originalImei}
+        newImei={watchedImei || ""}
+        onConfirm={handleModalConfirm}
+        onCancel={handleModalCancel}
+      />
     </div>
   );
 }
