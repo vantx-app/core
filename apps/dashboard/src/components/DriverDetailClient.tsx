@@ -618,7 +618,7 @@ export function DriverDetailClient({
                 <span className="text-base-content/50">Cuenta Vinculada</span>
                 <span className="font-medium">
                   {driver.userId ? (
-                    <span className="text-success font-bold flex items-center gap-1">
+                    <span className="text-emerald-600 font-bold flex items-center gap-1">
                       <UserCheck className="size-3" />
                       Vinculada
                     </span>
@@ -706,13 +706,13 @@ export function DriverDetailClient({
             ) : (
               <div className="space-y-4 pt-1">
                 {activeAssignment && (
-                  <div className="bg-success/5 border border-success/20 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-3 bg-success/10 rounded-xl text-success">
+                      <div className="p-3 bg-emerald-500/10 rounded-xl text-emerald-600">
                         <Truck className="size-6" />
                       </div>
                       <div>
-                        <span className="badge badge-success badge-xs text-white font-bold mb-1">
+                        <span className="badge badge-xs font-bold mb-1 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                           ASIGNACIÓN ACTIVA
                         </span>
                         <h4 className="font-bold text-sm text-base-content">

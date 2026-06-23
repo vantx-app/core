@@ -305,8 +305,8 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
               Vehículo Asignado
             </h2>
             {activeAssignment && (
-              <span className="badge badge-success badge-xs font-bold gap-1 px-2.5 py-2 text-white animate-pulse">
-                <span className="size-1.5 rounded-full bg-white block animate-ping"></span>
+              <span className="badge badge-xs font-bold gap-1 px-2.5 py-2 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20 animate-pulse">
+                <span className="size-1.5 rounded-full bg-emerald-600 block animate-ping"></span>
                 Activo
               </span>
             )}

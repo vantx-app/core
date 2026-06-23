@@ -226,7 +226,7 @@ function BillingTab() {
                 </h3>
                 <div className="mt-2 flex items-center gap-2">
                   {isActive ? (
-                    <div className="flex items-center gap-1.5 text-success font-bold text-lg">
+                    <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-lg">
                       <ShieldCheck className="size-5" />
                       <span>{t("billing.active")}</span>
                     </div>
@@ -431,7 +431,7 @@ function BillingTab() {
                         {vehicle.trialActivated &&
                         vehicle.trialExpiresAt &&
                         new Date() < new Date(vehicle.trialExpiresAt) ? (
-                          <span className="badge badge-sm badge-success text-[10px] uppercase font-bold tracking-wider px-2 text-white bg-emerald-500 border-none">
+                          <span className="badge badge-sm text-[10px] uppercase font-bold tracking-wider px-2 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                             Prueba Gratuita (Expira:{" "}
                             {new Date(
                               vehicle.trialExpiresAt,

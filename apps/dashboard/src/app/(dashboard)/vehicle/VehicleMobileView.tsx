@@ -60,7 +60,7 @@ export function VehicleMobileView({
   const getStatusBadgeClass = (status: MobileViewVehicleSummary["status"]) => {
     switch (status) {
       case "ACTIVE":
-        return "bg-success/10 text-success border-success/20";
+        return "bg-emerald-500/10 text-emerald-700 border-emerald-500/20";
       case "IN_MAINTENANCE":
         return "bg-warning/10 text-warning border-warning/20";
       case "DECOMMISSIONED":
@@ -194,7 +194,7 @@ export function VehicleMobileView({
     {
       id: "active",
       name: "Activos",
-      badge: "bg-success",
+      badge: "bg-emerald-500/40",
       vehicles: activeVehicles,
     },
     {

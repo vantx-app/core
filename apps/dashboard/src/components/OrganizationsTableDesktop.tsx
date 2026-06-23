@@ -58,7 +58,7 @@ export function OrganizationsTableDesktop({
             <div className="flex items-center gap-1.5 font-semibold text-xs text-base-content/90">
               <User className="size-3.5 text-base-content/40" />
               <span>{owner.name}</span>
-              <span className="badge badge-success badge-xs text-white text-[8px] px-1 py-0.5">
+              <span className="badge badge-xs text-[8px] px-1 py-0.5 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                 Owner
               </span>
             </div>

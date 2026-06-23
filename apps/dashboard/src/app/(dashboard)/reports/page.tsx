@@ -290,7 +290,7 @@ function ReportsPageContent() {
 
     if (filtered.length === 0) {
       return (
-        <div className="flex items-center gap-2 text-xs text-success bg-success/5 border border-success/10 p-3 rounded-xl mt-2">
+        <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-500/5 border border-emerald-500/10 p-3 rounded-xl mt-2">
           <UserCheck className="size-4 shrink-0" />
           <span>
             ¡Excelente conducción! Sin eventos detectados ni penalizaciones en

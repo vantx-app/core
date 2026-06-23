@@ -3,7 +3,7 @@ export const getScoreCircleColor = (
 ): string => {
   if (score == null || isNaN(score)) return "text-base-content/20 stroke-base-300";
   const rounded = Math.round(score);
-  if (rounded >= 85) return "text-base-content/20 stroke-base-content/30";
+  if (rounded >= 85) return "text-emerald-500 stroke-emerald-500";
   if (rounded >= 70) return "text-warning stroke-warning";
   return "text-error stroke-error";
 };
@@ -22,7 +22,7 @@ export const getScoreBadgeColor = (
 export const getScoreTextColor = (score: number | null | undefined): string => {
   if (score == null || isNaN(score)) return "text-base-content/40";
   const rounded = Math.round(score);
-  if (rounded >= 85) return "text-base-content/75";
+  if (rounded >= 85) return "text-emerald-500";
   if (rounded >= 70) return "text-warning";
   return "text-error";
 };
@@ -32,7 +32,7 @@ export const getScoreTailwindColor = (
 ): string => {
   if (score == null || isNaN(score)) return "text-base-content/40";
   const rounded = Math.round(score);
-  if (rounded >= 85) return "text-base-content/60";
+  if (rounded >= 85) return "text-emerald-500";
   if (rounded >= 70) return "text-amber-500";
   return "text-rose-500";
 };

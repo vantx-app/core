@@ -22,7 +22,7 @@ export function ScoreProgressBar({ score, label }: ScoreProgressBarProps) {
             roundedScore === null
               ? "bg-base-300 w-0"
               : roundedScore >= 85
-                ? "bg-base-content/25"
+                ? "bg-emerald-500/40"
                 : roundedScore >= 70
                   ? "bg-gradient-to-r from-amber-500 to-amber-600 shadow-[0_0_8px_rgba(245,158,11,0.3)]"
                   : "bg-gradient-to-r from-rose-500 to-rose-600 shadow-[0_0_8px_rgba(239,68,68,0.3)]"

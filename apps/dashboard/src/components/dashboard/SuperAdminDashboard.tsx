@@ -362,13 +362,13 @@ export function SuperAdminDashboard({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-base-content/75">
                   <span className="flex items-center gap-1">
-                    <ShieldCheck className="size-3.5 text-success" /> Activos
+                    <ShieldCheck className="size-3.5 text-emerald-500" /> Activos
                   </span>
                   <span className="font-bold">{activeStatusCount}</span>
                 </div>
                 <div className="w-full bg-base-200 rounded-full h-1.5 overflow-hidden">
                   <div
-                    className="bg-success h-1.5 rounded-full"
+                    className="bg-emerald-500/40 h-1.5 rounded-full"
                     style={{
                       width: `${liveVehicles.length > 0 ? (activeStatusCount / liveVehicles.length) * 100 : 0}%`,
                     }}

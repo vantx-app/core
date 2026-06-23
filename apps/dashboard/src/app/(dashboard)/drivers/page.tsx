@@ -47,7 +47,7 @@ function DriversPageContent() {
   const getScoreColor = (score: number | null | undefined) => {
     if (score == null)
       return "text-base-content/40 border-base-200 bg-base-200/5";
-    if (score >= 85) return "text-success border-success/20 bg-success/5";
+    if (score >= 85) return "text-emerald-600 border-emerald-500/20 bg-emerald-500/5";
     if (score >= 70) return "text-warning border-warning/20 bg-warning/5";
     return "text-error border-error/20 bg-error/5";
   };
@@ -56,7 +56,7 @@ function DriversPageContent() {
     switch (status) {
       case "ACTIVE":
         return (
-          <span className="badge badge-success gap-1 text-white">
+          <span className="badge gap-1 bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
             <UserCheck className="size-3" />
             Activo
           </span>
@@ -83,7 +83,7 @@ function DriversPageContent() {
     {
       id: "active",
       name: "Conductores Activos",
-      badge: "bg-success",
+      badge: "bg-emerald-500/40",
       drivers: activeDrivers,
     },
     {

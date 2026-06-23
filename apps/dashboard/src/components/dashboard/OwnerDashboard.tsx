@@ -449,7 +449,7 @@ export function OwnerDashboard({
               ))}
               {fleetAlerts.length === 0 && (
                 <div className="text-center py-10 text-xs text-base-content/40 flex flex-col items-center justify-center gap-2">
-                  <ShieldCheck className="size-8 text-success opacity-60" />
+                  <ShieldCheck className="size-8 text-emerald-500 opacity-60" />
                   <p className="font-semibold">Flota segura y operativa</p>
                   <p className="text-[10px] text-base-content/30">
                     No hay incidentes de telemetría reportados.
@@ -609,7 +609,7 @@ export function OwnerDashboard({
                           </span>
                           <span
                             className={`badge badge-sm font-bold text-white ${v.status === "ACTIVE"
-                              ? "badge-success"
+                              ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
                               : v.status === "IN_MAINTENANCE"
                                 ? "badge-warning"
                                 : "badge-neutral"

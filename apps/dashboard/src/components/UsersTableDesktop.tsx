@@ -54,7 +54,7 @@ export function UsersTableDesktop({
         const hasDriverLink = !!u.driver;
         return hasDriverLink && u.driver ? (
           <div className="space-y-1">
-            <span className="badge badge-success badge-xs font-semibold text-white py-1 px-1.5 flex items-center gap-1 w-fit text-[9px]">
+            <span className="badge badge-xs font-semibold py-1 px-1.5 flex items-center gap-1 w-fit text-[9px] bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
               <UserCheck className="size-2.5" />
               Vínculo Activo
             </span>

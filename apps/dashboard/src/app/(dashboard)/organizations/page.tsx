@@ -857,7 +857,7 @@ export default function OrganizationsPage() {
                   <span className="font-semibold text-base-content/90">
                     {owner.name}
                   </span>
-                  <span className="badge badge-success badge-sm text-[10px] text-white font-bold">
+                  <span className="badge badge-sm text-[10px] font-bold bg-emerald-500/10 text-emerald-700 border border-emerald-500/20">
                     Owner
                   </span>
                 </div>

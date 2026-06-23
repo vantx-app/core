@@ -810,7 +810,7 @@ export function VehicleDetailClient({
                       <span className="text-base-content/40 block font-semibold uppercase tracking-wider text-[10px]">
                         Estado de Tacógrafo
                       </span>
-                      <span className="text-xl font-black tracking-tight text-success mt-1 block">
+                      <span className="text-xl font-black tracking-tight text-emerald-600 mt-1 block">
                         {vehicle.liveState?.lastIgnition
                           ? (vehicle.liveState?.lastSpeed || 0) > 0
                             ? "CONDUCCIÓN"
@@ -866,7 +866,7 @@ export function VehicleDetailClient({
                     label="Estado Administrativo"
                     value={
                       <span
-                        className={`badge badge-sm font-bold text-white ${vehicle.status === "ACTIVE" ? "badge-success" : "badge-warning"}`}
+                        className={`badge badge-sm font-bold ${vehicle.status === "ACTIVE" ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20" : "badge-warning text-white"}`}
                       >
                         {vehicle.status === "ACTIVE" ? "Activo" : "Taller"}
                       </span>
