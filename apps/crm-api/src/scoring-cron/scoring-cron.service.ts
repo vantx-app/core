@@ -279,7 +279,29 @@ export class ScoringCronService {
 
     let lastSpeedLimit: number | null = null;
     let decelerationGraceWindowEnd = 0; // Marca de tiempo en ms
-    let lastValidOnRouteSpeedLimit = fallbackOverspeedThreshold; // Inertial Fallback
+
+    // Buscar el primer límite de velocidad en ruta válido del viaje para inicializar el fallback de inercia
+    let initialValidLimit = fallbackOverspeedThreshold;
+    for (const log of validLogs) {
+      const { index: closestIdx, distanceKm: snapDist } =
+        this.findClosestGeometryIndex(log.latitude, log.longitude, geometry);
+      if (snapDist <= 0.05) {
+        const { functionalClass: fc } =
+          this.getSpeedLimitAndClassForGeometryIndex(closestIdx, spans);
+        let limit: number;
+        if (fc === 1) limit = 110;
+        else if (fc === 2) limit = 80;
+        else if (fc === 3 || fc === 4) limit = 60;
+        else if (fc === 5) limit = 40;
+        else limit = fallbackOverspeedThreshold;
+
+        if (limit !== fallbackOverspeedThreshold) {
+          initialValidLimit = limit;
+          break;
+        }
+      }
+    }
+    let lastValidOnRouteSpeedLimit = initialValidLimit; // Inertial Fallback
 
     for (const log of validLogs) {
       const { index: closestIdx, distanceKm: snapDist } =
@@ -296,7 +318,7 @@ export class ScoringCronService {
 
         // Smart Fallback Ingestion: Asignar base conservadora basada en Reglamento de Tránsito de Panamá (ignorar speedLimit de HERE)
         if (fc === 1) {
-          limitToUse = 100; // Autopistas / Corredores
+          limitToUse = 110; // Autopistas / Corredores (Updated to 110!)
         } else if (fc === 2) {
           limitToUse = 80; // Carreteras / Vías Interurbanas
         } else if (fc === 3) {
@@ -308,7 +330,11 @@ export class ScoringCronService {
         } else {
           limitToUse = fallbackOverspeedThreshold;
         }
-        lastValidOnRouteSpeedLimit = limitToUse; // Actualizar último límite válido en ruta
+
+        // Solo actualizar el último límite válido en ruta si no es el fallback genérico
+        if (limitToUse !== fallbackOverspeedThreshold) {
+          lastValidOnRouteSpeedLimit = limitToUse;
+        }
       }
 
       // Lógica de transición espacial: Ventana de gracia por desaceleración rápida (drop >= 20 km/h)

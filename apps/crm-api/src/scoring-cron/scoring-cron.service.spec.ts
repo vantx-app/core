@@ -541,18 +541,18 @@ describe('ScoringCronService', () => {
         ],
       });
 
-      // Límite FC1 = 100. Threshold = 110.
+      // Límite FC1 = 110. Threshold = 120.
       const logs = [
         {
           latitude: 9.991,
           longitude: -79.991,
-          speed: 115,
+          speed: 125,
           timestamp: new Date('2026-06-12T12:00:00Z'),
         },
         {
           latitude: 9.991,
           longitude: -79.991,
-          speed: 115,
+          speed: 125,
           timestamp: new Date('2026-06-12T12:00:05Z'),
         },
         {

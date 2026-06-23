@@ -1,7 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { RulesEngineService } from 'src/rules-engine/rules-engine.service';
-import { RuleEngineConfig } from './scoring.interfaces';
+import {
+  RuleEngineConfig,
+  DEFAULT_RULE_ENGINE_CONFIG,
+} from './scoring.interfaces';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -10,40 +13,8 @@ export class WeeklyScoringService {
   private readonly BATCH_SIZE = 50;
   private readonly MIN_KM_THRESHOLD = 5.0; // Ignorar tramos muy cortos
 
-  private readonly DEFAULT_CONFIG: RuleEngineConfig = {
-    engineVersion: '1.0',
-    pillars: {
-      SAFETY: { weight: 0.45, baseScore: 100 },
-      EFFICIENCY: { weight: 0.3, baseScore: 100 },
-      ASSET_CARE: { weight: 0.25, baseScore: 100 },
-    },
-    rules: [
-      {
-        code: 'OVERSPEEDING',
-        pillar: 'SAFETY',
-        deductionPer100Km: 5.0,
-        maxDeduction: 20.0,
-      },
-      {
-        code: 'EXCESSIVE_IDLING',
-        pillar: 'EFFICIENCY',
-        deductionPer100Km: 20.0,
-        maxDeduction: 60.0,
-      },
-      {
-        code: 'HIGH_RPM',
-        pillar: 'ASSET_CARE',
-        deductionPer100Km: 12.0,
-        maxDeduction: 50.0,
-      },
-      {
-        code: 'DEVICE_UNPLUGGED',
-        pillar: 'ASSET_CARE',
-        deductionPerEvent: 20.0,
-        maxDeduction: 60.0,
-      },
-    ],
-  };
+  private readonly DEFAULT_CONFIG: RuleEngineConfig =
+    DEFAULT_RULE_ENGINE_CONFIG;
 
   constructor(
     private prisma: PrismaService,
@@ -237,6 +208,16 @@ export class WeeklyScoringService {
         };
 
         await this.prisma.$transaction(async (tx) => {
+          const existingSnapshot = await tx.driverScoreSnapshot.findUnique({
+            where: {
+              driverId_weekNumber_year: {
+                driverId: d.id,
+                weekNumber: weekNum,
+                year,
+              },
+            },
+          });
+
           await tx.driverScoreSnapshot.upsert({
             where: {
               driverId_weekNumber_year: {
@@ -286,38 +267,63 @@ export class WeeklyScoringService {
               },
             });
           } else {
-            const newTotalKm = currentStats.totalKm + safeTotalKm;
+            const oldKm = existingSnapshot ? existingSnapshot.totalKm : 0;
+            const oldHours = existingSnapshot ? existingSnapshot.totalHours : 0;
+            const oldSafety = existingSnapshot
+              ? existingSnapshot.safetyScore
+              : 0;
+            const oldEco = existingSnapshot ? existingSnapshot.ecoScore : 0;
+            const oldAsset = existingSnapshot ? existingSnapshot.assetScore : 0;
+            const oldOverall = existingSnapshot
+              ? existingSnapshot.overallScore
+              : 0;
 
-            const calcWeighted = (global: number, weekly: number) =>
-              parseFloat(
+            const snapshotDelta = existingSnapshot ? 0 : 1;
+
+            const newTotalKm = currentStats.totalKm - oldKm + safeTotalKm;
+            const newTotalHours =
+              currentStats.totalHours - oldHours + safeTotalHours;
+
+            const calcWeighted = (
+              global: number,
+              oldVal: number,
+              newVal: number,
+            ) => {
+              if (newTotalKm <= 0) return 100.0;
+              return parseFloat(
                 (
-                  (global * currentStats.totalKm + weekly * safeTotalKm) /
+                  (global * currentStats.totalKm -
+                    oldVal * oldKm +
+                    newVal * safeTotalKm) /
                   newTotalKm
                 ).toFixed(2),
               );
+            };
 
             await tx.driverGlobalStats.update({
               where: { driverId: d.id },
               data: {
                 totalKm: parseFloat(newTotalKm.toFixed(2)),
-                totalHours: parseFloat(
-                  (currentStats.totalHours + safeTotalHours).toFixed(2),
-                ),
-                totalSnapshots: currentStats.totalSnapshots + 1,
+                totalHours: parseFloat(newTotalHours.toFixed(2)),
+                totalSnapshots: currentStats.totalSnapshots + snapshotDelta,
                 globalSafetyScore: calcWeighted(
                   currentStats.globalSafetyScore,
+                  oldSafety,
                   finalSafety,
                 ),
                 globalEcoScore: calcWeighted(
                   currentStats.globalEcoScore,
+                  oldEco,
                   finalEco,
                 ),
                 globalAssetScore: calcWeighted(
                   currentStats.globalAssetScore,
+                  oldAsset,
                   finalAsset,
                 ),
                 globalOverallScore: calcWeighted(
                   currentStats.globalOverallScore,
+                  oldOverall,
                   finalOverall,
                 ),
               },
@@ -448,6 +454,16 @@ export class WeeklyScoringService {
           };
 
           await this.prisma.$transaction(async (tx) => {
+            const existingSnapshot = await tx.vehicleScoreSnapshot.findUnique({
+              where: {
+                vehicleId_weekNumber_year: {
+                  vehicleId: v.id,
+                  weekNumber,
+                  year,
+                },
+              },
+            });
+
             await tx.vehicleScoreSnapshot.upsert({
               where: {
                 vehicleId_weekNumber_year: {
@@ -496,38 +512,63 @@ export class WeeklyScoringService {
                 },
               });
             } else {
-              const newTotalKm = currentStats.totalKm + safeTotalKm;
+              const oldBreakdown = existingSnapshot?.breakdown as any;
+              const oldHours = oldBreakdown?.scores?.totalHours || 0;
+              const oldKm = existingSnapshot ? existingSnapshot.totalKm : 0;
+              const oldMaintenance = existingSnapshot
+                ? existingSnapshot.maintenanceScore
+                : 0;
+              const oldFuel = existingSnapshot
+                ? existingSnapshot.fuelEfficiency
+                : 0;
+              const oldSafety = existingSnapshot
+                ? existingSnapshot.safetyScore
+                : 0;
+              const oldOverall = oldBreakdown?.scores?.overallScore || 0;
 
-              const calcWeighted = (globalScore: number, weeklyScore: number) =>
-                parseFloat(
+              const newTotalKm = currentStats.totalKm - oldKm + safeTotalKm;
+              const newTotalHours =
+                currentStats.totalEngineHours - oldHours + safeTotalHours;
+
+              const calcWeighted = (
+                globalScore: number,
+                oldVal: number,
+                newVal: number,
+              ) => {
+                if (newTotalKm <= 0) return 100.0;
+                return parseFloat(
                   (
-                    (globalScore * currentStats.totalKm +
-                      weeklyScore * safeTotalKm) /
+                    (globalScore * currentStats.totalKm -
+                      oldVal * oldKm +
+                      newVal * safeTotalKm) /
                     newTotalKm
                   ).toFixed(2),
                 );
+              };
 
               await tx.vehicleGlobalStats.update({
                 where: { vehicleId: v.id },
                 data: {
                   totalKm: parseFloat(newTotalKm.toFixed(2)),
-                  totalEngineHours: parseFloat(
-                    (currentStats.totalEngineHours + safeTotalHours).toFixed(2),
-                  ),
+                  totalEngineHours: parseFloat(newTotalHours.toFixed(2)),
                   globalMaintenanceScore: calcWeighted(
                     currentStats.globalMaintenanceScore,
+                    oldMaintenance,
                     metrics.assetScore,
                   ),
                   globalFuelEfficiency: calcWeighted(
                     currentStats.globalFuelEfficiency,
+                    oldFuel,
                     metrics.ecoScore,
                   ),
                   globalSafetyScore: calcWeighted(
                     currentStats.globalSafetyScore ?? 100,
+                    oldSafety,
                     metrics.safetyScore,
                   ),
                   globalOverallScore: calcWeighted(
                     currentStats.globalOverallScore ?? 100,
+                    oldOverall,
                     metrics.overallScore,
                   ),
                 },

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../prisma.service';
 import { of, throwError } from 'rxjs';
+import { encodeFlexiblePolyline } from './route-utils';
 
 describe('HereRoutesClientService', () => {
   let service: HereRoutesClientService;
@@ -101,17 +102,26 @@ describe('HereRoutesClientService', () => {
   });
 
   it('debe parsear y decodificar correctamente la respuesta de HERE Map Attributes API', async () => {
-    // Mock de la respuesta HTTP con ROAD_GEOM_FC2 y coordenadas en Panamá
+    // Mock de la respuesta HTTP con el formato correcto de v8 routes y coordenadas en Panamá
+    const mockPolyline = encodeFlexiblePolyline([
+      [9.0083, -79.5246],
+      [9.0123, -79.5286],
+    ]);
+
     const mockResponse = {
       data: {
-        Layers: [
+        routes: [
           {
-            LayerName: 'ROAD_GEOM_FC2',
-            Attributes: [
+            sections: [
               {
-                LINK_ID: '12345',
-                LAT: '900830,400',
-                LON: '-7952460,-400',
+                polyline: mockPolyline,
+                spans: [
+                  {
+                    offset: 0,
+                    functionalClass: 2,
+                    segmentId: '12345',
+                  },
+                ],
               },
             ],
           },

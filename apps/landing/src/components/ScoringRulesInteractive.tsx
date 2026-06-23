@@ -188,34 +188,33 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
   // Formatear reglas para display
   const getDeductionText = (rule: Rule) => {
     if (rule.deductionPer100Km !== undefined && rule.deductionPer100Km > 0) {
-      return `-${rule.deductionPer100Km} pts / 100 km`;
+      return `-${rule.deductionPer100Km} pts/100km`;
     }
     if (rule.deductionPerEvent !== undefined && rule.deductionPerEvent > 0) {
-      return `-${rule.deductionPerEvent} pts / evento`;
+      return `-${rule.deductionPerEvent} pts/evento`;
     }
     if (
       rule.deductionPerSeverityUnit !== undefined &&
       rule.deductionPerSeverityUnit > 0
     ) {
-      const unit =
-        rule.code === "HIGH_RPM" ? "RPM de exceso" : "mG de intensidad";
-      return `-${rule.deductionPerSeverityUnit} pts / ${unit}`;
+      const unit = rule.code === "HIGH_RPM" ? "RPM" : "mG";
+      return `-${rule.deductionPerSeverityUnit} pts/${unit}`;
     }
     if (rule.deductionFixed !== undefined && rule.deductionFixed > 0) {
-      return `-${rule.deductionFixed} pts (Fijo)`;
+      return `-${rule.deductionFixed} pts (fijo)`;
     }
     return "Variable";
   };
 
   const getThresholdText = (rule: Rule) => {
     if (rule.code === "OVERSPEEDING" && rule.threshold) {
-      return `Límite de vía + 12 km/h`;
+      return `Vía +10 km/h`;
     }
     if (rule.code === "HIGH_RPM" && rule.threshold) {
       return `> ${rule.threshold} RPM`;
     }
     if (rule.code === "EXCESSIVE_IDLING") {
-      return `> 5 min continuo`;
+      return `> 5 min`;
     }
     if (rule.threshold) {
       return `> ${rule.threshold} mG`;
@@ -390,12 +389,12 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
                   className="p-6 hover:bg-slate-50/50 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-6"
                 >
                   {/* Regla Detalle */}
-                  <div className="flex items-start gap-4 max-w-xl">
+                  <div className="flex items-start gap-4 max-w-xl w-full">
                     <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-500 shrink-0">
                       <RuleIcon className="size-5" />
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2.5 mb-1.5 flex-wrap">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between md:justify-start md:gap-2.5 mb-1.5 w-full">
                         <h5 className="text-sm font-bold text-slate-900">
                           {ruleMeta.name}
                         </h5>
@@ -418,10 +417,10 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
                   </div>
 
                   {/* Parámetros Técnicos */}
-                  <div className="grid grid-cols-3 gap-6 text-left md:text-right shrink-0 md:w-80 font-mono">
+                  <div className="grid grid-cols-3 gap-6 text-left md:text-right shrink-0 md:w-[420px] font-mono">
                     <div>
                       <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">
-                        Umbral
+                        Condición
                       </span>
                       <span className="text-xs font-bold text-slate-800">
                         {getThresholdText(rule)}
@@ -429,7 +428,7 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">
-                        Deducción
+                        Puntos
                       </span>
                       <span className="text-xs font-bold text-rose-600">
                         {getDeductionText(rule)}
@@ -437,7 +436,7 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
                     </div>
                     <div>
                       <span className="text-[10px] text-slate-400 block uppercase font-bold font-sans">
-                        Límite Máx
+                        Tope
                       </span>
                       <span className="text-xs font-bold text-slate-800">
                         {rule.maxDeduction} pts
@@ -470,18 +469,18 @@ export function ScoringRulesInteractive({ scoringProfiles }: Props) {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-xs text-slate-700">
               <div className="bg-white/80 p-3 rounded-xl border border-amber-200/50">
                 <strong className="text-slate-900 block mb-1">
-                  Límite de Vía Dinámico
+                  Categorización de Vías
                 </strong>
-                Se consulta en tiempo real el límite de la vía exacta donde
-                circula el vehículo, discriminando entre automóviles y
-                transporte de carga pesada.
+                Se identifica la categoría de la vía (autopista, avenida, calle)
+                según la telemetría, aplicando los límites estipulados por el
+                Reglamento de Tránsito.
               </div>
               <div className="bg-white/80 p-3 rounded-xl border border-amber-200/50">
                 <strong className="text-slate-900 block mb-1">
                   Tolerancia de Gracia
                 </strong>
                 El sistema aplica un margen de gracia de{" "}
-                <strong>+12 km/h</strong> sobre el límite de la vía. La
+                <strong>+10 km/h</strong> sobre el límite de la vía. La
                 penalización se activa únicamente si se supera este umbral.
               </div>
               <div className="bg-white/80 p-3 rounded-xl border border-amber-200/50">

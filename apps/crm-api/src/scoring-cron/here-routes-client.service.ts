@@ -8,6 +8,8 @@ import {
   CalculatedRouteResult,
   haversineDistance,
   encodeFlexiblePolyline,
+  decodeFlexiblePolyline,
+  downsampleByDistance,
   calculateHeading,
   getAngleDiff,
   uniformThin,
@@ -189,40 +191,57 @@ export class HereRoutesClientService {
       );
     }
 
-    // 2. CACHE MISS: LLAMAR A LA API DE HERE MAP ATTRIBUTES
+    // 2. CACHE MISS: LLAMAR A LA API DE HERE ROUTING V8
     this.logger.log(
-      `Cache MISS: Solicitando atributos de mapa a HERE API para ${coordinates.length} coordenadas...`,
+      `Cache MISS: Solicitando ruta a HERE Routing API v8 para ${coordinates.length} coordenadas...`,
     );
 
-    // Capping inteligente para evitar que la URL de la polilínea exceda los límites de tamaño
-    let processedCoords = coordinates;
-    if (coordinates.length > 1200) {
-      this.logger.log(
-        `Mitigación de tamaño activa: Reduciendo uniformemente de ${coordinates.length} a 1200 puntos.`,
-      );
-      processedCoords = uniformThin(coordinates, 1200);
-    }
+    // Downsampling inteligente usando downsampleByDistance para encajar en límites de URL del API
+    const processedCoords = downsampleByDistance(coordinates, 0.2, 60);
 
-    const polylineForHere = processedCoords.map(
-      (c) => [c.lat, c.lng] as [number, number],
-    );
-    const encodedPolyline = encodeFlexiblePolyline(polylineForHere);
-
-    const url = 'https://smap.hereapi.com/v8/maps/attributes/path';
+    const transportMode = travelMode.toLowerCase();
+    const url = 'https://router.hereapi.com/v8/routes';
     const queryParams = new URLSearchParams();
     queryParams.append('apikey', apiKey);
-    queryParams.append('attributes', 'ROAD_GEOM_FCn(*)');
-    queryParams.append('flexiblePolyline', encodedPolyline);
+    queryParams.append('transportMode', transportMode);
+    queryParams.append(
+      'origin',
+      `${processedCoords[0].lat},${processedCoords[0].lng}`,
+    );
+    queryParams.append(
+      'destination',
+      `${processedCoords[processedCoords.length - 1].lat},${processedCoords[processedCoords.length - 1].lng}`,
+    );
+
+    // Agregar puntos intermedios como via con passThrough
+    for (let i = 1; i < processedCoords.length - 1; i++) {
+      queryParams.append(
+        'via',
+        `${processedCoords[i].lat},${processedCoords[i].lng}!passThrough=true`,
+      );
+    }
+
+    queryParams.append('return', 'polyline');
+    queryParams.append('spans', 'functionalClass,segmentId');
 
     try {
       const response = await firstValueFrom(
         this.httpService.get(`${url}?${queryParams.toString()}`, {
-          timeout: 15000,
+          timeout: 20000,
         }),
       );
 
-      const data = response.data;
-      const layers = data.Layers || data.layers || [];
+      const section = response.data?.routes?.[0]?.sections?.[0];
+      if (!section || !section.polyline) {
+        throw new Error(
+          'No se encontró sección o polilínea en la respuesta del API de HERE',
+        );
+      }
+
+      const decoded = decodeFlexiblePolyline(section.polyline);
+      const polylinePoints = decoded.polyline; // Array de [lat, lng]
+      const apiSpans = section.spans || [];
+
       const linksToSave: {
         linkId: string;
         functionalClass: number;
@@ -234,15 +253,18 @@ export class HereRoutesClientService {
         maxLng: number;
       }[] = [];
 
-      for (const layer of layers) {
-        const layerName = layer.LayerName || layer.layerName || '';
-        const fcMatch = layerName.match(/FC(\d+)/i);
-        const fc = fcMatch ? parseInt(fcMatch[1], 10) : 3;
+      for (let i = 0; i < apiSpans.length; i++) {
+        const span = apiSpans[i];
+        const fc = span.functionalClass || 3;
+        const rawLinkId =
+          span.segmentId || span.segmentRef || `gen-${i}-${Date.now()}`;
+        const linkId = String(rawLinkId);
 
         // Mapeo oficial de límites de velocidad de Panamá (PANAMA_LEGAL_CEILINGS)
+        // FC1 se establece en 110 km/h para reflejar límites reales en corredores y autopistas
         const speedLimit =
           fc === 1
-            ? 100 // Autopistas / Corredores
+            ? 110 // Autopistas / Corredores
             : fc === 2
               ? 80 // Carreteras
               : fc === 3
@@ -251,50 +273,34 @@ export class HereRoutesClientService {
                   ? 60
                   : 40; // FC5: Calles Residenciales / Urbanas comerciales
 
-        const rows = layer.Attributes || layer.attributes || [];
-        for (const row of rows) {
-          const linkId = String(row.LINK_ID || row.link_id);
-          const latStr = String(row.LAT || row.lat || '');
-          const lonStr = String(row.LON || row.lon || '');
-          if (!latStr || !lonStr) continue;
+        const startOffset = span.offset;
+        const endOffset =
+          i < apiSpans.length - 1
+            ? apiSpans[i + 1].offset
+            : polylinePoints.length - 1;
+        const segmentPts = polylinePoints.slice(startOffset, endOffset + 1);
+        if (segmentPts.length === 0) continue;
 
-          // Decodificar deltas de la geometría del enlace
-          const latTokens = latStr.split(',');
-          const lonTokens = lonStr.split(',');
-          const pts: [number, number][] = [];
-          let currentLat = 0;
-          let currentLon = 0;
+        const lats = segmentPts.map((p) => p[0]);
+        const lons = segmentPts.map((p) => p[1]);
 
-          const lats: number[] = [];
-          const lons: number[] = [];
+        // Guardar geometría en formato [lng, lat]
+        const geometryStr = segmentPts.map((p) => `${p[1]},${p[0]}`).join(';');
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lons);
+        const maxLng = Math.max(...lons);
 
-          for (let i = 0; i < latTokens.length; i++) {
-            const dLat = parseInt(latTokens[i], 10);
-            const dLon = parseInt(lonTokens[i], 10);
-            currentLat += dLat;
-            currentLon += dLon;
-            lats.push(currentLat / 100000.0);
-            lons.push(currentLon / 100000.0);
-            pts.push([currentLon / 100000.0, currentLat / 100000.0]); // [lng, lat]
-          }
-
-          const geometryStr = pts.map((p) => `${p[0]},${p[1]}`).join(';');
-          const minLat = Math.min(...lats);
-          const maxLat = Math.max(...lats);
-          const minLng = Math.min(...lons);
-          const maxLng = Math.max(...lons);
-
-          linksToSave.push({
-            linkId,
-            functionalClass: fc,
-            speedLimit,
-            geometry: geometryStr,
-            minLat,
-            maxLat,
-            minLng,
-            maxLng,
-          });
-        }
+        linksToSave.push({
+          linkId,
+          functionalClass: fc,
+          speedLimit,
+          geometry: geometryStr,
+          minLat,
+          maxLat,
+          minLng,
+          maxLng,
+        });
       }
 
       // Upsertar secuencialmente en la BD para autolearning

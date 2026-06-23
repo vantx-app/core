@@ -117,7 +117,7 @@ export default async function HowItWorksPage() {
               en el vehículo y comienzan a leer el bus CAN sin intervenir el
               cableado.
             </p>
-            <div className="mt-auto w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg">
+            <div className="mt-auto self-end w-10 h-10 rounded-2xl bg-blue-600 flex items-center justify-center text-white font-black text-lg">
               1
             </div>
           </div>
@@ -131,7 +131,7 @@ export default async function HowItWorksPage() {
               Velocidad, fuerza G, consumo de combustible, ralentí y códigos de
               falla se transmiten a 1 Hz hacia nuestro motor de telemetría.
             </p>
-            <div className="mt-auto w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg">
+            <div className="mt-auto self-end w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black text-lg">
               2
             </div>
           </div>
@@ -146,7 +146,7 @@ export default async function HowItWorksPage() {
               conductor — visible para ellos y para los propietarios de flota en
               el mercado.
             </p>
-            <div className="mt-auto w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-black text-lg">
+            <div className="mt-auto self-end w-10 h-10 rounded-2xl bg-emerald-600 flex items-center justify-center text-white font-black text-lg">
               3
             </div>
           </div>
