@@ -34,7 +34,7 @@ import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
 import { ScoreProgressBar } from "@/components/ui/ScoreProgressBar";
 import type { RuleDeductionDetail, ScoreBreakdown } from "@/types";
 import { BackButton } from "@/components/ui/BackButton";
-import { formatHours, formatTripDate, formatTimeOnly } from "@/utils/client";
+import { formatHours, formatTripDate, formatTimeOnly, getScoreTailwindColor } from "@/utils/client";
 
 function ReportsPageContent() {
   const searchParams = useSearchParams();
@@ -621,7 +621,7 @@ function ReportsPageContent() {
                             <div className="flex flex-col justify-between border-b md:border-b-0 md:border-r border-base-200/50 pb-4 md:pb-0 md:pr-6">
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
-                                  <ShieldCheck className="size-5 text-emerald-500" />
+                                  <ShieldCheck className={`size-5 ${getScoreTailwindColor(vBreak.scores.safetyScore)}`} />
                                   <span className="text-xs font-black uppercase tracking-wider text-base-content/75">
                                     Seguridad Vial
                                   </span>
@@ -644,7 +644,7 @@ function ReportsPageContent() {
                             <div className="flex flex-col justify-between border-b md:border-b-0 md:border-r border-base-200/50 pb-4 md:pb-0 md:px-6">
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
-                                  <Leaf className="size-5 text-emerald-500" />
+                                  <Leaf className={`size-5 ${getScoreTailwindColor(vBreak.scores.ecoScore)}`} />
                                   <span className="text-xs font-black uppercase tracking-wider text-base-content/75">
                                     Eficiencia de Operación
                                   </span>
@@ -667,7 +667,7 @@ function ReportsPageContent() {
                             <div className="flex flex-col justify-between md:pl-6">
                               <div className="space-y-3">
                                 <div className="flex items-center gap-2">
-                                  <Activity className="size-5 text-emerald-500" />
+                                  <Activity className={`size-5 ${getScoreTailwindColor(vBreak.scores.assetScore)}`} />
                                   <span className="text-xs font-black uppercase tracking-wider text-base-content/75">
                                     Cuidado del Vehículo
                                   </span>

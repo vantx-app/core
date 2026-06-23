@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import api from "../utils/client/api-client";
-import { getCategoryText, getFuelText } from "../utils/client/format";
 import {
   Car,
   Plus,
@@ -15,6 +14,7 @@ import {
   Save,
   X,
 } from "lucide-react";
+import { VehicleCard, LoadingCard, EmptyState } from "./VehicleCard";
 
 interface Vehicle {
   id: string;
@@ -209,12 +209,7 @@ export function MyListingsTab() {
   };
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white border border-slate-200 rounded-2xl">
-        <Loader2 className="size-8 animate-spin text-blue-600" />
-        <p className="text-xs text-slate-500">Cargando tus publicaciones...</p>
-      </div>
-    );
+    return <LoadingCard message="Cargando tus publicaciones..." />;
   }
 
   if (error) {
@@ -223,7 +218,7 @@ export function MyListingsTab() {
         <AlertCircle className="size-5 shrink-0 text-amber-600 mt-0.5" />
         <div>
           <h4 className="font-bold text-sm text-slate-800">Error</h4>
-          <p className="text-xs text-slate-600 mt-1">{error}</p>
+          <p className="text-xs text-slate-650 mt-1">{error}</p>
         </div>
       </div>
     );
@@ -253,135 +248,85 @@ export function MyListingsTab() {
 
       {/* Grid de Vehículos */}
       {vehicles.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 py-16">
-          <Car className="size-14 text-slate-350 mb-3" />
-          <h3 className="text-sm font-bold text-slate-700">
-            No tienes vehículos registrados
-          </h3>
-          <p className="text-xs text-slate-400 max-w-sm mt-1 mb-4">
-            Aún no has registrado ningún vehículo en tu flota. Registra uno
-            ahora para listarlo en el mercado.
-          </p>
-          <button
-            onClick={openCreateModal}
-            className="btn btn-outline border-slate-300 text-slate-650 hover:bg-slate-50 text-xs font-bold px-4 py-2 rounded-xl"
-          >
-            Comenzar Registro
-          </button>
-        </div>
+        <EmptyState
+          title="No tienes vehículos registrados"
+          description="Aún no has registrado ningún vehículo en tu flota. Registra uno ahora para listarlo en el mercado."
+          actionButton={
+            <button
+              onClick={openCreateModal}
+              className="btn btn-outline border-slate-300 text-slate-650 hover:bg-slate-50 text-xs font-bold px-4 py-2 rounded-xl"
+            >
+              Comenzar Registro
+            </button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left">
-          {vehicles.map((vehicle) => (
-            <div
-              key={vehicle.id}
-              className={`p-6 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 transition-all shadow-sm flex flex-col justify-between gap-5 relative overflow-hidden`}
-            >
-              <div>
-                {/* Estatus e Identificación */}
-                <div className="flex justify-between items-start gap-4">
-                  <div className="space-y-0.5">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                      {getCategoryText(vehicle.category)} •{" "}
-                      {getFuelText(vehicle.fuelType)}
-                    </span>
-                    <h4 className="font-extrabold text-lg text-slate-900 leading-tight">
-                      {vehicle.make
-                        ? `${vehicle.make} ${vehicle.model || ""}`
-                        : "Vehículo sin marca/modelo"}
-                      {vehicle.year && (
-                        <span className="text-slate-400 font-medium text-xs ml-1.5">
-                          ({vehicle.year})
-                        </span>
-                      )}
-                    </h4>
-                    <div className="flex gap-2 mt-1.5 flex-wrap">
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 border border-slate-200 text-slate-700">
-                        Placa: {vehicle.plateNumber}
-                      </span>
-                      {vehicle.alias && (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 border border-blue-100 text-blue-700">
-                          Alias: {vehicle.alias}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+          {vehicles.map((vehicle) => {
+            const activeDriver = vehicle.assignments?.[0]?.driver;
 
-                  {/* Badge de Listado */}
-                  {(() => {
-                    const activeDriver = vehicle.assignments?.[0]?.driver;
-                    if (vehicle.isListed) {
-                      if (activeDriver) {
-                        return (
-                          <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-amber-50 text-amber-700 border-amber-200">
-                            Listado (Oculto)
-                          </span>
-                        );
-                      }
-                      return (
-                        <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-emerald-50 text-emerald-700 border-emerald-200">
-                          Listado
-                        </span>
-                      );
-                    }
-                    return (
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-slate-200 border-slate-200 text-slate-500">
-                        Borrador
-                      </span>
-                    );
-                  })()}
-                </div>
+            // 1. Header status badge
+            let headerBadge = null;
+            if (vehicle.isListed) {
+              if (activeDriver) {
+                headerBadge = (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-amber-50 text-amber-700 border-amber-200">
+                    Listado (Oculto)
+                  </span>
+                );
+              } else {
+                headerBadge = (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                    Listado
+                  </span>
+                );
+              }
+            } else {
+              headerBadge = (
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold border bg-slate-200 border-slate-200 text-slate-500">
+                  Borrador
+                </span>
+              );
+            }
 
-                {/* Precios y Detalles */}
-                {vehicle.isListed && (
-                  <div className="mt-4 pt-3 border-t border-slate-100 space-y-2">
-                    <div className="flex items-baseline gap-1 text-slate-900">
-                      <span className="font-extrabold text-xl tracking-tight">
-                        ${vehicle.listingPrice?.toFixed(2) || "0.00"}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-semibold uppercase">
-                        / Mensual
-                      </span>
-                    </div>
-                    {vehicle.listingDescription && (
-                      <p className="text-xs text-slate-650 line-clamp-2 leading-relaxed italic">
-                        &ldquo;{vehicle.listingDescription}&rdquo;
-                      </p>
-                    )}
-                    {vehicle.hasOptionToBuy && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-100 px-2 py-0.5 rounded-lg">
-                        Alquiler con opción a compra
-                      </span>
-                    )}
-                  </div>
+            // 2. Metadata tags (plate, alias)
+            const tags = (
+              <div className="flex gap-2 mt-1.5 flex-wrap">
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-100 border border-slate-200 text-slate-700">
+                  Placa: {vehicle.plateNumber}
+                </span>
+                {vehicle.alias && (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 border border-blue-100 text-blue-700">
+                    Alias: {vehicle.alias}
+                  </span>
                 )}
-
-                {/* Warning: Active driver assignment warning */}
-                {(() => {
-                  const activeDriver = vehicle.assignments?.[0]?.driver;
-                  if (vehicle.isListed && activeDriver) {
-                    const driverName = activeDriver.firstName && activeDriver.lastName
-                      ? `${activeDriver.firstName} ${activeDriver.lastName}`
-                      : activeDriver.nationalId;
-                    return (
-                      <div className="mt-3 p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-2 text-left">
-                        <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
-                        <div>
-                          <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">
-                            Vehículo Oculto en el Mercado
-                          </p>
-                          <p className="text-[10px] text-amber-700 leading-relaxed mt-0.5">
-                            Asignado actualmente a <span className="font-bold">{driverName}</span>. No será visible para otros conductores hasta que sea desvinculado.
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
               </div>
+            );
 
-              {/* Botones de Acción */}
-              <div className="border-t border-slate-100 pt-4 flex gap-3">
+            // 3. Driver assignment warning banner
+            let warningBanner = null;
+            if (vehicle.isListed && activeDriver) {
+              const driverName = activeDriver.firstName && activeDriver.lastName
+                ? `${activeDriver.firstName} ${activeDriver.lastName}`
+                : activeDriver.nationalId;
+              warningBanner = (
+                <div className="mt-3 p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-2 text-left w-full">
+                  <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-bold text-amber-800 uppercase tracking-wide">
+                      Vehículo Oculto en el Mercado
+                    </p>
+                    <p className="text-[10px] text-amber-700 leading-relaxed mt-0.5">
+                      Asignado actualmente a <span className="font-bold">{driverName}</span>. No será visible para otros conductores hasta que sea desvinculado.
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+
+            // 4. Action buttons
+            const actions = (
+              <>
                 <button
                   onClick={() => openEditModal(vehicle)}
                   className="flex-1 py-2 rounded-xl border border-slate-200 hover:border-slate-350 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs active:scale-95 transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer"
@@ -409,9 +354,22 @@ export function MyListingsTab() {
                     </>
                   )}
                 </button>
-              </div>
-            </div>
-          ))}
+              </>
+            );
+
+            return (
+              <VehicleCard
+                key={vehicle.id}
+                vehicle={vehicle}
+                headerBadge={headerBadge}
+                tags={tags}
+                showDetails={vehicle.isListed}
+                buyOptionStyle="badge"
+                warningBanner={warningBanner}
+                actions={actions}
+              />
+            );
+          })}
         </div>
       )}
 

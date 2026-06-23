@@ -195,18 +195,18 @@ export function OwnerDashboard({
         });
       }
 
-      // 4. Pérdida de señal / fuera de línea por más de 30 minutos (Warning)
+      // 4. Pérdida de señal / fuera de línea por más de 30 minutos y menos de 12 horas (Warning)
       if (v.liveState?.lastUpdate) {
         const lastUpdateMs = new Date(v.liveState.lastUpdate).getTime();
         const diffMins = (Date.now() - lastUpdateMs) / (1000 * 60);
-        if (diffMins > 30 && !isUnplugged && v.status === "ACTIVE") {
+        if (diffMins > 30 && diffMins <= 720 && !isUnplugged && v.status === "ACTIVE") {
           alerts.push({
             id: `${v.id}-offline`,
             vehicleId: v.id,
             vehicleAlias: alias,
             plateNumber: plate,
             type: "offline",
-            message: `Pérdida de señal hace más de ${Math.round(diffMins)} min en unidad ${alias}`,
+            message: `Pérdida de señal por más de ${Math.round(diffMins)} min en unidad ${alias}`,
             severity: "warning",
             timestamp: v.liveState.lastUpdate,
           });
@@ -276,13 +276,12 @@ export function OwnerDashboard({
       header: "Estado",
       render: (v) => (
         <span
-          className={`badge badge-sm font-bold text-white ${
-            v.status === "ACTIVE"
-              ? "badge-success"
-              : v.status === "IN_MAINTENANCE"
-                ? "badge-warning"
-                : "badge-neutral"
-          }`}
+          className={`badge badge-sm font-bold text-white ${v.status === "ACTIVE"
+            ? "badge-success"
+            : v.status === "IN_MAINTENANCE"
+              ? "badge-warning"
+              : "badge-neutral"
+            }`}
         >
           {v.status === "ACTIVE"
             ? "Activo"
@@ -423,11 +422,10 @@ export function OwnerDashboard({
               {fleetAlerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className={`p-3.5 rounded-xl border flex gap-3 text-xs animate-in fade-in duration-300 ${
-                    alert.severity === "error"
-                      ? "bg-rose-500/5 border-rose-500/20 text-rose-800 dark:text-rose-200"
-                      : "bg-amber-500/5 border-amber-500/20 text-amber-800 dark:text-amber-200"
-                  }`}
+                  className={`p-3.5 rounded-xl border flex gap-3 text-xs animate-in fade-in duration-300 ${alert.severity === "error"
+                    ? "bg-rose-500/5 border-rose-500/20 text-rose-800 dark:text-rose-200"
+                    : "bg-amber-500/5 border-amber-500/20 text-amber-800 dark:text-amber-200"
+                    }`}
                 >
                   {alert.type === "unplugged" && (
                     <Power className="size-4.5 shrink-0 text-rose-500 mt-0.5" />
@@ -615,13 +613,12 @@ export function OwnerDashboard({
                             Estado Administrativo
                           </span>
                           <span
-                            className={`badge badge-sm font-bold text-white ${
-                              v.status === "ACTIVE"
-                                ? "badge-success"
-                                : v.status === "IN_MAINTENANCE"
-                                  ? "badge-warning"
-                                  : "badge-neutral"
-                            }`}
+                            className={`badge badge-sm font-bold text-white ${v.status === "ACTIVE"
+                              ? "badge-success"
+                              : v.status === "IN_MAINTENANCE"
+                                ? "badge-warning"
+                                : "badge-neutral"
+                              }`}
                           >
                             {v.status === "ACTIVE"
                               ? "Activo"

@@ -20,7 +20,7 @@ import {
   DriverStats,
   TableColumn,
 } from "@/types";
-import { formatHours, getScoreBadgeColor } from "@/utils/client";
+import { formatHours, getScoreBadgeColor, getScoreTailwindColor } from "@/utils/client";
 import { WelcomeBanner } from "@/components/ui/WelcomeBanner";
 import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
 import { Table } from "@/components/ui/Table";
@@ -238,7 +238,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck className="size-5 text-emerald-500" />
+              <ShieldCheck className={`size-5 ${getScoreTailwindColor(safetyScore)}`} />
               <span className="text-base-content/75 text-xs font-bold uppercase tracking-wider">
                 Seguridad Vial
               </span>
@@ -257,7 +257,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
 
           <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="flex items-center gap-2 mb-2">
-              <Leaf className="size-5 text-emerald-500" />
+              <Leaf className={`size-5 ${getScoreTailwindColor(ecoScore)}`} />
               <span className="text-base-content/75 text-xs font-bold uppercase tracking-wider">
                 Eficiencia de Operación
               </span>
@@ -276,7 +276,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
 
           <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-col items-center justify-between text-center transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="flex items-center gap-2 mb-2">
-              <Activity className="size-5 text-emerald-500" />
+              <Activity className={`size-5 ${getScoreTailwindColor(assetScore)}`} />
               <span className="text-base-content/75 text-xs font-bold uppercase tracking-wider">
                 Cuidado del Vehículo
               </span>

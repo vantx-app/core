@@ -1,27 +1,40 @@
 export const getScoreCircleColor = (
   score: number | null | undefined,
 ): string => {
-  if (score == null) return "text-base-content/20 stroke-base-300";
-  if (score >= 85) return "text-success stroke-success";
-  if (score >= 70) return "text-warning stroke-warning";
+  if (score == null || isNaN(score)) return "text-base-content/20 stroke-base-300";
+  const rounded = Math.round(score);
+  if (rounded >= 85) return "text-base-content/20 stroke-base-content/30";
+  if (rounded >= 70) return "text-warning stroke-warning";
   return "text-error stroke-error";
 };
 
 export const getScoreBadgeColor = (
   score: number | null | undefined,
 ): string => {
-  if (score == null)
+  if (score == null || isNaN(score))
     return "badge-ghost text-base-content/50 border-base-200/80";
-  if (score >= 85) return "badge-success text-white bg-emerald-500 border-none";
-  if (score >= 70) return "badge-warning text-white bg-amber-500 border-none";
+  const rounded = Math.round(score);
+  if (rounded >= 85) return "bg-base-200 text-base-content/70 border-base-300 font-semibold";
+  if (rounded >= 70) return "badge-warning text-white bg-amber-500 border-none";
   return "badge-error text-white bg-rose-500 border-none";
 };
 
 export const getScoreTextColor = (score: number | null | undefined): string => {
-  if (score == null) return "text-base-content/40";
-  if (score >= 85) return "text-success";
-  if (score >= 70) return "text-warning";
+  if (score == null || isNaN(score)) return "text-base-content/40";
+  const rounded = Math.round(score);
+  if (rounded >= 85) return "text-base-content/75";
+  if (rounded >= 70) return "text-warning";
   return "text-error";
+};
+
+export const getScoreTailwindColor = (
+  score: number | null | undefined,
+): string => {
+  if (score == null || isNaN(score)) return "text-base-content/40";
+  const rounded = Math.round(score);
+  if (rounded >= 85) return "text-base-content/60";
+  if (rounded >= 70) return "text-amber-500";
+  return "text-rose-500";
 };
 
 export const getVehicleStatusBadgeClass = (status: string): string => {
