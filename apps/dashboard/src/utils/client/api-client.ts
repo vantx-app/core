@@ -82,32 +82,46 @@ api.interceptors.response.use(
         // Reintentamos la petición que falló originalmente
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         // Si el refresh falla (ej. Refresh Token expirado), rechazamos toda la cola
         processQueue(refreshError, null);
 
-        // Limpiamos rastros
-        const deleteSettings = getCookieSettings(0);
-        Cookies.remove("access_token", { path: "/" });
-        if (deleteSettings.domain) {
-          Cookies.remove("access_token", {
-            path: "/",
-            domain: deleteSettings.domain,
-          });
-        }
-        Cookies.remove("refresh_token", { path: "/" });
-        if (deleteSettings.domain) {
-          Cookies.remove("refresh_token", {
-            path: "/",
-            domain: deleteSettings.domain,
-          });
-        }
+        // Solo limpiamos sesión y redirigimos si el fallo es de autenticación real (401 o 403).
+        // Evitamos que caídas de red transitorias o fallos del servidor expulsen al usuario.
+        const isAuthFailure =
+          refreshError.response &&
+          (refreshError.response.status === 401 ||
+            refreshError.response.status === 403);
 
-        // Redirección forzada (MVP Friendly)
-        if (typeof window !== "undefined") {
-          const landingUrl =
-            process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
-          window.location.href = `${landingUrl}/login?expired=true`;
+        if (isAuthFailure) {
+          // Limpiamos rastros
+          const deleteSettings = getCookieSettings(0);
+          Cookies.remove("access_token", { path: "/" });
+          if (deleteSettings.domain) {
+            Cookies.remove("access_token", {
+              path: "/",
+              domain: deleteSettings.domain,
+            });
+          }
+          Cookies.remove("refresh_token", { path: "/" });
+          if (deleteSettings.domain) {
+            Cookies.remove("refresh_token", {
+              path: "/",
+              domain: deleteSettings.domain,
+            });
+          }
+
+          // Redirección forzada (MVP Friendly)
+          if (typeof window !== "undefined") {
+            const landingUrl =
+              process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+            window.location.href = `${landingUrl}/login?expired=true`;
+          }
+        } else {
+          console.warn(
+            "[Auth] Fallo transitorio en refresh de token en cliente. No se limpia la sesión.",
+            refreshError,
+          );
         }
 
         return Promise.reject(refreshError);

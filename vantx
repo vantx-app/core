@@ -37,7 +37,7 @@ server {
     # Permite al SW controlar todo el origen
     location = /dashboard/sw.js {
         proxy_pass http://127.0.0.1:3001/dashboard/sw.js;
-        add_header Service-Worker-Allowed /;
+        add_header Service-Worker-Allowed /dashboard/;
         proxy_set_header Host $host;
     }
 

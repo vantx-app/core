@@ -3,7 +3,7 @@
   "short_name": "Vantx",
   "description": "Sistema de Gestión de Flotas y Marketplace de Conductores",
   "start_url": "/dashboard",
-  "scope": "/",
+  "scope": "/dashboard/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#1d4ed8",

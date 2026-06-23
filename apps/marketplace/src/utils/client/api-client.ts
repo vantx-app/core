@@ -76,36 +76,51 @@ api.interceptors.response.use(
         processQueue(null, newAccessToken);
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
         return api(originalRequest);
-      } catch (refreshError) {
+      } catch (refreshError: any) {
         processQueue(refreshError, null);
-        const deleteSettings = getCookieSettings(0);
-        Cookies.remove("access_token", { path: "/" });
-        if (deleteSettings.domain) {
-          Cookies.remove("access_token", {
-            path: "/",
-            domain: deleteSettings.domain,
-          });
-        }
-        Cookies.remove("refresh_token", { path: "/" });
-        if (deleteSettings.domain) {
-          Cookies.remove("refresh_token", {
-            path: "/",
-            domain: deleteSettings.domain,
-          });
-        }
 
-        // Si es una consulta pública del Marketplace (como verificar perfil o listar conductores),
-        // no forzamos redirección para permitir navegación en modo invitado.
-        const isPublicCheck =
-          originalRequest.url?.includes("/users/me") ||
-          originalRequest.url?.includes("/public");
+        // Solo limpiamos sesión y redirigimos si el fallo es de autenticación real (401 o 403).
+        // Evitamos que caídas de red transitorias o fallos del servidor expulsen al usuario.
+        const isAuthFailure =
+          refreshError.response &&
+          (refreshError.response.status === 401 ||
+            refreshError.response.status === 403);
 
-        if (!isPublicCheck) {
-          const landingUrl =
-            process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
-          if (typeof window !== "undefined") {
-            window.location.href = `${landingUrl}/login?expired=true&callbackUrl=${encodeURIComponent(window.location.href)}`;
+        if (isAuthFailure) {
+          const deleteSettings = getCookieSettings(0);
+          Cookies.remove("access_token", { path: "/" });
+          if (deleteSettings.domain) {
+            Cookies.remove("access_token", {
+              path: "/",
+              domain: deleteSettings.domain,
+            });
           }
+          Cookies.remove("refresh_token", { path: "/" });
+          if (deleteSettings.domain) {
+            Cookies.remove("refresh_token", {
+              path: "/",
+              domain: deleteSettings.domain,
+            });
+          }
+
+          // Si es una consulta pública del Marketplace (como verificar perfil o listar conductores),
+          // no forzamos redirección para permitir navegación en modo invitado.
+          const isPublicCheck =
+            originalRequest.url?.includes("/users/me") ||
+            originalRequest.url?.includes("/public");
+
+          if (!isPublicCheck) {
+            const landingUrl =
+              process.env.NEXT_PUBLIC_LANDING_URL || "http://localhost:3000";
+            if (typeof window !== "undefined") {
+              window.location.href = `${landingUrl}/login?expired=true&callbackUrl=${encodeURIComponent(window.location.href)}`;
+            }
+          }
+        } else {
+          console.warn(
+            "[Auth] Fallo transitorio en refresh de token en marketplace. No se limpia la sesión.",
+            refreshError,
+          );
         }
 
         return Promise.reject(refreshError);
