@@ -613,7 +613,7 @@ export class VehiclesService {
     const baseUrl = this.getFrontendBaseUrl();
     return {
       ...link,
-      trackingUrl: `${baseUrl}/track/${link.id}`,
+      trackingUrl: `${baseUrl}/dashboard/track/${link.id}`,
     };
   }
 
@@ -631,7 +631,7 @@ export class VehiclesService {
     const baseUrl = this.getFrontendBaseUrl();
     return links.map((link) => ({
       ...link,
-      trackingUrl: `${baseUrl}/track/${link.id}`,
+      trackingUrl: `${baseUrl}/dashboard/track/${link.id}`,
     }));
   }
 
@@ -654,7 +654,7 @@ export class VehiclesService {
     const baseUrl = this.getFrontendBaseUrl();
     return {
       ...updatedLink,
-      trackingUrl: `${baseUrl}/track/${updatedLink.id}`,
+      trackingUrl: `${baseUrl}/dashboard/track/${updatedLink.id}`,
     };
   }
 

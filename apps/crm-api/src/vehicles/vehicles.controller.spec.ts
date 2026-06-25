@@ -77,7 +77,7 @@ describe('VehiclesController', () => {
         const dto = { clientName: 'Client XYZ' };
         const mockResult = {
           id: 'link-uuid',
-          trackingUrl: 'http://localhost:3000/track/link-uuid',
+          trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid',
         };
         vehiclesServiceMock.verifyVehicleAccess.mockResolvedValue(undefined);
         vehiclesServiceMock.createTrackingLink.mockResolvedValue(mockResult);
@@ -105,7 +105,7 @@ describe('VehiclesController', () => {
         const mockResult = [
           {
             id: 'link-uuid',
-            trackingUrl: 'http://localhost:3000/track/link-uuid',
+            trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid',
           },
         ];
         vehiclesServiceMock.verifyVehicleAccess.mockResolvedValue(undefined);
@@ -134,7 +134,7 @@ describe('VehiclesController', () => {
         const mockResult = {
           id: 'link-uuid',
           isActive: false,
-          trackingUrl: 'http://localhost:3000/track/link-uuid',
+          trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid',
         };
         vehiclesServiceMock.verifyVehicleAccess.mockResolvedValue(undefined);
         vehiclesServiceMock.revokeTrackingLink.mockResolvedValue(mockResult);
