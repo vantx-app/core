@@ -180,3 +180,45 @@
 .animate-slide-up {
   animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+/* User Location GPS Pulsing Marker */
+.user-location-marker {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.user-location-dot {
+  width: 14px;
+  height: 14px;
+  background-color: #3b82f6; /* Blue-500 */
+  border: 2.5px solid #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.4);
+  position: absolute;
+  z-index: 2;
+}
+
+.user-location-pulse {
+  width: 24px;
+  height: 24px;
+  background-color: rgba(59, 130, 246, 0.25);
+  border-radius: 50%;
+  position: absolute;
+  z-index: 1;
+  animation: user-pulse 2s infinite ease-out;
+}
+
+@keyframes user-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}

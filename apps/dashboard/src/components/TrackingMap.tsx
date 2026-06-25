@@ -9,9 +9,9 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { io, Socket } from "socket.io-client";
-import { ShieldCheck, Navigation, Compass } from "lucide-react";
+import { ShieldCheck, Navigation, Compass, MapPin } from "lucide-react";
 import axios from "axios";
-import { DEFAULT_MAP_CONFIG } from "@/utils/client";
+import { DEFAULT_MAP_CONFIG, getDistance, formatDistance } from "@/utils/client";
 
 // Configure Mapbox Token
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || "";
@@ -65,15 +65,25 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
     masterEl: HTMLElement;
   } | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
 
   const [details, setDetails] = useState<MapTrackingDetails>(initialDetails);
   const [isFollowing, setIsFollowingState] = useState(true);
   const isFollowingRef = useRef(true);
 
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
   const setIsFollowing = (val: boolean) => {
     setIsFollowingState(val);
     isFollowingRef.current = val;
   };
+
+  const distance = useMemo(() => {
+    if (!userLocation || details.lastLat == null || details.lastLng == null) return null;
+    return getDistance(userLocation.lat, userLocation.lng, details.lastLat, details.lastLng);
+  }, [userLocation, details.lastLat, details.lastLng]);
 
   const currentStatusConfig = useMemo(() => {
     const statusKey = (
@@ -188,6 +198,10 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
       markerRef.current?.remove();
       markerRef.current = null;
       markerElementsRef.current = null;
+      if (userMarkerRef.current) {
+        userMarkerRef.current.remove();
+        userMarkerRef.current = null;
+      }
       map.current?.remove();
       map.current = null;
     };
@@ -315,6 +329,84 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
     }
   };
 
+  const handleShowUserLocation = () => {
+    if (typeof window === "undefined" || !navigator.geolocation) {
+      setLocationError("Tu navegador no soporta geolocalización");
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setUserLocation({ lat: latitude, lng: longitude });
+        setIsLocating(false);
+
+        if (!map.current) return;
+
+        // Disable auto-follow to show both markers
+        setIsFollowing(false);
+
+        // Create or update user location marker
+        if (!userMarkerRef.current) {
+          const el = document.createElement("div");
+          el.className = "user-location-marker";
+
+          const pulse = document.createElement("div");
+          pulse.className = "user-location-pulse";
+
+          const dot = document.createElement("div");
+          dot.className = "user-location-dot";
+
+          el.appendChild(pulse);
+          el.appendChild(dot);
+
+          userMarkerRef.current = new mapboxgl.Marker({ element: el })
+            .setLngLat([longitude, latitude])
+            .addTo(map.current);
+        } else {
+          userMarkerRef.current.setLngLat([longitude, latitude]);
+        }
+
+        // Fit map bounds to show both user and vehicle
+        if (details.lastLat != null && details.lastLng != null) {
+          const bounds = new mapboxgl.LngLatBounds();
+          bounds.extend([details.lastLng, details.lastLat]);
+          bounds.extend([longitude, latitude]);
+
+          map.current.fitBounds(bounds, {
+            padding: { top: 80, bottom: 80, left: 80, right: 80 },
+            maxZoom: 15,
+            duration: 1000,
+          });
+        } else {
+          map.current.flyTo({
+            center: [longitude, latitude],
+            zoom: 15,
+            duration: 1000,
+          });
+        }
+      },
+      (error) => {
+        console.error("Error obtaining geolocation:", error);
+        setIsLocating(false);
+        if (error.code === error.PERMISSION_DENIED) {
+          setLocationError("Permiso de ubicación denegado");
+        } else {
+          setLocationError("No se pudo obtener tu ubicación");
+        }
+        setTimeout(() => setLocationError(null), 3000);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0,
+      }
+    );
+  };
+
   return (
     <div className="relative w-full h-full">
       {/* Mapbox Container */}
@@ -350,23 +442,55 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
             </span>
           </div>
 
-          {/* Botón para centrar y seguir en el mapa */}
-          {isFollowing ? (
+          {/* Botones de acción en cuadrícula de 2 columnas */}
+          <div className="grid grid-cols-2 gap-2 mt-0.5">
+            {isFollowing ? (
+              <button
+                onClick={handleCenterMap}
+                className="btn btn-sm btn-primary text-white w-full gap-1 font-bold shadow-sm transition-all rounded-xl text-xs"
+              >
+                <Compass className="size-3.5" />
+                Siguiendo
+              </button>
+            ) : (
+              <button
+                onClick={handleCenterMap}
+                className="btn btn-primary btn-sm w-full gap-1 text-white font-bold shadow-md hover:shadow-lg transition-all rounded-xl text-xs animate-in fade-in zoom-in-95 duration-200"
+              >
+                <Navigation className="size-3.5 fill-current rotate-45" />
+                Seguir vehíc.
+              </button>
+            )}
+
             <button
-              onClick={handleCenterMap}
-              className="btn btn-sm btn-primary text-white w-full gap-2 font-bold shadow-sm transition-all rounded-xl mt-0.5"
+              onClick={handleShowUserLocation}
+              disabled={isLocating}
+              className={`btn btn-sm gap-1 font-bold shadow-sm rounded-xl text-xs transition-all ${
+                userLocation
+                  ? "btn-secondary text-white"
+                  : "btn-outline btn-secondary"
+              }`}
             >
-              <Compass className="size-3.5" />
-              Siguiendo
+              <MapPin className={`size-3.5 ${isLocating ? "animate-pulse" : ""}`} />
+              {isLocating ? "Ubicando..." : "Mi ubicación"}
             </button>
-          ) : (
-            <button
-              onClick={handleCenterMap}
-              className="btn btn-primary btn-sm w-full gap-2 text-white font-bold shadow-md hover:shadow-lg transition-all rounded-xl mt-0.5 animate-in fade-in zoom-in-95 duration-200"
-            >
-              <Navigation className="size-3.5 fill-current rotate-45" />
-              Centrar y seguir
-            </button>
+          </div>
+
+          {/* Mensajes de error de ubicación */}
+          {locationError && (
+            <div className="text-center text-[10px] text-error font-semibold animate-in fade-in slide-in-from-bottom-1 duration-200 mt-1">
+              {locationError}
+            </div>
+          )}
+
+          {/* Distancia dinámica al vehículo */}
+          {distance !== null && (
+            <div className="flex items-center justify-between text-xs py-1.5 border-t border-base-300 mt-1.5 animate-in fade-in duration-300">
+              <span className="text-base-content/65 font-medium">Distancia a ti:</span>
+              <span className="font-bold text-secondary bg-secondary/10 px-2 py-0.5 rounded-lg border border-secondary/15">
+                {formatDistance(distance)}
+              </span>
+            </div>
           )}
         </div>
       </div>
