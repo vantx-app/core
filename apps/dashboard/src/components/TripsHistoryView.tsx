@@ -595,7 +595,7 @@ export default function TripsHistoryView({
     }
 
     return (
-      <div className="w-full bg-base-100 dark:bg-base-950/20 border-t border-base-200/70 p-5 mb-32 lg:mb-0 flex flex-col lg:flex-row gap-6 items-stretch">
+      <div className="w-full bg-base-100 dark:bg-base-950/20 border-t border-base-200/70 p-5 flex flex-col lg:flex-row gap-6 items-stretch">
         {/* Summary Block */}
         <div className="flex items-center gap-5 shrink-0 w-full lg:w-auto lg:pr-8 lg:border-r border-base-200/50">
           <div className="shrink-0 scale-95 origin-center">
@@ -831,7 +831,7 @@ export default function TripsHistoryView({
                 ? "flex-grow h-full w-full border-none rounded-none"
                 : `border border-base-200 rounded-2xl flex-grow lg:flex lg:h-full lg:min-h-0 lg:order-2 ${
                     isMobileMapActive
-                      ? "flex h-auto lg:h-full lg:min-h-0"
+                      ? "flex h-auto lg:h-full lg:min-h-0 mb-32 lg:mb-0"
                       : "hidden"
                   }`
             }
