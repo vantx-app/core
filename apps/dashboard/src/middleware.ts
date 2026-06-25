@@ -6,6 +6,7 @@ import {
   getCookieSettings,
   refreshSessionInMiddleware,
   parseHostHeader,
+  applyRequestHeadersToResponse,
 } from "@vantx/auth";
 
 export const config = {
@@ -149,7 +150,30 @@ export async function middleware(request: NextRequest) {
     const secureHeaders = new Headers(request.headers);
     secureHeaders.set("x-user-role", userRole);
     secureHeaders.set("Authorization", `Bearer ${validAccessToken}`);
-    response = NextResponse.next({ request: { headers: secureHeaders } });
+
+    // Si refrescamos el token, también actualizamos el Cookie header en el request
+    // para que las cookies inyectadas estén disponibles en los Server Components en este renderizado.
+    if (cookiesToSet) {
+      let requestCookies = request.headers.get("cookie") || "";
+      const newCookiesMap = new Map<string, string>();
+      requestCookies.split(";").forEach((c) => {
+        const parts = c.trim().split("=");
+        if (parts[0]) newCookiesMap.set(parts[0], parts[1] || "");
+      });
+      cookiesToSet.forEach((cookie) => {
+        newCookiesMap.set(cookie.name, cookie.value);
+      });
+      const newCookieStr = Array.from(newCookiesMap.entries())
+        .map(([name, val]) => `${name}=${val}`)
+        .join("; ");
+      secureHeaders.set("cookie", newCookieStr);
+    }
+
+    // Creamos una respuesta limpia
+    response = NextResponse.next();
+
+    // Aplicamos los headers modificados utilizando el workaround
+    applyRequestHeadersToResponse(response, secureHeaders);
 
     // Si refrescamos el token, propagamos las nuevas cookies en el response 200 OK
     if (cookiesToSet) {

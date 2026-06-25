@@ -238,3 +238,21 @@ export async function refreshSessionInMiddleware(
     return { success: false, errorType: "TRANSIENT_ERROR" };
   }
 }
+
+/**
+ * Next.js Middleware helper to set request header overrides on the response.
+ * This is a critical workaround for the Next.js bug where setting cookies on
+ * NextResponse.next({ request: { headers } }) causes response cookies to be discarded.
+ */
+export function applyRequestHeadersToResponse(
+  response: { headers: { set: (key: string, value: string) => void } },
+  requestHeaders: Headers
+) {
+  const keys: string[] = [];
+  requestHeaders.forEach((value, key) => {
+    keys.push(key);
+    response.headers.set(`x-middleware-request-${key}`, value);
+  });
+  response.headers.set("x-middleware-override-headers", keys.join(","));
+}
+

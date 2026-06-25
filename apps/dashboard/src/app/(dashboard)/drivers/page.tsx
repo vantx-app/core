@@ -47,9 +47,7 @@ function DriversPageContent() {
   const getScoreColor = (score: number | null | undefined) => {
     if (score == null)
       return "text-base-content/40 border-base-200 bg-base-200/5";
-    if (score >= 85) return "text-emerald-600 border-emerald-500/20 bg-emerald-500/5";
-    if (score >= 70) return "text-warning border-warning/20 bg-warning/5";
-    return "text-error border-error/20 bg-error/5";
+    return "text-base-content border-base-200 bg-base-200/5";
   };
 
   const getStatusBadge = (status: DriversPageDriver["status"]) => {

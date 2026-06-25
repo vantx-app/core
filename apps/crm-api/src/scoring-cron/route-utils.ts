@@ -1,4 +1,11 @@
 import { TelemetryLog } from '@prisma/client';
+import {
+  haversineDistance,
+  calculateHeading,
+  getAngleDiff,
+} from '@vantx/telemetry-parser';
+
+export { haversineDistance, calculateHeading, getAngleDiff };
 
 /** Un tramo de ruta con su límite de velocidad y posición en la geometría */
 export interface RouteSpanWithSpeedLimit {
@@ -11,28 +18,6 @@ export interface RouteSpanWithSpeedLimit {
 export interface CalculatedRouteResult {
   spans: RouteSpanWithSpeedLimit[];
   geometry: [number, number][]; // [lng, lat] puntos decodificados de la ruta
-}
-
-/**
- * Distancia Haversine entre dos puntos en km.
- */
-export function haversineDistance(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
 }
 
 /**
@@ -279,24 +264,4 @@ export function encodeFlexiblePolyline(
   return [encodedHeaderList, ...encodedCoords].join('');
 }
 
-export function calculateHeading(
-  lat1: number,
-  lon1: number,
-  lat2: number,
-  lon2: number,
-): number {
-  const dLon = ((lon2 - lon1) * Math.PI) / 180;
-  const lat1Rad = (lat1 * Math.PI) / 180;
-  const lat2Rad = (lat2 * Math.PI) / 180;
-  const y = Math.sin(dLon) * Math.cos(lat2Rad);
-  const x =
-    Math.cos(lat1Rad) * Math.sin(lat2Rad) -
-    Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
-  const brng = (Math.atan2(y, x) * 180) / Math.PI;
-  return (brng + 360) % 360;
-}
-
-export function getAngleDiff(angle1: number, angle2: number): number {
-  const diff = Math.abs(angle1 - angle2) % 360;
-  return diff > 180 ? 360 - diff : diff;
-}
+// Math helpers calculateHeading and getAngleDiff are imported and re-exported from @vantx/telemetry-parser

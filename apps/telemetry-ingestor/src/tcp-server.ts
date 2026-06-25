@@ -46,13 +46,13 @@ const server = net.createServer((socket) => {
     }
 
     // FASE 2: TELEMETRÍA (AVL DATA)
-    if (dataBuffer.length > 0) {
-      if (dataBuffer.length < 8) return;
-
+    while (dataBuffer.length >= 12) {
       const dataFieldLength = dataBuffer.readUInt32BE(4);
       const totalRequiredLength = 8 + dataFieldLength + 4;
 
-      if (dataBuffer.length < totalRequiredLength) return; // Esperando más chunks TCP
+      if (dataBuffer.length < totalRequiredLength) {
+        break; // Esperando más chunks TCP
+      }
 
       const completePacket = dataBuffer.subarray(0, totalRequiredLength);
 

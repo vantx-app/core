@@ -608,11 +608,11 @@ export function OwnerDashboard({
                             Estado Administrativo
                           </span>
                           <span
-                            className={`badge badge-sm font-bold text-white ${v.status === "ACTIVE"
+                            className={`badge badge-sm font-bold ${v.status === "ACTIVE"
                               ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
                               : v.status === "IN_MAINTENANCE"
-                                ? "badge-warning"
-                                : "badge-neutral"
+                                ? "badge-warning text-white"
+                                : "badge-neutral text-white"
                               }`}
                           >
                             {v.status === "ACTIVE"

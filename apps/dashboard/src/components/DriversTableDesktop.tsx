@@ -124,7 +124,9 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
 
         const badge = (
           <span
-            className={`badge font-extrabold text-[10px] px-2.5 py-1 ${getScoreBadgeColor(score)}`}
+            className={`badge badge-ghost font-bold text-[10px] px-2.5 py-1 border border-base-300/60 ${
+              score === null ? "text-base-content/40" : "text-base-content/90"
+            }`}
           >
             {score !== null ? `${Math.round(score)} pts` : "N/A"}
           </span>
@@ -160,7 +162,9 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
 
         const badge = (
           <span
-            className={`badge font-extrabold text-[10px] px-2.5 py-1 ${getScoreBadgeColor(score)}`}
+            className={`badge badge-ghost font-bold text-[10px] px-2.5 py-1 border border-base-300/60 ${
+              score === null ? "text-base-content/40" : "text-base-content/90"
+            }`}
           >
             {score !== null ? `${Math.round(score)} pts` : "N/A"}
           </span>
@@ -196,7 +200,9 @@ export function DriversTableDesktop({ drivers }: DriversTableDesktopProps) {
 
         const badge = (
           <span
-            className={`badge font-extrabold text-[10px] px-2.5 py-1 ${getScoreBadgeColor(score)}`}
+            className={`badge badge-ghost font-bold text-[10px] px-2.5 py-1 border border-base-300/60 ${
+              score === null ? "text-base-content/40" : "text-base-content/90"
+            }`}
           >
             {score !== null ? `${Math.round(score)} pts` : "N/A"}
           </span>

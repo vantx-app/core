@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { Prisma, PrismaClient } from "@vantx/database";
+import { PrismaClient } from "@vantx/database";
 import { v7 as uuidv7 } from "uuid";
 import { notifyApi } from "./notifyApi";
 import {
@@ -8,6 +8,8 @@ import {
   parseEcoAxesValue,
   mapObdFuelType,
 } from "@vantx/telemetry-parser";
+import { snapTelemetryRecords } from "./snapTelemetry";
+import { saveTelemetryBatchData } from "./dbTelemetryWriter";
 
 const prisma = new PrismaClient();
 const logger = new Logger("Ingestor");
@@ -42,7 +44,10 @@ export async function processDataBatch(records: any[], imei: string) {
     return;
   }
 
-  // Resolve mapping configuration using deviceProfile from database
+  // 1. Perform Local Road Snapping using optimized chunked queries
+  const snappedRecords = await snapTelemetryRecords(records, prisma);
+
+  // 2. Resolve mapping configuration using deviceProfile from database
   const mapping =
     DEVICE_PROFILES[vehicle.deviceProfile] ||
     DEVICE_PROFILES.TELTONIKA_STANDARD;
@@ -82,13 +87,14 @@ export async function processDataBatch(records: any[], imei: string) {
     | "HYBRID"
     | null = null;
 
-  records.sort(
+  // Sort copies of records rather than mutating the original array
+  const sortedRecords = [...snappedRecords].sort(
     (a, b) => (a.timestamp as Date).getTime() - (b.timestamp as Date).getTime(),
   );
   const telemetryLogs: any = [];
 
   // MÁQUINA DE ESTADOS PURA (Mapeo dinámico y hardware trip status)
-  for (const rec of records) {
+  for (const rec of sortedRecords) {
     // Resolve dynamic values from mapping config
     const rawRpm =
       mapping.rpm !== undefined ? (rec.ioData[mapping.rpm] ?? 0) : 0;
@@ -116,10 +122,17 @@ export async function processDataBatch(records: any[], imei: string) {
       mapping.engineLoad !== undefined
         ? (rec.ioData[mapping.engineLoad] ?? null)
         : null;
-    const coolantTemp =
+    
+    let coolantTemp =
       mapping.coolantTemp !== undefined
         ? (rec.ioData[mapping.coolantTemp] ?? null)
         : null;
+    
+    // Scale LVCAN Engine Temperature (AVL ID 115) from 1/10 °C to Celsius degrees
+    if (mapping.coolantTemp === 115 && coolantTemp !== null) {
+      coolantTemp = coolantTemp / 10.0;
+    }
+
     const odometer =
       mapping.odometer !== undefined && rec.ioData[mapping.odometer] != null
         ? rec.ioData[mapping.odometer] / 1000.0
@@ -374,107 +387,17 @@ export async function processDataBatch(records: any[], imei: string) {
 
   const lastRecord = telemetryLogs[telemetryLogs.length - 1];
 
-  const transactionPromises: Prisma.PrismaPromise<any>[] = [];
-
-  // 1. Create new trips (must be first so telemetry logs can resolve their FK)
-  for (const [_, tripData] of tripsToCreate) {
-    transactionPromises.push(
-      prisma.trip.create({
-        data: {
-          id: tripData.id,
-          vehicleId: vehicle.id,
-          startTime: tripData.startTime,
-          endTime: tripData.endTime,
-        },
-      }),
-    );
-  }
-
-  // 2. Update existing trips (endTime)
-  for (const [_, tripData] of tripsToUpdate) {
-    transactionPromises.push(
-      prisma.trip.update({
-        where: { id: tripData.id },
-        data: {
-          endTime: tripData.endTime,
-        },
-      }),
-    );
-  }
-
-  // 3. Clear tripId on telemetry logs in the DB for deleted ghost trips (to avoid FK constraints)
-  for (const tripId of tripsToDelete) {
-    transactionPromises.push(
-      prisma.telemetryLog.updateMany({
-        where: { tripId },
-        data: { tripId: null },
-      }),
-    );
-  }
-
-  // 4. Delete the ghost trips physically
-  for (const tripId of tripsToDelete) {
-    transactionPromises.push(
-      prisma.trip.delete({
-        where: { id: tripId },
-      }),
-    );
-  }
-
-  // 5. Create the telemetry logs
-  transactionPromises.push(
-    prisma.telemetryLog.createMany({ data: telemetryLogs }),
-  );
-
-  // 6. Update vehicle live state
-  transactionPromises.push(
-    prisma.vehicleLiveState.upsert({
-      where: { vehicleId: vehicle.id },
-      update: {
-        lastLat: lastRecord.latitude,
-        lastLng: lastRecord.longitude,
-        lastAngle: lastRecord.angle,
-        lastSpeed: lastRecord.speed,
-        lastIgnition: lastRecord.ignition,
-        unplugged: lastRecord.unplugged,
-        currentStatus: lastRecord.status,
-        lastOdometer: lastRecord.odometer,
-        lastUpdate: lastRecord.timestamp,
-      },
-      create: {
-        vehicleId: vehicle.id,
-        lastLat: lastRecord.latitude,
-        lastLng: lastRecord.longitude,
-        lastAngle: lastRecord.angle,
-        lastSpeed: lastRecord.speed,
-        lastIgnition: lastRecord.ignition,
-        unplugged: lastRecord.unplugged,
-        currentStatus: lastRecord.status,
-        lastOdometer: lastRecord.odometer,
-        lastUpdate: lastRecord.timestamp,
-      },
-    }),
-  );
-
-  const vehicleUpdateData: any = {};
-  if (newVinDetected) {
-    vehicleUpdateData.vin = newVinDetected;
-  }
-  if (newFuelTypeDetected) {
-    vehicleUpdateData.fuelType = newFuelTypeDetected;
-  }
-
-  if (Object.keys(vehicleUpdateData).length > 0) {
-    transactionPromises.push(
-      prisma.vehicle.update({
-        where: { id: vehicle.id },
-        data: vehicleUpdateData,
-      }),
-    );
-  }
-
-  // PERSISTENCIA TRANSACCIONAL MASIVA
-  await prisma.$transaction(transactionPromises);
+  // 3. Persist the parsed logs and status states in a Postgres transaction
+  await saveTelemetryBatchData({
+    prisma,
+    vehicle,
+    telemetryLogs,
+    tripsToCreate,
+    tripsToUpdate,
+    tripsToDelete,
+    newVinDetected,
+    newFuelTypeDetected,
+  });
 
   // El WebSocket ahora escupirá EXCESSIVE_IDLING sin titubear
   notifyApi(vehicle, lastRecord).catch((err) =>

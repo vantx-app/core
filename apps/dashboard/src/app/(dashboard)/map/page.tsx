@@ -4,7 +4,7 @@ import { Suspense } from "react";
 // app/map/page.tsx
 export default async function MapPage() {
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-full w-full">
       <div className="flex-1 relative">
         <Suspense
           fallback={

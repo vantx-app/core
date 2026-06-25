@@ -116,7 +116,7 @@ export function parseTeltonikaData(buffer: Buffer) {
           const len = buffer.readUInt16BE(offset);
           offset += 2;
 
-          if (id === 256 || id === 281) {
+          if (id === 256 || id === 281 || id === 82) {
             ioData[id] = buffer
               .toString("ascii", offset, offset + len)
               .replace(/\0/g, "")

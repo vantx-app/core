@@ -19,6 +19,7 @@ jest.mock('@prisma/client', () => {
     },
     telemetryLog: { createMany: mockCreateMany },
     vehicleLiveState: { upsert: mockUpsert },
+    mapLink: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: mock$transaction,
   };
 
@@ -705,6 +706,60 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       expect(telemetryLogsPushed[0].tripId).toBe(createdTripId);
       // El log de cierre se pushea después de limpiar currentTrip, así que tiene tripId = null
       expect(telemetryLogsPushed[1].tripId).toBeNull();
+    });
+
+    it('debe procesar un lote para FMC150/FMC650 usando mapeos de LVCAN y escalar la temperatura del refrigerante', async () => {
+      const mockVehicleId = 'vehicle-uuid-lvcan-test';
+      const mockImei = 'imei-lvcan-test';
+      mockPrisma.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'LVCAN Truck',
+        deviceProfile: 'TELTONIKA_FMC150',
+        vin: null,
+      });
+      mockPrisma.vehicle.update.mockResolvedValue({});
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Ignition
+            85: 1500, // LVCAN RPM (AVL ID 85)
+            81: 45, // LVCAN Speed (AVL ID 81)
+            87: 125000, // LVCAN Total Mileage (125000 meters = 125 km)
+            115: 850, // LVCAN Engine Temperature (850 = 85.0°C)
+            82: 'LVCANVINTEST12345', // LVCAN VIN
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
+      const telemetryLogsPushed = mockPrisma.telemetryLog.createMany.mock.calls[mockPrisma.telemetryLog.createMany.mock.calls.length - 1][0].data;
+      const log = telemetryLogsPushed[0];
+
+      expect(log.rpm).toBe(1500);
+      expect(log.speed).toBe(45);
+      expect(log.odometer).toBe(125.0);
+      expect(log.coolantTemp).toBe(85.0); // Verificación de escala LVCAN coolantTemp (850 / 10 = 85)
+      
+      // Debe haber detectado el VIN y programado la actualización en la BD
+      expect(mockPrisma.vehicle.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockVehicleId },
+          data: { vin: 'LVCANVINTEST12345' },
+        }),
+      );
     });
   });
 });

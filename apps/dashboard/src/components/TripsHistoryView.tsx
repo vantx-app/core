@@ -804,7 +804,7 @@ export default function TripsHistoryView({
         <div
           className={`
           ${isFullscreen || isMobileMapActive ? "hidden" : "lg:hidden"} 
-          flex flex-col space-y-3
+          flex flex-col space-y-3 pb-32
         `}
         >
           <div className="shrink-0 pb-2 border-b border-base-200 px-1">

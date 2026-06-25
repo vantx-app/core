@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma.service';
+import { snapPointToLinks } from '@vantx/telemetry-parser';
 import {
   RouteSpanWithSpeedLimit,
   CalculatedRouteResult,
@@ -91,90 +92,29 @@ export class HereRoutesClientService {
 
         for (let i = 0; i < coordinates.length; i++) {
           const pt = coordinates[i];
-          let bestScore = Infinity;
-          let closestPt: [number, number] | null = null;
-          let matchedLink: (typeof parsedLinks)[0] | null = null;
-          let bestDist = Infinity;
+          const res = snapPointToLinks(
+            pt.lat,
+            pt.lng,
+            pt.speed,
+            pt.angle,
+            parsedLinks,
+            0.03, // 30 meters threshold
+          );
 
-          for (const link of parsedLinks) {
-            for (let idx = 0; idx < link.points.length; idx++) {
-              const linkPt = link.points[idx];
-              const dist = haversineDistance(
-                pt.lat,
-                pt.lng,
-                linkPt[1],
-                linkPt[0],
-              );
-
-              let anglePenalty = 0;
-              let speedPenalty = 0;
-
-              if (
-                pt.speed !== undefined &&
-                pt.angle !== undefined &&
-                pt.speed > 15
-              ) {
-                let segmentHeading = 0;
-                if (idx < link.points.length - 1) {
-                  const nextPt = link.points[idx + 1];
-                  segmentHeading = calculateHeading(
-                    linkPt[1],
-                    linkPt[0],
-                    nextPt[1],
-                    nextPt[0],
-                  );
-                } else if (idx > 0) {
-                  const prevPt = link.points[idx - 1];
-                  segmentHeading = calculateHeading(
-                    prevPt[1],
-                    prevPt[0],
-                    linkPt[1],
-                    linkPt[0],
-                  );
-                }
-
-                const diffNormal = getAngleDiff(pt.angle, segmentHeading);
-                const diffReverse = getAngleDiff(
-                  pt.angle,
-                  (segmentHeading + 180) % 360,
-                );
-                const minDiff = Math.min(diffNormal, diffReverse);
-
-                if (minDiff > 45) {
-                  anglePenalty = 0.05; // Penalización de 50 metros
-                }
-              }
-
-              if (pt.speed !== undefined && pt.speed > 55) {
-                if (link.speedLimit <= 40) {
-                  speedPenalty = 0.05; // Penalización de 50 metros si va rápido en calle residencial
-                }
-              }
-
-              const score = dist + anglePenalty + speedPenalty;
-              if (score < bestScore) {
-                bestScore = score;
-                bestDist = dist;
-                closestPt = linkPt;
-                matchedLink = link;
-              }
-            }
-          }
-
-          if (!closestPt || bestDist > 0.03) {
+          if (!res.snapped) {
             allPointsSnapped = false;
             break;
           }
 
-          snappedGeometry.push(closestPt);
+          snappedGeometry.push([res.longitude, res.latitude]);
 
-          if (matchedLink && matchedLink.linkId !== lastLinkId) {
+          if (res.matchedLink && res.matchedLink.linkId !== lastLinkId) {
             spans.push({
               geometryOffset: i,
-              speedLimit: matchedLink.speedLimit,
-              functionalClass: matchedLink.functionalClass,
+              speedLimit: res.matchedLink.speedLimit,
+              functionalClass: res.matchedLink.functionalClass,
             });
-            lastLinkId = matchedLink.linkId;
+            lastLinkId = res.matchedLink.linkId;
           }
         }
 
@@ -223,6 +163,7 @@ export class HereRoutesClientService {
 
     queryParams.append('return', 'polyline');
     queryParams.append('spans', 'functionalClass,segmentId');
+    queryParams.append('departureTime', 'any');
 
     try {
       const response = await firstValueFrom(
@@ -353,89 +294,28 @@ export class HereRoutesClientService {
 
       for (let i = 0; i < coordinates.length; i++) {
         const pt = coordinates[i];
-        let bestScore = Infinity;
-        let closestPt: [number, number] | null = null;
-        let matchedLink: (typeof parsedLinks)[0] | null = null;
-        let bestDist = Infinity;
+        const res = snapPointToLinks(
+          pt.lat,
+          pt.lng,
+          pt.speed,
+          pt.angle,
+          parsedLinks,
+          Infinity, // No distance threshold for Cache MISS path
+        );
 
-        for (const link of parsedLinks) {
-          for (let idx = 0; idx < link.points.length; idx++) {
-            const linkPt = link.points[idx];
-            const dist = haversineDistance(
-              pt.lat,
-              pt.lng,
-              linkPt[1],
-              linkPt[0],
-            );
-
-            let anglePenalty = 0;
-            let speedPenalty = 0;
-
-            if (
-              pt.speed !== undefined &&
-              pt.angle !== undefined &&
-              pt.speed > 15
-            ) {
-              let segmentHeading = 0;
-              if (idx < link.points.length - 1) {
-                const nextPt = link.points[idx + 1];
-                segmentHeading = calculateHeading(
-                  linkPt[1],
-                  linkPt[0],
-                  nextPt[1],
-                  nextPt[0],
-                );
-              } else if (idx > 0) {
-                const prevPt = link.points[idx - 1];
-                segmentHeading = calculateHeading(
-                  prevPt[1],
-                  prevPt[0],
-                  linkPt[1],
-                  linkPt[0],
-                );
-              }
-
-              const diffNormal = getAngleDiff(pt.angle, segmentHeading);
-              const diffReverse = getAngleDiff(
-                pt.angle,
-                (segmentHeading + 180) % 360,
-              );
-              const minDiff = Math.min(diffNormal, diffReverse);
-
-              if (minDiff > 45) {
-                anglePenalty = 0.05;
-              }
-            }
-
-            if (pt.speed !== undefined && pt.speed > 55) {
-              if (link.speedLimit <= 40) {
-                speedPenalty = 0.05;
-              }
-            }
-
-            const score = dist + anglePenalty + speedPenalty;
-            if (score < bestScore) {
-              bestScore = score;
-              bestDist = dist;
-              closestPt = linkPt;
-              matchedLink = link;
-            }
-          }
-        }
-
-        if (closestPt) {
-          snappedGeometry.push(closestPt);
+        if (res.snapped) {
+          snappedGeometry.push([res.longitude, res.latitude]);
         } else {
           snappedGeometry.push([pt.lng, pt.lat]);
         }
 
-        if (matchedLink && matchedLink.linkId !== lastLinkId) {
+        if (res.matchedLink && res.matchedLink.linkId !== lastLinkId) {
           spans.push({
             geometryOffset: i,
-            speedLimit: matchedLink.speedLimit,
-            functionalClass: matchedLink.functionalClass,
+            speedLimit: res.matchedLink.speedLimit,
+            functionalClass: res.matchedLink.functionalClass,
           });
-          lastLinkId = matchedLink.linkId;
+          lastLinkId = res.matchedLink.linkId;
         }
       }
 

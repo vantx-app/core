@@ -39,7 +39,7 @@ export default function PublicTrackingPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-base-100 gap-4">
+      <div className="flex h-dvh w-screen flex-col items-center justify-center bg-base-100 gap-4">
         <span className="loading loading-spinner loading-lg text-primary"></span>
         <p className="text-sm font-semibold text-base-content/60 animate-pulse">
           Cargando mapa de rastreo...
@@ -50,7 +50,7 @@ export default function PublicTrackingPage() {
 
   if (error || !details) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-base-100 p-6">
+      <div className="flex h-dvh w-screen flex-col items-center justify-center bg-base-100 p-6">
         <div className="max-w-md w-full bg-base-200/50 backdrop-blur-md border border-base-300/40 p-8 rounded-2xl shadow-md text-center space-y-4">
           <div className="flex justify-center">
             <div className="size-16 rounded-full bg-error/10 flex items-center justify-center text-error">
@@ -87,7 +87,7 @@ export default function PublicTrackingPage() {
   }
 
   return (
-    <div className="h-screen w-screen overflow-hidden relative">
+    <div className="h-dvh w-screen overflow-hidden relative">
       <TrackingMapWrapper id={id} initialDetails={details} />
     </div>
   );

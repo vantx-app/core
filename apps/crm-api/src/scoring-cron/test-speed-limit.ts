@@ -208,6 +208,7 @@ async function getRouteSpeedLimits(
 
   queryParams.append('return', 'polyline');
   queryParams.append('spans', 'functionalClass,segmentId');
+  queryParams.append('departureTime', 'any');
 
   try {
     const response = await axios.get(`${url}?${queryParams.toString()}`, {
