@@ -30,6 +30,9 @@
   --color-primary: #1d4ed8;
   --p: 0.45 0.23 260 !important; /* OKLCH representation of Royal Blue */
   --pc: 0.98 0.01 260;
+  --color-secondary: #10b981;
+  --s: 0.7276 0.165 161.42 !important; /* OKLCH representation of Premium Emerald */
+  --sc: 0.98 0.01 161.42;
 
   --vantx-wing-start: #475569;
   --vantx-wing-end: #0f172a;
@@ -43,10 +46,11 @@
 /* En DaisyUI v5 / Tailwind v4, los temas se configuran así */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Forzamos que incluso si hay un tema light activo, use nuestro azul */
+/* Forzamos que incluso si hay un tema light activo, use nuestro azul y verde */
 [data-theme="light"],
 :root {
   --p: 0.45 0.23 260 !important;
+  --s: 0.7276 0.165 161.42 !important;
 }
 
 /* Custom Scrollbars */
