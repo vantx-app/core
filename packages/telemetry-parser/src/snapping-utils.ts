@@ -79,35 +79,76 @@ export function snapPointToLinks(
   let matchedLink: SnappingLink | null = null;
 
   const speedToUse = speed ?? 0;
+  const cosLat = Math.cos((lat * Math.PI) / 180);
 
   for (const link of links) {
-    for (let idx = 0; idx < link.points.length; idx++) {
-      const linkPt = link.points[idx];
+    const pointsCount = link.points.length;
+    if (pointsCount === 0) continue;
+
+    // Fallback if link only has 1 point (no segments can be formed)
+    if (pointsCount < 2) {
+      const linkPt = link.points[0];
       const dist = haversineDistance(lat, lng, linkPt[1], linkPt[0]);
+      
+      let anglePenalty = 0;
+      let speedPenalty = 0;
+
+      if (speedToUse > 55 && link.speedLimit <= 40) {
+        speedPenalty = 0.05;
+      }
+
+      const score = dist + anglePenalty + speedPenalty;
+      if (score < bestScore) {
+        bestScore = score;
+        bestDist = dist;
+        closestPt = linkPt;
+        matchedLink = link;
+      }
+      continue;
+    }
+
+    // Iterate segments
+    for (let idx = 0; idx < pointsCount - 1; idx++) {
+      const ptA = link.points[idx];
+      const ptB = link.points[idx + 1];
+
+      const lngA = ptA[0];
+      const latA = ptA[1];
+      const lngB = ptB[0];
+      const latB = ptB[1];
+
+      // Segment vector AB and point vector AP in flat space
+      const dx = (lngB - lngA) * cosLat;
+      const dy = latB - latA;
+      const ab2 = dx * dx + dy * dy;
+
+      let t = 0;
+      if (ab2 > 0) {
+        const px = (lng - lngA) * cosLat;
+        const py = lat - latA;
+        t = Math.max(0, Math.min(1, (px * dx + py * dy) / ab2));
+      }
+
+      // Projected coordinate
+      const projLat = latA + t * dy;
+      const projLng = lngA + t * (lngB - lngA);
+
+      // Distance from GPS point to projected point (flat-plane approximation in km)
+      const fdx = (lng - projLng) * cosLat;
+      const fdy = lat - projLat;
+      const dist2 = fdx * fdx + fdy * fdy;
+      const distKm = Math.sqrt(dist2) * 111.1949;
+
+      // Optimization: prune branch early if flat distance exceeds current best score
+      if (distKm >= bestScore) {
+        continue;
+      }
 
       let anglePenalty = 0;
       let speedPenalty = 0;
 
       if (angle !== undefined && speedToUse > 15) {
-        let segmentHeading = 0;
-        if (idx < link.points.length - 1) {
-          const nextPt = link.points[idx + 1];
-          segmentHeading = calculateHeading(
-            linkPt[1],
-            linkPt[0],
-            nextPt[1],
-            nextPt[0],
-          );
-        } else if (idx > 0) {
-          const prevPt = link.points[idx - 1];
-          segmentHeading = calculateHeading(
-            prevPt[1],
-            prevPt[0],
-            linkPt[1],
-            linkPt[0],
-          );
-        }
-
+        const segmentHeading = calculateHeading(latA, lngA, latB, lngB);
         const diffNormal = getAngleDiff(angle, segmentHeading);
         const diffReverse = getAngleDiff(angle, (segmentHeading + 180) % 360);
         const minDiff = Math.min(diffNormal, diffReverse);
@@ -123,24 +164,27 @@ export function snapPointToLinks(
         }
       }
 
-      const score = dist + anglePenalty + speedPenalty;
+      const score = distKm + anglePenalty + speedPenalty;
       if (score < bestScore) {
         bestScore = score;
-        bestDist = dist;
-        closestPt = linkPt;
+        bestDist = distKm;
+        closestPt = [projLng, projLat];
         matchedLink = link;
       }
     }
   }
 
-  if (closestPt && bestDist <= maxDistKm) {
-    return {
-      snapped: true,
-      latitude: closestPt[1],
-      longitude: closestPt[0],
-      bestDist,
-      matchedLink,
-    };
+  if (closestPt) {
+    const exactDist = haversineDistance(lat, lng, closestPt[1], closestPt[0]);
+    if (exactDist <= maxDistKm) {
+      return {
+        snapped: true,
+        latitude: closestPt[1],
+        longitude: closestPt[0],
+        bestDist: exactDist,
+        matchedLink,
+      };
+    }
   }
 
   return {

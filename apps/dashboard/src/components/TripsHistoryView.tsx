@@ -595,7 +595,7 @@ export default function TripsHistoryView({
     }
 
     return (
-      <div className="w-full bg-base-100 dark:bg-base-950/20 border-t border-base-200/70 p-5 flex flex-col lg:flex-row gap-6 items-stretch">
+      <div className="w-full bg-base-100 dark:bg-base-950/20 border-t border-base-200/70 p-5 pb-32 lg:pb-5 flex flex-col lg:flex-row gap-6 items-stretch">
         {/* Summary Block */}
         <div className="flex items-center gap-5 shrink-0 w-full lg:w-auto lg:pr-8 lg:border-r border-base-200/50">
           <div className="shrink-0 scale-95 origin-center">
