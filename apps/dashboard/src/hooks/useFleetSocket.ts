@@ -121,7 +121,14 @@ export const useFleetSocket = (
             { withCredentials: true },
           );
           const newToken = response.data.accessToken;
-          Cookies.set("access_token", newToken);
+          const authSettings = getCookieSettings(15 * 60 * 1000);
+          Cookies.set("access_token", newToken, {
+            path: authSettings.path,
+            domain: authSettings.domain,
+            sameSite: authSettings.sameSite as any,
+            secure: authSettings.secure,
+            expires: new Date(Date.now() + 15 * 60 * 1000), // 15 mins
+          });
 
           // Magia de React: Al cambiar este estado, React destruye el useEffect
           // y lo vuelve a arrancar con el token fresco. No necesitamos "socket.connect()"

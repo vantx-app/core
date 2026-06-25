@@ -41,3 +41,39 @@ export function formatDistance(km: number): string {
   }
   return `${km.toFixed(1)} km`;
 }
+
+/**
+ * Anima suavemente la posición de un marcador de Mapbox desde una coordenada inicial
+ * hasta una coordenada objetivo usando requestAnimationFrame e interpolación easeOutQuad.
+ * Retorna el ID de requestAnimationFrame para que pueda ser cancelado si es necesario.
+ */
+export function animateMarkerPosition(
+  marker: mapboxgl.Marker,
+  from: [number, number],
+  to: [number, number],
+  duration = 1000,
+  onComplete?: () => void,
+): number {
+  const start = performance.now();
+  let animationFrameId: number;
+
+  function frame(time: number) {
+    const elapsed = time - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const t = progress * (2 - progress); // easeOutQuad
+
+    const lng = from[0] + (to[0] - from[0]) * t;
+    const lat = from[1] + (to[1] - from[1]) * t;
+
+    marker.setLngLat([lng, lat]);
+
+    if (progress < 1) {
+      animationFrameId = requestAnimationFrame(frame);
+    } else if (onComplete) {
+      onComplete();
+    }
+  }
+
+  animationFrameId = requestAnimationFrame(frame);
+  return animationFrameId;
+}

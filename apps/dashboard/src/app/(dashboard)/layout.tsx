@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import { ImpersonationBanner } from "@/components/dashboard/ImpersonationBanner";
 import { Logo } from "@/components/Logo";
 import { SubscriptionGateClient } from "@/components/dashboard/SubscriptionGateClient";
+import { MainContainer } from "@/components/dashboard/MainContainer";
 
 export default async function DashboardLayout({
   children,
@@ -59,12 +60,12 @@ export default async function DashboardLayout({
               </Link>
             </nav>
             {/* MAIN CONTENT */}
-            <main className="flex-1 relative overflow-y-auto pb-36 lg:pb-0 z-10">
+            <MainContainer>
               <Suspense fallback={null}>
                 <ImpersonationBanner />
               </Suspense>
               {children}
-            </main>
+            </MainContainer>
             <Suspense fallback={null}>
               <MobileBottomNav />
             </Suspense>

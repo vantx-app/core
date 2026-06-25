@@ -761,5 +761,143 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         }),
       );
     });
+
+    it('debe aplicar snapping a la calle si la ignición está encendida', async () => {
+      const mockVehicleId = 'vehicle-uuid-snap-on';
+      const mockImei = 'imei-snap-on';
+      mockPrisma.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Snap On',
+        deviceProfile: 'TELTONIKA_STANDARD',
+        vin: 'VIN123',
+      });
+      
+      const mockLink = {
+        linkId: 'road-1',
+        functionalClass: 3,
+        speedLimit: 50,
+        geometry: '-79.5201,8.9801;-79.5202,8.9802',
+      };
+      mockPrisma.mapLink.findMany.mockResolvedValue([mockLink]);
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Ignition Active
+            250: 1,
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
+      const telemetryPushed = mockPrisma.telemetryLog.createMany.mock.calls[mockPrisma.telemetryLog.createMany.mock.calls.length - 1][0].data[0];
+      // Debe haber cambiado las coordenadas originales por el snapping
+      expect(telemetryPushed.latitude).not.toBe(8.98);
+      expect(telemetryPushed.longitude).not.toBe(-79.52);
+    });
+
+    it('debe saltarse el snapping si la ignición está apagada', async () => {
+      const mockVehicleId = 'vehicle-uuid-snap-off';
+      const mockImei = 'imei-snap-off';
+      mockPrisma.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Snap Off',
+        deviceProfile: 'TELTONIKA_STANDARD',
+        vin: 'VIN123',
+      });
+      
+      const mockLink = {
+        linkId: 'road-1',
+        functionalClass: 3,
+        speedLimit: 50,
+        geometry: '-79.5201,8.9801;-79.5202,8.9802',
+      };
+      mockPrisma.mapLink.findMany.mockResolvedValue([mockLink]);
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 0, // Ignition Inactive
+            250: 0,
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
+      const telemetryPushed = mockPrisma.telemetryLog.createMany.mock.calls[mockPrisma.telemetryLog.createMany.mock.calls.length - 1][0].data[0];
+      // Debe conservar las coordenadas originales
+      expect(telemetryPushed.latitude).toBe(8.98);
+      expect(telemetryPushed.longitude).toBe(-79.52);
+    });
+
+    it('debe saltarse el snapping si la precisión del GPS es baja (satélites < 5)', async () => {
+      const mockVehicleId = 'vehicle-uuid-snap-low-gps';
+      const mockImei = 'imei-snap-low-gps';
+      mockPrisma.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Snap Low GPS',
+        deviceProfile: 'TELTONIKA_STANDARD',
+        vin: 'VIN123',
+      });
+      
+      const mockLink = {
+        linkId: 'road-1',
+        functionalClass: 3,
+        speedLimit: 50,
+        geometry: '-79.5201,8.9801;-79.5202,8.9802',
+      };
+      mockPrisma.mapLink.findMany.mockResolvedValue([mockLink]);
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 3, // Conteo bajo de satélites (< 5)
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Ignition Active
+            250: 1,
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
+      const telemetryPushed = mockPrisma.telemetryLog.createMany.mock.calls[mockPrisma.telemetryLog.createMany.mock.calls.length - 1][0].data[0];
+      // Debe conservar las coordenadas originales debido a los pocos satélites
+      expect(telemetryPushed.latitude).toBe(8.98);
+      expect(telemetryPushed.longitude).toBe(-79.52);
+    });
   });
 });

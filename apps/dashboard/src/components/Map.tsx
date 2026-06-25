@@ -11,7 +11,7 @@ import Link from "next/link";
 import ShareLocationModal from "./ShareLocationModal";
 import api from "@/utils/client/api-client";
 import { MobileFleetDrawer } from "./MobileFleetDrawer";
-import { formatDate, DEFAULT_MAP_CONFIG } from "@/utils/client";
+import { formatDate, DEFAULT_MAP_CONFIG, animateMarkerPosition } from "@/utils/client";
 import { DetailRow } from "@/components/ui/DetailRow";
 
 // 1. Extraemos y limpiamos el token ANTES de que React haga nada.
@@ -128,6 +128,7 @@ export default function FleetMap() {
   const lastAppliedStateRef = useRef<
     Record<string, { lat: number; lng: number; angle: number; status: string }>
   >({});
+  const animationsRef = useRef<Record<string, number>>({});
 
   const { fleet, isConnected } = useFleet();
   const initialFitDone = useRef(false);
@@ -321,6 +322,8 @@ export default function FleetMap() {
       Object.values(markersRef.current).forEach((m) => m.remove());
       markersRef.current = {};
       markerElementsRef.current = {};
+      Object.values(animationsRef.current).forEach((animId) => cancelAnimationFrame(animId));
+      animationsRef.current = {};
       mapInstance.remove();
       map.current = null;
     };
@@ -368,8 +371,29 @@ export default function FleetMap() {
 
       if (markersRef.current[id]) {
         if (hasChanged) {
-          // 1. Mover el marcador en el mapa
-          markersRef.current[id].setLngLat([longitude, latitude]);
+          // 1. Mover el marcador en el mapa de forma animada (o instantánea si es el primer render)
+          const to: [number, number] = [longitude, latitude];
+          if (last) {
+            const from: [number, number] = [last.lng, last.lat];
+            if (from[0] !== to[0] || from[1] !== to[1]) {
+              if (animationsRef.current[id]) {
+                cancelAnimationFrame(animationsRef.current[id]);
+              }
+              animationsRef.current[id] = animateMarkerPosition(
+                markersRef.current[id],
+                from,
+                to,
+                1000,
+                () => {
+                  delete animationsRef.current[id];
+                }
+              );
+            } else {
+              markersRef.current[id].setLngLat(to);
+            }
+          } else {
+            markersRef.current[id].setLngLat(to);
+          }
 
           // 2. Usar referencias cacheadas para evitar querySelector y layout thrashing en Safari
           const cached = markerElementsRef.current[id];
@@ -531,12 +555,16 @@ export default function FleetMap() {
   useEffect(() => {
     if (followedLat === null || followedLng === null || !map.current) return;
 
+    // Calcular el padding inferior en móvil para evitar que la tarjeta/sheet cubra el marcador
+    const bottomPaddingVal = isMobile ? 64 + safeAreaBottom + 30 : 0;
+
     map.current.easeTo({
       center: [followedLng, followedLat],
+      padding: { top: 0, bottom: bottomPaddingVal, left: 0, right: 0 },
       duration: 800,
       easing: (t: number) => t,
     });
-  }, [followedLat, followedLng]);
+  }, [followedLat, followedLng, isMobile, safeAreaBottom]);
 
   // Centrar/volar al vehículo seleccionado cuando cambia el id del vehículo
   useEffect(() => {
@@ -549,11 +577,15 @@ export default function FleetMap() {
       Math.abs(currentCenter.lat - latitude) < 0.001;
 
     if (!isAlreadyCentered) {
+      // Calcular el padding inferior en móvil
+      const bottomPaddingVal = isMobile ? 64 + safeAreaBottom + 30 : 0;
+
       const fly = () => {
         if (!map.current) return;
         map.current.flyTo({
           center: [longitude, latitude],
           zoom: 15,
+          padding: { top: 0, bottom: bottomPaddingVal, left: 0, right: 0 },
           duration: 1200,
         });
       };
@@ -564,7 +596,7 @@ export default function FleetMap() {
         map.current.once("load", fly);
       }
     }
-  }, [vehicleId]);
+  }, [vehicleId, isMobile, safeAreaBottom]);
 
   // Encuadrar la flota una sola vez cuando se cargan los datos por primera vez
   useEffect(() => {
@@ -577,8 +609,12 @@ export default function FleetMap() {
         const bounds = new mapboxgl.LngLatBounds();
         markers.forEach((marker) => bounds.extend(marker.getLngLat()));
 
+        // Aplicar padding para que no se encuadre debajo de la interfaz móvil
+        const bottomPaddingVal = isMobile ? 64 + safeAreaBottom + 30 : 0;
+
         map.current.fitBounds(bounds, {
           maxZoom: 14,
+          padding: { top: 40, bottom: bottomPaddingVal + 40, left: 40, right: 40 },
           duration: 1200,
         });
         initialFitDone.current = true;
@@ -590,7 +626,7 @@ export default function FleetMap() {
         map.current.once("load", fit);
       }
     }
-  }, [fleet, vehicleId]);
+  }, [fleet, vehicleId, isMobile, safeAreaBottom]);
 
   const renderVehicleList = () => {
     if (fleetCount === 0) {

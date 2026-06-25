@@ -44,13 +44,13 @@ export async function processDataBatch(records: any[], imei: string) {
     return;
   }
 
-  // 1. Perform Local Road Snapping using optimized chunked queries
-  const snappedRecords = await snapTelemetryRecords(records, prisma);
-
-  // 2. Resolve mapping configuration using deviceProfile from database
+  // 1. Resolve mapping configuration using deviceProfile from database
   const mapping =
     DEVICE_PROFILES[vehicle.deviceProfile] ||
     DEVICE_PROFILES.TELTONIKA_STANDARD;
+
+  // 2. Perform Local Road Snapping using optimized chunked queries
+  const snappedRecords = await snapTelemetryRecords(records, prisma, mapping);
 
   // Mecanismo anti-reinicio de Docker para los viajes
   if (!activeTripsCache.has(vehicle.id)) {

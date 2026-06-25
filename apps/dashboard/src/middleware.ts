@@ -6,7 +6,6 @@ import {
   getCookieSettings,
   refreshSessionInMiddleware,
   parseHostHeader,
-  applyRequestHeadersToResponse,
 } from "@vantx/auth";
 
 export const config = {
@@ -169,11 +168,12 @@ export async function middleware(request: NextRequest) {
       secureHeaders.set("cookie", newCookieStr);
     }
 
-    // Creamos una respuesta limpia
-    response = NextResponse.next();
-
-    // Aplicamos los headers modificados utilizando el workaround
-    applyRequestHeadersToResponse(response, secureHeaders);
+    // Creamos una respuesta pasando los headers modificados para Next.js 15/16
+    response = NextResponse.next({
+      request: {
+        headers: secureHeaders,
+      },
+    });
 
     // Si refrescamos el token, propagamos las nuevas cookies en el response 200 OK
     if (cookiesToSet) {

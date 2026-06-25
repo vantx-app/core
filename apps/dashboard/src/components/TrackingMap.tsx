@@ -11,7 +11,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { io, Socket } from "socket.io-client";
 import { ShieldCheck, Navigation, Compass, MapPin } from "lucide-react";
 import axios from "axios";
-import { DEFAULT_MAP_CONFIG, getDistance, formatDistance } from "@/utils/client";
+import { DEFAULT_MAP_CONFIG, getDistance, formatDistance, animateMarkerPosition } from "@/utils/client";
 
 // Configure Mapbox Token
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || "";
@@ -66,6 +66,8 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
   } | null>(null);
   const socketRef = useRef<Socket | null>(null);
   const userMarkerRef = useRef<mapboxgl.Marker | null>(null);
+  const animationRef = useRef<number | null>(null);
+  const lastCoordsRef = useRef<[number, number] | null>(null);
 
   const [details, setDetails] = useState<MapTrackingDetails>(initialDetails);
   const [isFollowing, setIsFollowingState] = useState(true);
@@ -101,8 +103,29 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
   ) => {
     if (!markerRef.current) return;
 
-    // 1. Move position
-    markerRef.current.setLngLat([longitude, latitude]);
+    // 1. Mover la posición de forma animada si tenemos una posición previa
+    const from = lastCoordsRef.current;
+    const to: [number, number] = [longitude, latitude];
+    
+    if (from && (from[0] !== to[0] || from[1] !== to[1])) {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      
+      animationRef.current = animateMarkerPosition(
+        markerRef.current,
+        from,
+        to,
+        1000,
+        () => {
+          animationRef.current = null;
+        }
+      );
+    } else {
+      markerRef.current.setLngLat(to);
+    }
+    
+    lastCoordsRef.current = to;
 
     // 2. Rotate and color using refs to avoid DOM queries
     const cached = markerElementsRef.current;
@@ -187,6 +210,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
       .addTo(map.current);
 
     markerRef.current = newMarker;
+    lastCoordsRef.current = [initialLng, initialLat];
     markerElementsRef.current = {
       pinContainer: rotContainer,
       svgEl: svg,
@@ -198,6 +222,10 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
       markerRef.current?.remove();
       markerRef.current = null;
       markerElementsRef.current = null;
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
       if (userMarkerRef.current) {
         userMarkerRef.current.remove();
         userMarkerRef.current = null;

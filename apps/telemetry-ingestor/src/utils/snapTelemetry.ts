@@ -1,9 +1,13 @@
 import { PrismaClient } from "@vantx/database";
-import { snapPointToLinks, Logger } from "@vantx/telemetry-parser";
+import { snapPointToLinks, Logger, AvlMapping } from "@vantx/telemetry-parser";
 
 const logger = new Logger("SnapTelemetry");
 
-export async function snapTelemetryRecords(records: any[], prisma: PrismaClient): Promise<any[]> {
+export async function snapTelemetryRecords(
+  records: any[],
+  prisma: PrismaClient,
+  mapping: AvlMapping,
+): Promise<any[]> {
   try {
     const validRecords = records.filter((r) => r.latitude !== 0 && r.longitude !== 0);
     if (validRecords.length === 0) return records;
@@ -59,6 +63,31 @@ export async function snapTelemetryRecords(records: any[], prisma: PrismaClient)
         });
 
         for (const rec of chunk) {
+          // Evitar snapping si la ignición del vehículo está apagada (vehículo apagado)
+          const rawRpm =
+            mapping.rpm !== undefined ? (rec.ioData[mapping.rpm] ?? 0) : 0;
+          const rawVoltage =
+            mapping.voltage !== undefined ? (rec.ioData[mapping.voltage] ?? 0) : 0;
+          const rawIgnitionPin =
+            mapping.ignition !== undefined
+              ? rec.ioData[mapping.ignition] === 1
+              : false;
+          const isHardwareExcessiveIdling =
+            mapping.excessiveIdling !== undefined
+              ? rec.eventId === mapping.excessiveIdling ||
+              rec.ioData[mapping.excessiveIdling] === 1
+              : false;
+
+          const trueIgnition =
+            rawIgnitionPin ||
+            rawRpm > 400 ||
+            (mapping.ignition === undefined && rawVoltage > 13200) ||
+            isHardwareExcessiveIdling;
+
+          if ((rec.satellites !== undefined && rec.satellites < 5) || !trueIgnition) {
+            continue;
+          }
+
           const res = snapPointToLinks(
             rec.latitude,
             rec.longitude,
