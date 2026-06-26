@@ -11,7 +11,11 @@ import Link from "next/link";
 import ShareLocationModal from "./ShareLocationModal";
 import api from "@/utils/client/api-client";
 import { MobileFleetDrawer } from "./MobileFleetDrawer";
-import { formatDate, DEFAULT_MAP_CONFIG, animateMarkerPosition } from "@/utils/client";
+import {
+  formatDate,
+  DEFAULT_MAP_CONFIG,
+  animateMarkerPosition,
+} from "@/utils/client";
 import { DetailRow } from "@/components/ui/DetailRow";
 
 // 1. Extraemos y limpiamos el token ANTES de que React haga nada.
@@ -322,7 +326,9 @@ export default function FleetMap() {
       Object.values(markersRef.current).forEach((m) => m.remove());
       markersRef.current = {};
       markerElementsRef.current = {};
-      Object.values(animationsRef.current).forEach((animId) => cancelAnimationFrame(animId));
+      Object.values(animationsRef.current).forEach((animId) =>
+        cancelAnimationFrame(animId),
+      );
       animationsRef.current = {};
       mapInstance.remove();
       map.current = null;
@@ -386,7 +392,7 @@ export default function FleetMap() {
                 1000,
                 () => {
                   delete animationsRef.current[id];
-                }
+                },
               );
             } else {
               markersRef.current[id].setLngLat(to);
@@ -614,7 +620,12 @@ export default function FleetMap() {
 
         map.current.fitBounds(bounds, {
           maxZoom: 14,
-          padding: { top: 40, bottom: bottomPaddingVal + 40, left: 40, right: 40 },
+          padding: {
+            top: 40,
+            bottom: bottomPaddingVal + 40,
+            left: 40,
+            right: 40,
+          },
           duration: 1200,
         });
         initialFitDone.current = true;

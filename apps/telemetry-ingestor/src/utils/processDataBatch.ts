@@ -125,12 +125,12 @@ export async function processDataBatch(records: any[], imei: string) {
       mapping.engineLoad !== undefined
         ? (rec.ioData[mapping.engineLoad] ?? null)
         : null;
-    
+
     let coolantTemp =
       mapping.coolantTemp !== undefined
         ? (rec.ioData[mapping.coolantTemp] ?? null)
         : null;
-    
+
     // Scale LVCAN Engine Temperature (AVL ID 115) from 1/10 °C to Celsius degrees
     if (mapping.coolantTemp === 115 && coolantTemp !== null) {
       coolantTemp = coolantTemp / 10.0;
@@ -255,7 +255,9 @@ export async function processDataBatch(records: any[], imei: string) {
     // Lógica de Viajes (Trips)
     // Guard: Si el viaje actual en memoria inició después del timestamp de este registro,
     // significa que este registro pertenece al pasado (diferido) y no al viaje activo actual.
-    const isRecordBeforeCurrentTrip = currentTrip && (rec.timestamp as Date).getTime() < currentTrip.startTime.getTime();
+    const isRecordBeforeCurrentTrip =
+      currentTrip &&
+      (rec.timestamp as Date).getTime() < currentTrip.startTime.getTime();
     const effectiveTrip = isRecordBeforeCurrentTrip ? undefined : currentTrip;
 
     if (!effectiveTrip && tripActive) {
@@ -353,9 +355,11 @@ export async function processDataBatch(records: any[], imei: string) {
       localActiveTrip = undefined;
     }
 
-    const recordTripId = (currentTrip && (rec.timestamp as Date).getTime() >= currentTrip.startTime.getTime())
-      ? currentTrip.id
-      : null;
+    const recordTripId =
+      currentTrip &&
+      (rec.timestamp as Date).getTime() >= currentTrip.startTime.getTime()
+        ? currentTrip.id
+        : null;
 
     telemetryLogs.push({
       vehicleId: vehicle.id,

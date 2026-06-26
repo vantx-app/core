@@ -747,14 +747,17 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
-      const telemetryLogsPushed = mockPrisma.telemetryLog.createMany.mock.calls[mockPrisma.telemetryLog.createMany.mock.calls.length - 1][0].data;
+      const telemetryLogsPushed =
+        mockPrisma.telemetryLog.createMany.mock.calls[
+          mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+        ][0].data;
       const log = telemetryLogsPushed[0];
 
       expect(log.rpm).toBe(1500);
       expect(log.speed).toBe(45);
       expect(log.odometer).toBe(125.0);
       expect(log.coolantTemp).toBe(85.0); // Verificación de escala LVCAN coolantTemp (850 / 10 = 85)
-      
+
       // Debe haber detectado el VIN y programado la actualización en la BD
       expect(mockPrisma.vehicle.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -774,7 +777,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         deviceProfile: 'TELTONIKA_STANDARD',
         vin: 'VIN123',
       });
-      
+
       const mockLink = {
         linkId: 'road-1',
         functionalClass: 3,
@@ -804,7 +807,10 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
-      const telemetryPushed = mockPrisma.telemetryLog.createMany.mock.calls[mockPrisma.telemetryLog.createMany.mock.calls.length - 1][0].data[0];
+      const telemetryPushed =
+        mockPrisma.telemetryLog.createMany.mock.calls[
+          mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+        ][0].data[0];
       // Debe haber cambiado las coordenadas originales por el snapping
       expect(telemetryPushed.latitude).not.toBe(8.98);
       expect(telemetryPushed.longitude).not.toBe(-79.52);
@@ -820,7 +826,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         deviceProfile: 'TELTONIKA_STANDARD',
         vin: 'VIN123',
       });
-      
+
       const mockLink = {
         linkId: 'road-1',
         functionalClass: 3,
@@ -850,7 +856,10 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
-      const telemetryPushed = mockPrisma.telemetryLog.createMany.mock.calls[mockPrisma.telemetryLog.createMany.mock.calls.length - 1][0].data[0];
+      const telemetryPushed =
+        mockPrisma.telemetryLog.createMany.mock.calls[
+          mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+        ][0].data[0];
       // Debe conservar las coordenadas originales
       expect(telemetryPushed.latitude).toBe(8.98);
       expect(telemetryPushed.longitude).toBe(-79.52);
@@ -866,7 +875,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         deviceProfile: 'TELTONIKA_STANDARD',
         vin: 'VIN123',
       });
-      
+
       const mockLink = {
         linkId: 'road-1',
         functionalClass: 3,
@@ -896,7 +905,10 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
-      const telemetryPushed = mockPrisma.telemetryLog.createMany.mock.calls[mockPrisma.telemetryLog.createMany.mock.calls.length - 1][0].data[0];
+      const telemetryPushed =
+        mockPrisma.telemetryLog.createMany.mock.calls[
+          mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+        ][0].data[0];
       // Debe conservar las coordenadas originales debido a los pocos satélites
       expect(telemetryPushed.latitude).toBe(8.98);
       expect(telemetryPushed.longitude).toBe(-79.52);
@@ -957,7 +969,9 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       mockPrisma.trip.findFirst.mockResolvedValue(null);
 
       // Primer lote: Inicia un viaje, pero la transacción falla
-      mockPrisma.$transaction.mockRejectedValueOnce(new Error('Error de conexión a la base de datos'));
+      mockPrisma.$transaction.mockRejectedValueOnce(
+        new Error('Error de conexión a la base de datos'),
+      );
 
       const records = [
         {
@@ -977,7 +991,9 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         },
       ];
 
-      await expect(processDataBatch(records, mockImei)).rejects.toThrow('Error de conexión a la base de datos');
+      await expect(processDataBatch(records, mockImei)).rejects.toThrow(
+        'Error de conexión a la base de datos',
+      );
 
       // Segundo lote (reintento): la transacción ahora tiene éxito.
       // Si el caché global no se ensució, debe volver a intentar crear un nuevo viaje
@@ -1039,7 +1055,10 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
 
       // Debe haber creado un nuevo viaje diferente en el pasado
       expect(mockPrisma.trip.create).toHaveBeenCalled();
-      const createdTripCall = mockPrisma.trip.create.mock.calls[mockPrisma.trip.create.mock.calls.length - 1][0];
+      const createdTripCall =
+        mockPrisma.trip.create.mock.calls[
+          mockPrisma.trip.create.mock.calls.length - 1
+        ][0];
       expect(createdTripCall.data.id).not.toBe('future-active-trip-uuid');
     });
   });

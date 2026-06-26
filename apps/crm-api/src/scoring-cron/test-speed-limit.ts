@@ -579,6 +579,7 @@ async function run() {
 
   // Buscar el primer límite de velocidad en ruta válido del viaje para inicializar el fallback de inercia
   let initialValidLimit = params.fallback;
+  let initialValidFC = 3; // Por defecto FC3 (Avenidas principales)
   if (useHere && routeResult) {
     const { spans, geometry } = routeResult;
     for (const log of validLogs) {
@@ -596,12 +597,14 @@ async function run() {
 
         if (limit !== params.fallback) {
           initialValidLimit = limit;
+          initialValidFC = fc ?? 3;
           break;
         }
       }
     }
   }
-  let lastValidOnRouteSpeedLimit = initialValidLimit; // Inertial Fallback
+  let lastValidOnRouteSpeedLimit = initialValidLimit; // Inertial Fallback de velocidad
+  let lastValidOnRouteFC = initialValidFC; // Inertial Fallback de clase funcional
 
   let currentEpisodeStart: Date | null = null;
   let lastSpeedingTimestamp: Date | null = null;
@@ -617,6 +620,7 @@ async function run() {
     originalLimit: number | null;
   }
   const violations: Violation[] = [];
+  let currentMultipliers: number[] = [];
 
   if (useHere && routeResult) {
     const { spans, geometry } = routeResult;
@@ -633,19 +637,20 @@ async function run() {
 
       // Off route si la distancia es > 50 metros (0.05 km)
       if (snapDist > 0.05) {
-        // Fuera de ruta (> 50m), usar Inertial Fallback (heredar el último límite válido en ruta)
+        // Fuera de ruta (> 50m), usar Inertial Fallback (heredar el último límite y FC válidos en ruta)
         limitToUse = lastValidOnRouteSpeedLimit;
+        functionalClass = lastValidOnRouteFC;
         isOffRoute = true;
         offRoutePoints++;
       } else {
         const { speedLimit, functionalClass: fc } =
           getSpeedLimitForGeometryIndex(closestIdx, spans);
         originalLimit = speedLimit;
-        functionalClass = fc;
+        functionalClass = fc ?? 3;
 
         // Smart Fallback Ingestion para Panamá (ignorar speedLimit de HERE y usar estrictamente el FC)
         if (fc === 1) {
-          limitToUse = 110; // Updated to 110!
+          limitToUse = 110; // Autopistas / Corredores
         } else if (fc === 2) {
           limitToUse = 80;
         } else if (fc === 3) {
@@ -656,11 +661,13 @@ async function run() {
           limitToUse = 40;
         } else {
           limitToUse = params.fallback;
+          functionalClass = 3;
         }
 
-        // Solo actualizar el último límite válido en ruta si no es el fallback genérico
+        // Solo actualizar el último límite y FC válidos en ruta si no es el fallback genérico
         if (limitToUse !== params.fallback) {
           lastValidOnRouteSpeedLimit = limitToUse;
+          lastValidOnRouteFC = functionalClass;
         }
       }
 
@@ -679,9 +686,20 @@ async function run() {
       const threshold = limitToUse + 10;
       const isSpeeding = !inDecelWindow && log.speed > threshold;
 
+      // Calcular multiplicador de severidad por Functional Class (Bypass Factor)
+      let multiplier = 1.0;
+      if (functionalClass === 1) multiplier = 0.5;
+      else if (functionalClass === 2) multiplier = 1.0;
+      else if (functionalClass === 3) multiplier = 1.5;
+      else if (functionalClass === 4) multiplier = 2.0;
+      else if (functionalClass === 5) multiplier = 3.0;
+
       if (isSpeeding) {
         if (!currentEpisodeStart) {
           currentEpisodeStart = logTime;
+          currentMultipliers = [multiplier];
+        } else {
+          currentMultipliers.push(multiplier);
         }
         lastSpeedingTimestamp = logTime;
 
@@ -707,11 +725,15 @@ async function run() {
               1000;
             if (actualDuration >= 5) {
               const duration = Math.max(10, actualDuration);
-              hereSeverity += duration;
+              const avgMultiplier =
+                currentMultipliers.reduce((sum, val) => sum + val, 0) /
+                currentMultipliers.length;
+              hereSeverity += duration * avgMultiplier;
               hereCount++;
             }
             currentEpisodeStart = null;
             lastSpeedingTimestamp = null;
+            currentMultipliers = [];
           }
         }
       }
@@ -733,7 +755,10 @@ async function run() {
         1000;
       if (actualDuration >= 5) {
         const duration = Math.max(10, actualDuration);
-        hereSeverity += duration;
+        const avgMultiplier =
+          currentMultipliers.reduce((sum, val) => sum + val, 0) /
+          currentMultipliers.length;
+        hereSeverity += duration * avgMultiplier;
         hereCount++;
       }
     }

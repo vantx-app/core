@@ -48,8 +48,13 @@ export default function VehicleForm({
   const [organizations, setOrganizations] = useState<NewVehiclePageOrg[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
 
-  const [pendingPayload, setPendingPayload] = useState<Record<string, unknown> | null>(null);
-  const [warningModalMode, setWarningModalMode] = useState<"create_no_imei" | "update_imei" | null>(null);
+  const [pendingPayload, setPendingPayload] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [warningModalMode, setWarningModalMode] = useState<
+    "create_no_imei" | "update_imei" | null
+  >(null);
 
   const {
     register,

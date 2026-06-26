@@ -238,6 +238,3 @@ export async function refreshSessionInMiddleware(
     return { success: false, errorType: "TRANSIENT_ERROR" };
   }
 }
-
-
-

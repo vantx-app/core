@@ -60,7 +60,9 @@ export default function ImeiWarningModal({
                   : "¿Registrar sin dispositivo GPS?"}
               </h2>
               <p className="text-[11px] text-base-content/50 mt-0.5">
-                {isUpdate ? "Acción irreversible en telemetría" : "El vehículo quedará sin rastreo"}
+                {isUpdate
+                  ? "Acción irreversible en telemetría"
+                  : "El vehículo quedará sin rastreo"}
               </p>
             </div>
           </div>
@@ -114,22 +116,26 @@ export default function ImeiWarningModal({
                   : "text-orange-700 dark:text-orange-400"
               }`}
             >
-              {isUpdate ? "⚠️ Riesgo de pérdida de telemetría" : "Sin rastreo GPS activo"}
+              {isUpdate
+                ? "⚠️ Riesgo de pérdida de telemetría"
+                : "Sin rastreo GPS activo"}
             </p>
             <p className="text-xs text-base-content/70 leading-relaxed">
               {isUpdate ? (
                 <>
                   Si el IMEI ingresado es incorrecto, el vehículo{" "}
-                  <strong>perderá la telemetría en tiempo real</strong>. Los viajes
-                  no se registrarán y el puntaje operativo de la unidad se verá
-                  afectado hasta que el dispositivo correcto transmita datos.
+                  <strong>perderá la telemetría en tiempo real</strong>. Los
+                  viajes no se registrarán y el puntaje operativo de la unidad
+                  se verá afectado hasta que el dispositivo correcto transmita
+                  datos.
                 </>
               ) : (
                 <>
                   El vehículo se registrará{" "}
-                  <strong>sin dispositivo de telemetría</strong>. El rastreo GPS,
-                  los viajes y el cálculo de puntajes no estarán disponibles hasta
-                  que se vincule un dispositivo desde la configuración del vehículo.
+                  <strong>sin dispositivo de telemetría</strong>. El rastreo
+                  GPS, los viajes y el cálculo de puntajes no estarán
+                  disponibles hasta que se vincule un dispositivo desde la
+                  configuración del vehículo.
                 </>
               )}
             </p>

@@ -11,7 +11,12 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import { io, Socket } from "socket.io-client";
 import { ShieldCheck, Navigation, Compass, MapPin } from "lucide-react";
 import axios from "axios";
-import { DEFAULT_MAP_CONFIG, getDistance, formatDistance, animateMarkerPosition } from "@/utils/client";
+import {
+  DEFAULT_MAP_CONFIG,
+  getDistance,
+  formatDistance,
+  animateMarkerPosition,
+} from "@/utils/client";
 
 // Configure Mapbox Token
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() || "";
@@ -73,7 +78,10 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
   const [isFollowing, setIsFollowingState] = useState(true);
   const isFollowingRef = useRef(true);
 
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
@@ -83,8 +91,14 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
   };
 
   const distance = useMemo(() => {
-    if (!userLocation || details.lastLat == null || details.lastLng == null) return null;
-    return getDistance(userLocation.lat, userLocation.lng, details.lastLat, details.lastLng);
+    if (!userLocation || details.lastLat == null || details.lastLng == null)
+      return null;
+    return getDistance(
+      userLocation.lat,
+      userLocation.lng,
+      details.lastLat,
+      details.lastLng,
+    );
   }, [userLocation, details.lastLat, details.lastLng]);
 
   const currentStatusConfig = useMemo(() => {
@@ -106,12 +120,12 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
     // 1. Mover la posición de forma animada si tenemos una posición previa
     const from = lastCoordsRef.current;
     const to: [number, number] = [longitude, latitude];
-    
+
     if (from && (from[0] !== to[0] || from[1] !== to[1])) {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-      
+
       animationRef.current = animateMarkerPosition(
         markerRef.current,
         from,
@@ -119,12 +133,12 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
         1000,
         () => {
           animationRef.current = null;
-        }
+        },
       );
     } else {
       markerRef.current.setLngLat(to);
     }
-    
+
     lastCoordsRef.current = to;
 
     // 2. Rotate and color using refs to avoid DOM queries
@@ -431,7 +445,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
         enableHighAccuracy: true,
         timeout: 10000,
         maximumAge: 0,
-      }
+      },
     );
   };
 
@@ -499,7 +513,9 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
                   : "btn-outline btn-secondary"
               }`}
             >
-              <MapPin className={`size-3.5 ${isLocating ? "animate-pulse" : ""}`} />
+              <MapPin
+                className={`size-3.5 ${isLocating ? "animate-pulse" : ""}`}
+              />
               {isLocating ? "Ubicando..." : "Mi ubicación"}
             </button>
           </div>
@@ -514,7 +530,9 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
           {/* Distancia dinámica al vehículo */}
           {distance !== null && (
             <div className="flex items-center justify-between text-xs py-1.5 border-t border-base-300 mt-1.5 animate-in fade-in duration-300">
-              <span className="text-base-content/65 font-medium">Distancia a ti:</span>
+              <span className="text-base-content/65 font-medium">
+                Distancia a ti:
+              </span>
               <span className="font-bold text-secondary bg-secondary/10 px-2 py-0.5 rounded-lg border border-secondary/15">
                 {formatDistance(distance)}
               </span>

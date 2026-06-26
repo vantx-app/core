@@ -45,17 +45,17 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     fuelType: 759,
   },
   TELTONIKA_FMC150: {
-    rpm: 85,           // LVCAN Engine RPM
-    voltage: 66,       // Physical voltage
-    ignition: 239,     // Physical ignition pin
-    movement: 240,     // Physical movement status
-    obdSpeed: 81,      // LVCAN Speed
-    odometer: 87,      // LVCAN Total Mileage
-    engineLoad: 31,    // Standard engine load (remains fallback)
-    coolantTemp: 115,  // LVCAN Engine Temperature
+    rpm: 85, // LVCAN Engine RPM
+    voltage: 66, // Physical voltage
+    ignition: 239, // Physical ignition pin
+    movement: 240, // Physical movement status
+    obdSpeed: 81, // LVCAN Speed
+    odometer: 87, // LVCAN Total Mileage
+    engineLoad: 31, // Standard engine load (remains fallback)
+    coolantTemp: 115, // LVCAN Engine Temperature
     dtcCount: 30,
     faultCodes: 281,
-    vin: 82,           // LVCAN VIN
+    vin: 82, // LVCAN VIN
     tripStatus: 250,
     ecoDrivingType: 253,
     ecoDrivingValueMax: 258,
@@ -67,17 +67,17 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     fuelType: 759,
   },
   TELTONIKA_FMC650: {
-    rpm: 85,           // LVCAN Engine RPM
-    voltage: 66,       // Physical voltage
-    ignition: 239,     // Physical ignition pin
-    movement: 240,     // Physical movement status
-    obdSpeed: 81,      // LVCAN Speed
-    odometer: 87,      // LVCAN Total Mileage
-    engineLoad: 31,    // Standard engine load
-    coolantTemp: 115,  // LVCAN Engine Temperature
+    rpm: 85, // LVCAN Engine RPM
+    voltage: 66, // Physical voltage
+    ignition: 239, // Physical ignition pin
+    movement: 240, // Physical movement status
+    obdSpeed: 81, // LVCAN Speed
+    odometer: 87, // LVCAN Total Mileage
+    engineLoad: 31, // Standard engine load
+    coolantTemp: 115, // LVCAN Engine Temperature
     dtcCount: 30,
     faultCodes: 281,
-    vin: 82,           // LVCAN VIN
+    vin: 82, // LVCAN VIN
     tripStatus: 250,
     ecoDrivingType: 253,
     ecoDrivingValueMax: 258,

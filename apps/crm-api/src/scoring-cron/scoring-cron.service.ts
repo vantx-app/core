@@ -5,8 +5,8 @@ import { ConfigService } from '@nestjs/config';
 import { HereRoutesClientService } from './here-routes-client.service';
 import { TelemetryRollupService } from './telemetry-rollup.service';
 import { WeeklyScoringService } from './weekly-scoring.service';
-import { TelemetryLog, VehicleCategory } from '@prisma/client';
-import { RouteSpanWithSpeedLimit } from './route-utils';
+import { VehicleCategory } from '@prisma/client';
+import { OverspeedCalculationService } from './overspeed-calculation.service';
 
 @Injectable()
 export class ScoringCronService {
@@ -19,6 +19,7 @@ export class ScoringCronService {
     private hereRoutesClient: HereRoutesClientService,
     private telemetryRollupService: TelemetryRollupService,
     private weeklyScoringService: WeeklyScoringService,
+    private overspeedCalculationService: OverspeedCalculationService,
   ) {}
 
   async runDailyRollup(targetDate?: string) {
@@ -117,12 +118,15 @@ export class ScoringCronService {
       }
 
       const result = apiKey
-        ? await this.evaluateOverspeedingWithHereRoutes(
+        ? await this.overspeedCalculationService.evaluateOverspeedingWithHereRoutes(
             logs,
             fallbackThreshold,
             category,
           )
-        : this.fallbackOverspeeding(logs, fallbackThreshold);
+        : this.overspeedCalculationService.calculateOverspeedingFallback(
+            logs,
+            fallbackThreshold,
+          );
 
       await this.prisma.dailyTelemetryRollup.update({
         where: { id: rollup.id },
@@ -141,343 +145,6 @@ export class ScoringCronService {
   async runWeeklyScoring() {
     this.logger.log('Delegando runWeeklyScoring a WeeklyScoringService...');
     return this.weeklyScoringService.runWeeklyScoring();
-  }
-
-  // Métodos para retrocompatibilidad con tests unitarios y llamadas internas
-  private getISOWeekNumber(d: Date): number {
-    const date = new Date(
-      Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
-    );
-    const dayNum = date.getUTCDay() || 7;
-    date.setUTCDate(date.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
-    return Math.ceil(
-      ((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7,
-    );
-  }
-
-  private fallbackOverspeeding(
-    logs: TelemetryLog[],
-    fallbackThreshold: number,
-  ): { overspeedCount: number; overspeedSeverity: number } {
-    let overspeedCount = 0;
-    let totalDurationSeconds = 0;
-
-    let currentEpisodeStart: Date | null = null;
-    let lastSpeedingTimestamp: Date | null = null;
-    const COOLDOWN_MS = 30 * 1000; // Cooldown de 30 segundos
-
-    for (const log of logs) {
-      // Umbral con margen de gracia de 10 km/h para Panamá
-      const isSpeeding = log.speed > fallbackThreshold + 10;
-
-      if (isSpeeding) {
-        if (!currentEpisodeStart) {
-          currentEpisodeStart = log.timestamp;
-        }
-        lastSpeedingTimestamp = log.timestamp;
-      } else {
-        if (currentEpisodeStart && lastSpeedingTimestamp) {
-          const timeSinceLastSpeeding =
-            log.timestamp.getTime() - lastSpeedingTimestamp.getTime();
-          if (timeSinceLastSpeeding >= COOLDOWN_MS) {
-            // Verificar duración mínima de 5 segundos antes de registrar la infracción
-            const actualDuration =
-              (lastSpeedingTimestamp.getTime() -
-                currentEpisodeStart.getTime()) /
-              1000;
-            if (actualDuration >= 5) {
-              const duration = Math.max(10, actualDuration);
-              totalDurationSeconds += duration;
-              overspeedCount++;
-            }
-
-            currentEpisodeStart = null;
-            lastSpeedingTimestamp = null;
-          }
-        }
-      }
-    }
-
-    if (currentEpisodeStart && lastSpeedingTimestamp) {
-      const actualDuration =
-        (lastSpeedingTimestamp.getTime() - currentEpisodeStart.getTime()) /
-        1000;
-      if (actualDuration >= 5) {
-        const duration = Math.max(10, actualDuration);
-        totalDurationSeconds += duration;
-        overspeedCount++;
-      }
-    }
-
-    return {
-      overspeedCount,
-      overspeedSeverity: parseFloat(totalDurationSeconds.toFixed(3)),
-    };
-  }
-
-  private async evaluateOverspeedingWithHereRoutes(
-    logs: TelemetryLog[],
-    fallbackOverspeedThreshold: number,
-    category: VehicleCategory,
-  ): Promise<{ overspeedCount: number; overspeedSeverity: number }> {
-    const validLogs = logs.filter(
-      (log) => log.latitude !== 0 && log.longitude !== 0,
-    );
-    if (validLogs.length < 2) {
-      return { overspeedCount: 0, overspeedSeverity: 0 };
-    }
-
-    // Si la velocidad máxima registrada no superó los 40 km/h,
-    // es matemáticamente imposible que haya un exceso de velocidad,
-    // incluso en zonas escolares de 30 km/h con el buffer de 10 km/h.
-    if (!validLogs.some((log) => log.speed > 40)) {
-      return { overspeedCount: 0, overspeedSeverity: 0 };
-    }
-
-    const startLog = validLogs[0];
-    const endLog = validLogs[validLogs.length - 1];
-    const distanceKm = this.getDistance(
-      startLog.latitude,
-      startLog.longitude,
-      endLog.latitude,
-      endLog.longitude,
-    );
-    if (distanceKm < 0.1) {
-      return { overspeedCount: 0, overspeedSeverity: 0 };
-    }
-
-    const isTruck =
-      category === VehicleCategory.HEAVY_DUTY ||
-      category === VehicleCategory.MACHINERY;
-    const travelMode = isTruck ? 'Truck' : 'Car';
-
-    const coordinates = validLogs.map((log) => ({
-      lat: log.latitude,
-      lng: log.longitude,
-      speed: log.speed,
-      angle: log.angle,
-    }));
-
-    const routeResult =
-      await this.hereRoutesClient.calculateRouteWithSpeedLimits(
-        coordinates,
-        travelMode as 'Car' | 'Truck',
-      );
-
-    if (!routeResult) {
-      return this.fallbackOverspeeding(validLogs, fallbackOverspeedThreshold);
-    }
-
-    const { spans, geometry } = routeResult;
-    let totalOverspeedCount = 0;
-    let totalDurationSeconds = 0;
-
-    let currentEpisodeStart: Date | null = null;
-    let lastSpeedingTimestamp: Date | null = null;
-    const COOLDOWN_MS = 30 * 1000; // Cooldown de 30 segundos
-
-    let lastSpeedLimit: number | null = null;
-    let decelerationGraceWindowEnd = 0; // Marca de tiempo en ms
-
-    // Buscar el primer límite de velocidad en ruta válido del viaje para inicializar el fallback de inercia
-    let initialValidLimit = fallbackOverspeedThreshold;
-    for (const log of validLogs) {
-      const { index: closestIdx, distanceKm: snapDist } =
-        this.findClosestGeometryIndex(log.latitude, log.longitude, geometry);
-      if (snapDist <= 0.05) {
-        const { functionalClass: fc } =
-          this.getSpeedLimitAndClassForGeometryIndex(closestIdx, spans);
-        let limit: number;
-        if (fc === 1) limit = 110;
-        else if (fc === 2) limit = 80;
-        else if (fc === 3 || fc === 4) limit = 60;
-        else if (fc === 5) limit = 40;
-        else limit = fallbackOverspeedThreshold;
-
-        if (limit !== fallbackOverspeedThreshold) {
-          initialValidLimit = limit;
-          break;
-        }
-      }
-    }
-    let lastValidOnRouteSpeedLimit = initialValidLimit; // Inertial Fallback
-
-    for (const log of validLogs) {
-      const { index: closestIdx, distanceKm: snapDist } =
-        this.findClosestGeometryIndex(log.latitude, log.longitude, geometry);
-
-      let limitToUse: number;
-
-      if (snapDist > 0.05) {
-        // Fuera de ruta (> 50m), usar Inertial Fallback (heredar el último límite válido en ruta)
-        limitToUse = lastValidOnRouteSpeedLimit;
-      } else {
-        const { functionalClass: fc } =
-          this.getSpeedLimitAndClassForGeometryIndex(closestIdx, spans);
-
-        // Smart Fallback Ingestion: Asignar base conservadora basada en Reglamento de Tránsito de Panamá (ignorar speedLimit de HERE)
-        if (fc === 1) {
-          limitToUse = 110; // Autopistas / Corredores (Updated to 110!)
-        } else if (fc === 2) {
-          limitToUse = 80; // Carreteras / Vías Interurbanas
-        } else if (fc === 3) {
-          limitToUse = 60; // Avenidas Urbanas Principales
-        } else if (fc === 4) {
-          limitToUse = 60; // Vías Colectoras
-        } else if (fc === 5) {
-          limitToUse = 40; // Calles Residenciales / Urbanas comerciales
-        } else {
-          limitToUse = fallbackOverspeedThreshold;
-        }
-
-        // Solo actualizar el último límite válido en ruta si no es el fallback genérico
-        if (limitToUse !== fallbackOverspeedThreshold) {
-          lastValidOnRouteSpeedLimit = limitToUse;
-        }
-      }
-
-      // Lógica de transición espacial: Ventana de gracia por desaceleración rápida (drop >= 20 km/h)
-      if (lastSpeedLimit !== null && limitToUse <= lastSpeedLimit - 20) {
-        decelerationGraceWindowEnd = log.timestamp.getTime() + 15000; // 15 segundos de suspensión
-      }
-      lastSpeedLimit = limitToUse;
-
-      const inDecelWindow =
-        log.timestamp.getTime() <= decelerationGraceWindowEnd;
-
-      // Umbral de velocidad con margen de gracia de 10 km/h
-      const threshold = limitToUse + 10;
-      const isSpeeding = !inDecelWindow && log.speed > threshold;
-
-      if (isSpeeding) {
-        if (!currentEpisodeStart) {
-          currentEpisodeStart = log.timestamp;
-        }
-        lastSpeedingTimestamp = log.timestamp;
-      } else {
-        if (currentEpisodeStart && lastSpeedingTimestamp) {
-          const timeSinceLastSpeeding =
-            log.timestamp.getTime() - lastSpeedingTimestamp.getTime();
-          if (timeSinceLastSpeeding >= COOLDOWN_MS) {
-            // Verificar duración mínima de 5 segundos antes de registrar la infracción
-            const actualDuration =
-              (lastSpeedingTimestamp.getTime() -
-                currentEpisodeStart.getTime()) /
-              1000;
-            if (actualDuration >= 5) {
-              const duration = Math.max(10, actualDuration);
-              totalDurationSeconds += duration;
-              totalOverspeedCount++;
-            }
-
-            currentEpisodeStart = null;
-            lastSpeedingTimestamp = null;
-          }
-        }
-      }
-    }
-
-    if (currentEpisodeStart && lastSpeedingTimestamp) {
-      const actualDuration =
-        (lastSpeedingTimestamp.getTime() - currentEpisodeStart.getTime()) /
-        1000;
-      if (actualDuration >= 5) {
-        const duration = Math.max(10, actualDuration);
-        totalDurationSeconds += duration;
-        totalOverspeedCount++;
-      }
-    }
-
-    return {
-      overspeedCount: totalOverspeedCount,
-      overspeedSeverity: parseFloat(totalDurationSeconds.toFixed(3)),
-    };
-  }
-
-  private findClosestGeometryIndex(
-    lat: number,
-    lng: number,
-    geometry: [number, number][],
-  ): { index: number; distanceKm: number } {
-    let minDist = Infinity;
-    let closestIdx = 0;
-    for (let i = 0; i < geometry.length; i++) {
-      const [gLng, gLat] = geometry[i];
-      const dist = this.getDistance(lat, lng, gLat, gLng);
-      if (dist < minDist) {
-        minDist = dist;
-        closestIdx = i;
-      }
-    }
-    return { index: closestIdx, distanceKm: minDist };
-  }
-
-  private getSpeedLimitAndClassForGeometryIndex(
-    geometryIndex: number,
-    spans: RouteSpanWithSpeedLimit[],
-  ): { speedLimit: number | null; functionalClass: number | null } {
-    if (spans.length === 0) return { speedLimit: null, functionalClass: null };
-    let matchedSpan = spans[0];
-    for (const span of spans) {
-      if (span.geometryOffset <= geometryIndex) {
-        matchedSpan = span;
-      } else {
-        break;
-      }
-    }
-    return {
-      speedLimit: matchedSpan.speedLimit,
-      functionalClass: matchedSpan.functionalClass ?? null,
-    };
-  }
-
-  private getDistance(
-    lat1: number,
-    lon1: number,
-    lat2: number,
-    lon2: number,
-  ): number {
-    const R = 6371;
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c;
-  }
-
-  // Métodos expuestos para spyOn en tests unitarios
-  private async processWeeklyDrivers(
-    start: Date,
-    end: Date,
-    weekNum: number,
-    year: number,
-  ) {
-    return (this.weeklyScoringService as any).processWeeklyDrivers(
-      start,
-      end,
-      weekNum,
-      year,
-    );
-  }
-
-  private async processWeeklyVehicles(
-    start: Date,
-    end: Date,
-    weekNum: number,
-    year: number,
-  ) {
-    return (this.weeklyScoringService as any).processWeeklyVehicles(
-      start,
-      end,
-      weekNum,
-      year,
-    );
   }
 
   // Retorna los perfiles de scoring por defecto/públicos (sin orgId)

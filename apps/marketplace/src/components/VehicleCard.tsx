@@ -68,11 +68,15 @@ export function VehicleCard({
           <div className="flex justify-between items-start gap-4">
             <div className="space-y-1">
               <span className="text-[10px] font-medium text-slate-400">
-                {getCategoryText(vehicle.category)} • {getFuelText(vehicle.fuelType)}
-                {vehicle.organization?.name && ` • ${vehicle.organization.name}`}
+                {getCategoryText(vehicle.category)} •{" "}
+                {getFuelText(vehicle.fuelType)}
+                {vehicle.organization?.name &&
+                  ` • ${vehicle.organization.name}`}
               </span>
               <h4 className="font-extrabold text-lg text-slate-900 leading-tight">
-                {vehicle.make ? `${vehicle.make} ${vehicle.model || ""}` : "Vehículo sin marca/modelo"}
+                {vehicle.make
+                  ? `${vehicle.make} ${vehicle.model || ""}`
+                  : "Vehículo sin marca/modelo"}
                 {vehicle.year && (
                   <span className="text-slate-400 font-medium text-sm ml-1.5">
                     ({vehicle.year})
@@ -103,7 +107,9 @@ export function VehicleCard({
                       <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">
                         Descripción de la oferta
                       </span>
-                      <p className={`text-xs leading-relaxed ${isLocked ? "text-slate-400 italic" : "text-slate-650"}`}>
+                      <p
+                        className={`text-xs leading-relaxed ${isLocked ? "text-slate-400 italic" : "text-slate-650"}`}
+                      >
                         {vehicle.listingDescription}
                       </p>
                     </>
@@ -115,8 +121,8 @@ export function VehicleCard({
                 </div>
               )}
 
-              {vehicle.hasOptionToBuy && (
-                buyOptionStyle === "box" ? (
+              {vehicle.hasOptionToBuy &&
+                (buyOptionStyle === "box" ? (
                   <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 rounded-xl p-3 text-xs flex items-start gap-2.5">
                     <div className="p-1 bg-emerald-500 text-white rounded-lg shrink-0 mt-0.5">
                       <DollarSign className="size-3.5" />
@@ -126,7 +132,8 @@ export function VehicleCard({
                         Alquiler con Opción a Compra
                       </p>
                       <p className="text-[10px] text-emerald-700 mt-0.5 leading-normal">
-                        Esta oferta permite la adquisición final del vehículo tras cumplir el tiempo pactado del contrato de alquiler.
+                        Esta oferta permite la adquisición final del vehículo
+                        tras cumplir el tiempo pactado del contrato de alquiler.
                       </p>
                     </div>
                   </div>
@@ -134,8 +141,7 @@ export function VehicleCard({
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-100 px-2 py-0.5 rounded-lg">
                     Alquiler con opción a compra
                   </span>
-                )
-              )}
+                ))}
             </div>
           )}
         </div>

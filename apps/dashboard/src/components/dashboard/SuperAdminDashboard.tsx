@@ -362,7 +362,8 @@ export function SuperAdminDashboard({
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-base-content/75">
                   <span className="flex items-center gap-1">
-                    <ShieldCheck className="size-3.5 text-emerald-500" /> Activos
+                    <ShieldCheck className="size-3.5 text-emerald-500" />{" "}
+                    Activos
                   </span>
                   <span className="font-bold">{activeStatusCount}</span>
                 </div>

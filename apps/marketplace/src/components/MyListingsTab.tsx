@@ -306,9 +306,10 @@ export function MyListingsTab() {
             // 3. Driver assignment warning banner
             let warningBanner = null;
             if (vehicle.isListed && activeDriver) {
-              const driverName = activeDriver.firstName && activeDriver.lastName
-                ? `${activeDriver.firstName} ${activeDriver.lastName}`
-                : activeDriver.nationalId;
+              const driverName =
+                activeDriver.firstName && activeDriver.lastName
+                  ? `${activeDriver.firstName} ${activeDriver.lastName}`
+                  : activeDriver.nationalId;
               warningBanner = (
                 <div className="mt-3 p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-2 text-left w-full">
                   <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
@@ -317,7 +318,9 @@ export function MyListingsTab() {
                       Vehículo Oculto en el Mercado
                     </p>
                     <p className="text-[10px] text-amber-700 leading-relaxed mt-0.5">
-                      Asignado actualmente a <span className="font-bold">{driverName}</span>. No será visible para otros conductores hasta que sea desvinculado.
+                      Asignado actualmente a{" "}
+                      <span className="font-bold">{driverName}</span>. No será
+                      visible para otros conductores hasta que sea desvinculado.
                     </p>
                   </div>
                 </div>
@@ -543,11 +546,13 @@ export function MyListingsTab() {
                 <div className="p-4 rounded-2xl bg-blue-50/50 border border-blue-100 space-y-4 animate-in slide-in-from-top-3 duration-250">
                   {/* Warning: Active driver assignment warning */}
                   {(() => {
-                    const activeDriver = editingVehicle?.assignments?.[0]?.driver;
+                    const activeDriver =
+                      editingVehicle?.assignments?.[0]?.driver;
                     if (activeDriver) {
-                      const driverName = activeDriver.firstName && activeDriver.lastName
-                        ? `${activeDriver.firstName} ${activeDriver.lastName}`
-                        : activeDriver.nationalId;
+                      const driverName =
+                        activeDriver.firstName && activeDriver.lastName
+                          ? `${activeDriver.firstName} ${activeDriver.lastName}`
+                          : activeDriver.nationalId;
                       return (
                         <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl flex items-start gap-2.5">
                           <AlertCircle className="size-4 shrink-0 text-amber-600 mt-0.5" />
@@ -556,7 +561,11 @@ export function MyListingsTab() {
                               Nota de Disponibilidad
                             </p>
                             <p className="text-[10px] text-amber-700 leading-relaxed mt-0.5">
-                              Este vehículo tiene asignado al conductor <span className="font-bold">{driverName}</span>. Si activas la oferta, se guardará como "Listado", pero no se mostrará a otros conductores en el mercado hasta que se libere la asignación actual.
+                              Este vehículo tiene asignado al conductor{" "}
+                              <span className="font-bold">{driverName}</span>.
+                              Si activas la oferta, se guardará como "Listado",
+                              pero no se mostrará a otros conductores en el
+                              mercado hasta que se libere la asignación actual.
                             </p>
                           </div>
                         </div>

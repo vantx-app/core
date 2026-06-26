@@ -23,7 +23,10 @@ const server = net.createServer((socket) => {
       try {
         await processTelemetry(packet, deviceImei, socket);
       } catch (err: any) {
-        logger.error(`Error processing queued packet for ${deviceImei}:`, err.message);
+        logger.error(
+          `Error processing queued packet for ${deviceImei}:`,
+          err.message,
+        );
       }
     }
     isProcessing = false;
@@ -81,7 +84,10 @@ const server = net.createServer((socket) => {
 
     if (packetQueue.length > 0) {
       processQueue().catch((err) =>
-        logger.error(`Error en cola de procesamiento para ${deviceImei}:`, err.message),
+        logger.error(
+          `Error en cola de procesamiento para ${deviceImei}:`,
+          err.message,
+        ),
       );
     }
   });

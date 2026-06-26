@@ -1,7 +1,8 @@
 export const getScoreCircleColor = (
   score: number | null | undefined,
 ): string => {
-  if (score == null || isNaN(score)) return "text-base-content/20 stroke-base-300";
+  if (score == null || isNaN(score))
+    return "text-base-content/20 stroke-base-300";
   const rounded = Math.round(score);
   if (rounded >= 85) return "text-emerald-500 stroke-emerald-500";
   if (rounded >= 70) return "text-warning stroke-warning";
@@ -14,8 +15,10 @@ export const getScoreBadgeColor = (
   if (score == null || isNaN(score))
     return "badge-ghost text-base-content/50 border-base-200/80";
   const rounded = Math.round(score);
-  if (rounded >= 85) return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 border font-semibold";
-  if (rounded >= 70) return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 border font-semibold";
+  if (rounded >= 85)
+    return "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20 border font-semibold";
+  if (rounded >= 70)
+    return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20 border font-semibold";
   return "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20 border font-semibold";
 };
 

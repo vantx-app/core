@@ -199,7 +199,12 @@ export function OwnerDashboard({
       if (v.liveState?.lastUpdate) {
         const lastUpdateMs = new Date(v.liveState.lastUpdate).getTime();
         const diffMins = (Date.now() - lastUpdateMs) / (1000 * 60);
-        if (diffMins > 30 && diffMins <= 720 && !isUnplugged && v.status === "ACTIVE") {
+        if (
+          diffMins > 30 &&
+          diffMins <= 720 &&
+          !isUnplugged &&
+          v.status === "ACTIVE"
+        ) {
           alerts.push({
             id: `${v.id}-offline`,
             vehicleId: v.id,
@@ -417,10 +422,11 @@ export function OwnerDashboard({
               {fleetAlerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className={`p-3.5 rounded-xl border flex gap-3 text-xs animate-in fade-in duration-300 ${alert.severity === "error"
-                    ? "bg-rose-500/5 border-rose-500/20 text-rose-800 dark:text-rose-200"
-                    : "bg-amber-500/5 border-amber-500/20 text-amber-800 dark:text-amber-200"
-                    }`}
+                  className={`p-3.5 rounded-xl border flex gap-3 text-xs animate-in fade-in duration-300 ${
+                    alert.severity === "error"
+                      ? "bg-rose-500/5 border-rose-500/20 text-rose-800 dark:text-rose-200"
+                      : "bg-amber-500/5 border-amber-500/20 text-amber-800 dark:text-amber-200"
+                  }`}
                 >
                   {alert.type === "unplugged" && (
                     <Power className="size-4.5 shrink-0 text-rose-500 mt-0.5" />
@@ -608,12 +614,13 @@ export function OwnerDashboard({
                             Estado Administrativo
                           </span>
                           <span
-                            className={`badge badge-sm font-bold ${v.status === "ACTIVE"
-                              ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
-                              : v.status === "IN_MAINTENANCE"
-                                ? "badge-warning text-white"
-                                : "badge-neutral text-white"
-                              }`}
+                            className={`badge badge-sm font-bold ${
+                              v.status === "ACTIVE"
+                                ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
+                                : v.status === "IN_MAINTENANCE"
+                                  ? "badge-warning text-white"
+                                  : "badge-neutral text-white"
+                            }`}
                           >
                             {v.status === "ACTIVE"
                               ? "Activo"

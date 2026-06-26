@@ -9,7 +9,9 @@ export async function snapTelemetryRecords(
   mapping: AvlMapping,
 ): Promise<any[]> {
   try {
-    const validRecords = records.filter((r) => r.latitude !== 0 && r.longitude !== 0);
+    const validRecords = records.filter(
+      (r) => r.latitude !== 0 && r.longitude !== 0,
+    );
     if (validRecords.length === 0) return records;
 
     // Safe check for prisma.mapLink mock compatibility in testing
@@ -17,7 +19,9 @@ export async function snapTelemetryRecords(
 
     // Create a new array with cloned objects to avoid mutating original inputs
     const processedRecords = records.map((rec) => ({ ...rec }));
-    const validProcessedRecords = processedRecords.filter((r) => r.latitude !== 0 && r.longitude !== 0);
+    const validProcessedRecords = processedRecords.filter(
+      (r) => r.latitude !== 0 && r.longitude !== 0,
+    );
 
     // Process in chunks of 20 records to keep bounding boxes tight and query sizes small on t3.small
     const CHUNK_SIZE = 20;
@@ -67,7 +71,9 @@ export async function snapTelemetryRecords(
           const rawRpm =
             mapping.rpm !== undefined ? (rec.ioData[mapping.rpm] ?? 0) : 0;
           const rawVoltage =
-            mapping.voltage !== undefined ? (rec.ioData[mapping.voltage] ?? 0) : 0;
+            mapping.voltage !== undefined
+              ? (rec.ioData[mapping.voltage] ?? 0)
+              : 0;
           const rawIgnitionPin =
             mapping.ignition !== undefined
               ? rec.ioData[mapping.ignition] === 1
@@ -75,7 +81,7 @@ export async function snapTelemetryRecords(
           const isHardwareExcessiveIdling =
             mapping.excessiveIdling !== undefined
               ? rec.eventId === mapping.excessiveIdling ||
-              rec.ioData[mapping.excessiveIdling] === 1
+                rec.ioData[mapping.excessiveIdling] === 1
               : false;
 
           const trueIgnition =
@@ -84,7 +90,10 @@ export async function snapTelemetryRecords(
             (mapping.ignition === undefined && rawVoltage > 13200) ||
             isHardwareExcessiveIdling;
 
-          if ((rec.satellites !== undefined && rec.satellites < 5) || !trueIgnition) {
+          if (
+            (rec.satellites !== undefined && rec.satellites < 5) ||
+            !trueIgnition
+          ) {
             continue;
           }
 

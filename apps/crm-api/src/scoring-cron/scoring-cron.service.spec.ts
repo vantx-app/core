@@ -1,17 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ScoringCronService } from './scoring-cron.service';
-import { PrismaService } from '../prisma.service';
+import { PrismaService } from 'src/prisma.service';
 import { RulesEngineService } from '../rules-engine/rules-engine.service';
 import { ConfigService } from '@nestjs/config';
 import { HereRoutesClientService } from './here-routes-client.service';
-import { VehicleCategory } from '@prisma/client';
 import { TelemetryRollupService } from './telemetry-rollup.service';
 import { WeeklyScoringService } from './weekly-scoring.service';
+import { VehicleCategory } from '@prisma/client';
+import { OverspeedCalculationService } from './overspeed-calculation.service';
 
 describe('ScoringCronService', () => {
   let service: ScoringCronService;
   let prismaMock: any;
   let hereRoutesClientMock: any;
+  let overspeedCalculationMock: any;
   let module: TestingModule;
 
   beforeEach(async () => {
@@ -39,6 +41,22 @@ describe('ScoringCronService', () => {
       assignment: {
         findMany: jest.fn().mockResolvedValue([]),
       },
+      driverScoreSnapshot: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      vehicleScoreSnapshot: {
+        createMany: jest.fn().mockResolvedValue({ count: 1 }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      driverGlobalStats: {
+        findUnique: jest.fn(),
+        upsert: jest.fn(),
+      },
+      vehicleGlobalStats: {
+        findUnique: jest.fn(),
+        upsert: jest.fn(),
+      },
       trip: {
         groupBy: jest.fn().mockResolvedValue([]),
       },
@@ -56,6 +74,11 @@ describe('ScoringCronService', () => {
       resetSuspension: jest.fn(),
     };
 
+    overspeedCalculationMock = {
+      calculateOverspeedingFallback: jest.fn(),
+      evaluateOverspeedingWithHereRoutes: jest.fn(),
+    };
+
     module = await Test.createTestingModule({
       providers: [
         ScoringCronService,
@@ -63,6 +86,10 @@ describe('ScoringCronService', () => {
         { provide: RulesEngineService, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: HereRoutesClientService, useValue: hereRoutesClientMock },
+        {
+          provide: OverspeedCalculationService,
+          useValue: overspeedCalculationMock,
+        },
         {
           provide: TelemetryRollupService,
           useValue: {
@@ -226,457 +253,6 @@ describe('ScoringCronService', () => {
     });
   });
 
-  describe('overspeeding calculations', () => {
-    it('fallbackOverspeeding debe calcular el exceso de velocidad fallback correctamente', () => {
-      const baseTime = new Date('2026-06-12T12:00:00Z');
-      const logs = [
-        { timestamp: new Date(baseTime.getTime() + 0), speed: 80 } as any,
-        { timestamp: new Date(baseTime.getTime() + 10000), speed: 125 } as any, // 15 over fallback 110 + 10 grace (starts episode)
-        { timestamp: new Date(baseTime.getTime() + 20000), speed: 123 } as any, // 13 over fallback 110 + 10 grace (continues episode)
-        { timestamp: new Date(baseTime.getTime() + 30000), speed: 110 } as any, // 110 <= 120 (below threshold)
-      ];
-      const result = (service as any).fallbackOverspeeding(logs, 110);
-      expect(result.overspeedCount).toBe(1);
-      expect(result.overspeedSeverity).toBe(10);
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe retornar 0 si hay menos de 2 logs con coordenadas válidas', async () => {
-      const logs = [
-        { latitude: 0, longitude: 0, speed: 120 } as any,
-        { latitude: 9.99, longitude: -79.99, speed: 120 } as any,
-      ];
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.PASSENGER,
-      );
-      expect(result.overspeedCount).toBe(0);
-      expect(result.overspeedSeverity).toBe(0);
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe retornar 0 sin llamar a la API si la velocidad máxima de la trip es <= 10 km/h', async () => {
-      const logs = [
-        { latitude: 9.991, longitude: -79.991, speed: 5 } as any,
-        { latitude: 9.992, longitude: -79.992, speed: 8 } as any,
-      ];
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.PASSENGER,
-      );
-      expect(result.overspeedCount).toBe(0);
-      expect(result.overspeedSeverity).toBe(0);
-      expect(
-        hereRoutesClientMock.calculateRouteWithSpeedLimits,
-      ).not.toHaveBeenCalled();
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe retornar 0 sin llamar a la API si la distancia de la trip es < 0.1 km', async () => {
-      const logs = [
-        { latitude: 9.991, longitude: -79.991, speed: 50 } as any,
-        { latitude: 9.9911, longitude: -79.9911, speed: 60 } as any,
-      ];
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.PASSENGER,
-      );
-      expect(result.overspeedCount).toBe(0);
-      expect(result.overspeedSeverity).toBe(0);
-      expect(
-        hereRoutesClientMock.calculateRouteWithSpeedLimits,
-      ).not.toHaveBeenCalled();
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe usar fallback si HERE API retorna null (error o suspendido)', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue(
-        null,
-      );
-
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 125, // > 110 + 10 grace
-          timestamp: new Date('2026-06-12T12:00:00Z'),
-          angle: 90,
-        } as any,
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 123,
-          timestamp: new Date('2026-06-12T12:00:10Z'),
-          angle: 90,
-        } as any,
-      ];
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.PASSENGER,
-      );
-      expect(result.overspeedCount).toBe(1);
-      expect(result.overspeedSeverity).toBe(10);
-      expect(
-        hereRoutesClientMock.calculateRouteWithSpeedLimits,
-      ).toHaveBeenCalled();
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe usar los límites de velocidad de HERE API con buffer de 10km/h', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [
-          { geometryOffset: 0, speedLimit: 80, functionalClass: 2 },
-          { geometryOffset: 1, speedLimit: 50, functionalClass: 3 },
-        ],
-        geometry: [
-          [-79.991, 9.991],
-          [-79.998, 9.998],
-        ],
-      });
-
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 95, // exceeds 80 + 10 = 90
-          timestamp: new Date('2026-06-12T12:00:00Z'),
-          angle: 90,
-        } as any,
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 95,
-          timestamp: new Date('2026-06-12T12:00:05Z'),
-          angle: 90,
-        } as any,
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 58, // 58 < 50 + 10 = 60 (below threshold)
-          timestamp: new Date('2026-06-12T12:00:10Z'),
-          angle: 90,
-        } as any,
-      ];
-
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.PASSENGER,
-      );
-      // Log 1: speed 95, limit 80, threshold = 92 → overspeed (starts episode)
-      // Log 2: speed 95, limit 80, threshold = 92 → overspeed (continues episode, duration = 5s)
-      // Log 3: speed 58, limit 50, threshold = 62 → no overspeed (closes episode)
-      expect(result.overspeedCount).toBe(1);
-      expect(result.overspeedSeverity).toBe(10); // Math.max(10, 5) = 10
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe enviar TravelMode Truck para HEAVY_DUTY y machinery', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [{ geometryOffset: 0, speedLimit: 60, functionalClass: 3 }],
-        geometry: [
-          [-79.991, 9.991],
-          [-79.998, 9.998],
-        ],
-      });
-
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 75, // exceeds 60 + 10 = 70
-          timestamp: new Date('2026-06-12T12:00:00Z'),
-          angle: 90,
-        } as any,
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 75,
-          timestamp: new Date('2026-06-12T12:00:05Z'),
-          angle: 90,
-        } as any,
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 58,
-          timestamp: new Date('2026-06-12T12:00:10Z'),
-          angle: 90,
-        } as any,
-      ];
-
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.HEAVY_DUTY,
-      );
-
-      expect(result.overspeedCount).toBe(1);
-      expect(result.overspeedSeverity).toBe(10);
-      expect(
-        hereRoutesClientMock.calculateRouteWithSpeedLimits,
-      ).toHaveBeenCalledWith(expect.any(Array), 'Truck');
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe caer al limite general si no hay límite de span', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [
-          { geometryOffset: 0, speedLimit: null }, // Sin límite definido
-        ],
-        geometry: [
-          [-79.991, 9.991],
-          [-79.998, 9.998],
-        ],
-      });
-
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 95,
-          timestamp: new Date(),
-          angle: 90,
-        } as any,
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 58,
-          timestamp: new Date(),
-          angle: 90,
-        } as any,
-      ];
-
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.MACHINERY,
-      );
-
-      // speedLimit es null → usa fallbackOverspeedThreshold (110) → threshold = 120
-      expect(result.overspeedCount).toBe(0);
-      expect(result.overspeedSeverity).toBe(0);
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe usar fallback cuando el GPS está Off Route (> 20m del punto más cercano)', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [{ geometryOffset: 0, speedLimit: 30, functionalClass: 5 }],
-        geometry: [
-          [-79.534, 8.994],
-          [-79.53, 8.99],
-        ],
-      });
-
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 80,
-          timestamp: new Date(),
-          angle: 90,
-        } as any,
-      ];
-
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110, // fallbackThreshold
-        VehicleCategory.PASSENGER,
-      );
-
-      // Off Route → usa lastValidOnRouteSpeedLimit (inicializado en 110) → threshold = 120 → 80 < 120 → sin infracción
-      expect(result.overspeedCount).toBe(0);
-      expect(result.overspeedSeverity).toBe(0);
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe usar Inertial Fallback para puntos Off Route (heredar límite del último punto válido)', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [{ geometryOffset: 0, speedLimit: 40, functionalClass: 5 }],
-        geometry: [
-          [-79.991, 9.991],
-          [-79.998, 9.998],
-        ],
-      });
-
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 50,
-          timestamp: new Date('2026-06-12T12:00:00Z'),
-        } as any, // On Route: snaps to geometry[0], speedLimit = 50. lastValidOnRouteSpeedLimit becomes 50
-        {
-          latitude: 9.0, // way off route
-          longitude: -79.0,
-          speed: 65, // exceeds 50 + 10 = 60 (Inertial Fallback limit = 50)
-          timestamp: new Date('2026-06-12T12:00:05Z'),
-        } as any,
-        {
-          latitude: 9.0, // way off route
-          longitude: -79.0,
-          speed: 65,
-          timestamp: new Date('2026-06-12T12:00:10Z'),
-        } as any,
-        {
-          latitude: 9.0, // way off route
-          longitude: -79.0,
-          speed: 50, // below 50 + 10 = 60
-          timestamp: new Date('2026-06-12T12:00:15Z'),
-        } as any,
-      ];
-
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110, // fallbackThreshold is 110, but since we had an on-route point of 50, off-route points must inherit 50
-        VehicleCategory.PASSENGER,
-      );
-
-      // Si heredó 50: speed 65 > 50 + 10 = 60. Se inicia y continúa el episodio (duración 5s >= 5s), count = 1.
-      // Si usara fallback general 110: speed 65 <= 110 + 10 = 120, count = 0.
-      expect(result.overspeedCount).toBe(1);
-      expect(result.overspeedSeverity).toBe(10);
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe aplicar Smart Fallback cuando speedLimit es null basado en FC', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [{ geometryOffset: 0, speedLimit: null, functionalClass: 1 }],
-        geometry: [
-          [-79.991, 9.991],
-          [-79.998, 9.998],
-        ],
-      });
-
-      // Límite FC1 = 110. Threshold = 120.
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 125,
-          timestamp: new Date('2026-06-12T12:00:00Z'),
-        },
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 125,
-          timestamp: new Date('2026-06-12T12:00:05Z'),
-        },
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 80,
-          timestamp: new Date('2026-06-12T12:00:10Z'),
-        },
-      ];
-
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.PASSENGER,
-      );
-      expect(result.overspeedCount).toBe(1);
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe suspender la evaluación durante la ventana de gracia de desaceleración (drop >= 20 km/h)', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [
-          { geometryOffset: 0, speedLimit: 100, functionalClass: 1 },
-          { geometryOffset: 1, speedLimit: 60, functionalClass: 3 },
-        ],
-        geometry: [
-          [-79.991, 9.991],
-          [-79.998, 9.998],
-        ],
-      });
-
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 100,
-          timestamp: new Date('2026-06-12T12:00:00Z'),
-        },
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 75,
-          timestamp: new Date('2026-06-12T12:00:05Z'),
-        }, // en ventana grace
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 75,
-          timestamp: new Date('2026-06-12T12:00:10Z'),
-        }, // en ventana grace
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 75,
-          timestamp: new Date('2026-06-12T12:00:25Z'),
-        }, // fuera ventana grace, empieza ep
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 75,
-          timestamp: new Date('2026-06-12T12:00:30Z'),
-        }, // sigue ep, dura 5s
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 50,
-          timestamp: new Date('2026-06-12T12:00:35Z'),
-        },
-      ];
-
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.PASSENGER,
-      );
-      expect(result.overspeedCount).toBe(1);
-      expect(result.overspeedSeverity).toBe(10);
-    });
-
-    it('evaluateOverspeedingWithHereRoutes debe descartar episodios con duración menor a 5 segundos', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
-        spans: [{ geometryOffset: 0, speedLimit: 50, functionalClass: 5 }],
-        geometry: [
-          [-79.991, 9.991],
-          [-79.998, 9.998],
-        ],
-      });
-
-      const logs = [
-        {
-          latitude: 9.991,
-          longitude: -79.991,
-          speed: 50,
-          timestamp: new Date('2026-06-12T12:00:00Z'),
-        },
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 70,
-          timestamp: new Date('2026-06-12T12:00:05Z'),
-        }, // empieza ep
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 70,
-          timestamp: new Date('2026-06-12T12:00:09Z'),
-        }, // dura 4s
-        {
-          latitude: 9.998,
-          longitude: -79.998,
-          speed: 50,
-          timestamp: new Date('2026-06-12T12:00:10Z'),
-        },
-      ];
-
-      const result = await (service as any).evaluateOverspeedingWithHereRoutes(
-        logs,
-        110,
-        VehicleCategory.PASSENGER,
-      );
-      expect(result.overspeedCount).toBe(0);
-      expect(result.overspeedSeverity).toBe(0);
-    });
-  });
-
   describe('runDailyRollup post-processing with HERE', () => {
     let configService: ConfigService;
 
@@ -738,6 +314,11 @@ describe('ScoringCronService', () => {
       ];
       prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
 
+      overspeedCalculationMock.calculateOverspeedingFallback.mockReturnValue({
+        overspeedCount: 1,
+        overspeedSeverity: 10,
+      });
+
       await service.runDailyRollup('2026-06-01');
 
       expect(prismaMock.dailyTelemetryRollup.findMany).toHaveBeenCalled();
@@ -797,12 +378,12 @@ describe('ScoringCronService', () => {
       ];
       prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
 
-      jest
-        .spyOn(service as any, 'evaluateOverspeedingWithHereRoutes')
-        .mockResolvedValue({
+      overspeedCalculationMock.evaluateOverspeedingWithHereRoutes.mockResolvedValue(
+        {
           overspeedCount: 2,
           overspeedSeverity: 30.0,
-        });
+        },
+      );
 
       await service.runDailyRollup('2026-06-01');
 

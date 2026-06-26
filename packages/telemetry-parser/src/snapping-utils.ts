@@ -89,7 +89,7 @@ export function snapPointToLinks(
     if (pointsCount < 2) {
       const linkPt = link.points[0];
       const dist = haversineDistance(lat, lng, linkPt[1], linkPt[0]);
-      
+
       let anglePenalty = 0;
       let speedPenalty = 0;
 
