@@ -4,7 +4,6 @@ import {
   getCookieSettings,
   isTokenExpired,
   refreshSessionInMiddleware,
-  parseHostHeader,
   getRoleFromToken,
 } from "@vantx/auth";
 
@@ -50,7 +49,6 @@ export async function middleware(request: NextRequest) {
   if (!refreshToken) return NextResponse.next();
 
   let validAccessToken = accessToken;
-  let response = NextResponse.next();
   let cookiesToSet: any[] | undefined = undefined;
 
   // Si el access_token no existe o está expirado, intentamos refrescarlo en el servidor
@@ -94,53 +92,32 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Inyectamos las cabeceras del rol y token si el access_token es válido (o recién refrescado)
   if (validAccessToken) {
     const userRole = getRoleFromToken(validAccessToken);
     const secureHeaders = new Headers(request.headers);
     secureHeaders.set("x-user-role", userRole);
     secureHeaders.set("Authorization", `Bearer ${validAccessToken}`);
 
-    // Si refrescamos el token, también actualizamos el Cookie header en el request
-    // para que las cookies inyectadas estén disponibles en los Server Components en este renderizado.
-    if (cookiesToSet) {
-      let requestCookies = request.headers.get("cookie") || "";
-      const newCookiesMap = new Map<string, string>();
-      requestCookies.split(";").forEach((c) => {
-        const parts = c.trim().split("=");
-        if (parts[0]) newCookiesMap.set(parts[0], parts[1] || "");
-      });
-      cookiesToSet.forEach((cookie) => {
-        newCookiesMap.set(cookie.name, cookie.value);
-      });
-      const newCookieStr = Array.from(newCookiesMap.entries())
-        .map(([name, val]) => `${name}=${val}`)
-        .join("; ");
-      secureHeaders.set("cookie", newCookieStr);
-    }
-
-    // Creamos la respuesta pasando las cabeceras modificadas
-    response = NextResponse.next({
+    const response = NextResponse.next({
       request: {
         headers: secureHeaders,
       },
     });
 
-    // Si refrescamos el token, propagamos las nuevas cookies en el response 200 OK
     if (cookiesToSet) {
       cookiesToSet.forEach((cookie) => {
         response.cookies.set(cookie.name, cookie.value, cookie.options);
       });
-      // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
       response.headers.set("x-middleware-cache", "no-cache");
-      // Evitamos agresivamente que el navegador o WebView del PWA cachee la respuesta
       response.headers.set(
         "Cache-Control",
         "no-store, no-cache, must-revalidate, max-age=0",
       );
       response.headers.set("Pragma", "no-cache");
     }
+
+    return response;
   }
 
-  return response;
+  return NextResponse.next();
 }

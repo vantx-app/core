@@ -4,10 +4,6 @@ export async function fetchServer(endpoint: string, options: RequestInit = {}) {
   // Intentamos obtener el token desde la cabecera Authorization enviada por el middleware
   const headerStore = await headers();
   const authHeader = headerStore.get("Authorization");
-  const roleHeader = headerStore.get("x-user-role");
-  console.log(`DEBUG [fetchServer]: endpoint = ${endpoint}`);
-  console.log(`DEBUG [fetchServer]: header Authorization =`, authHeader ? "present" : "missing");
-  console.log(`DEBUG [fetchServer]: header x-user-role =`, roleHeader);
 
   let token = null;
 
@@ -15,25 +11,12 @@ export async function fetchServer(endpoint: string, options: RequestInit = {}) {
     token = authHeader.substring(7);
   }
 
-  // Si no está en Authorization, intentamos extraerlo de la cookie inyectada en request headers
-  if (!token) {
-    const cookieHeader = headerStore.get("cookie");
-    if (cookieHeader) {
-      const match = cookieHeader.match(/(?:^|;\s*)access_token=([^;]*)/);
-      if (match) {
-        token = match[1];
-      }
-    }
-  }
-
-  // Fallback a las cookies normales
+  // Fallback: read directly from the cookie store
   if (!token) {
     const cookieStore = await cookies();
     token = cookieStore.get("access_token")?.value;
-    console.log(`DEBUG [fetchServer]: fallback to cookies, access_token =`, token ? "present" : "missing");
   }
 
-  console.log(`DEBUG [fetchServer]: final resolved token =`, token ? "present" : "missing");
 
   // Si no hay token y se consulta /users/me, es un invitado
   if (endpoint === "/users/me" && !token) {
@@ -41,8 +24,6 @@ export async function fetchServer(endpoint: string, options: RequestInit = {}) {
   }
 
   const url = `${process.env.INTERNAL_API_URL}/api${endpoint}`;
-
-  console.log(`🚀 Intentando fetch a: ${url}`);
 
   // Preparamos cabeceras limpias
   const requestHeaders: Record<string, string> = {

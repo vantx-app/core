@@ -58,12 +58,10 @@ export const useFleetSocket = (
     socketRef.current = socket;
 
     socket.on("connect", () => {
-      console.log("✅ Socket conectado:", socket.id);
       setIsConnected(true);
     });
 
     socket.on("disconnect", () => {
-      console.log("❌ Socket desconectado");
       setIsConnected(false);
     });
 
@@ -161,11 +159,7 @@ export const useFleetSocket = (
 
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        console.log(
-          "ℹ️ Cambio de visibilidad del documento: visible. Comprobando conexión del socket...",
-        );
         if (socket && !socket.connected) {
-          console.log("🔌 Socket desconectado. Intentando reconectar...");
           socket.connect();
         }
       }
@@ -175,7 +169,6 @@ export const useFleetSocket = (
 
     // Limpieza: Cuando el componente se desmonta o el token cambia
     return () => {
-      console.log("🧹 Limpiando socket viejo...");
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       socket.disconnect();
       socketRef.current = null;
@@ -186,7 +179,6 @@ export const useFleetSocket = (
   // Manejar suscripciones de salas sin desconectar el socket físico
   useEffect(() => {
     if (socketRef.current && isConnected) {
-      console.log("📡 Emitiendo subscribe-to-fleet con params:", adminParams);
       socketRef.current.emit("subscribe-to-fleet", adminParams);
     }
   }, [adminParams, isConnected]);

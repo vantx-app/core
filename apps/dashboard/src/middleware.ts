@@ -5,7 +5,6 @@ import { getRoleFromToken, isTokenExpired, NAV_LINKS } from "./utils/client";
 import {
   getCookieSettings,
   refreshSessionInMiddleware,
-  parseHostHeader,
 } from "@vantx/auth";
 
 export const config = {
@@ -17,7 +16,6 @@ export const config = {
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
-  console.log(`DEBUG [Middleware]: Enter middleware for pathname: ${pathname}`);
   const accessToken = request.cookies.get("access_token")?.value;
   const refreshToken = request.cookies.get("refresh_token")?.value;
 
@@ -80,11 +78,9 @@ export async function middleware(request: NextRequest) {
   }
 
   let validAccessToken = accessToken;
-  let response = NextResponse.next();
   let cookiesToSet: any[] | undefined = undefined;
 
   if (!accessToken || isTokenExpired(accessToken)) {
-    console.log(`DEBUG [Middleware]: Access token is missing or expired for ${pathname}. Attempting refresh...`);
     try {
       const result = await refreshSessionInMiddleware({
         refreshToken,
@@ -93,7 +89,6 @@ export async function middleware(request: NextRequest) {
         host,
       });
 
-      console.log("DEBUG [Middleware]: Refresh result success =", result.success);
 
       if (!result.success) {
         throw new Error(result.errorType || "TRANSIENT_ERROR");
@@ -103,7 +98,6 @@ export async function middleware(request: NextRequest) {
       validAccessToken = newToken;
       cookiesToSet = result.cookiesToSet;
     } catch (error: any) {
-      console.error("DEBUG [Middleware]: Error during refresh:", error.message);
       console.error("[Auth] Error crítico en middleware:", error);
 
       // Si es un error de red o de servidor (5xx, timeouts), no borramos sesión ni redirigimos.
@@ -156,29 +150,7 @@ export async function middleware(request: NextRequest) {
     secureHeaders.set("x-user-role", userRole);
     secureHeaders.set("Authorization", `Bearer ${validAccessToken}`);
 
-    // Si refrescamos el token, también actualizamos el Cookie header en el request
-    // para que las cookies inyectadas estén disponibles en los Server Components en este renderizado.
-    if (cookiesToSet) {
-      let requestCookies = request.headers.get("cookie") || "";
-      const newCookiesMap = new Map<string, string>();
-      requestCookies.split(";").forEach((c) => {
-        const parts = c.trim().split("=");
-        if (parts[0]) newCookiesMap.set(parts[0], parts[1] || "");
-      });
-      cookiesToSet.forEach((cookie) => {
-        newCookiesMap.set(cookie.name, cookie.value);
-      });
-      const newCookieStr = Array.from(newCookiesMap.entries())
-        .map(([name, val]) => `${name}=${val}`)
-        .join("; ");
-      secureHeaders.set("cookie", newCookieStr);
-    }
-
-    console.log("DEBUG [Middleware]: Forwarding x-user-role =", secureHeaders.get("x-user-role"));
-    console.log("DEBUG [Middleware]: Forwarding Authorization =", secureHeaders.get("Authorization") ? "present" : "missing");
-
-    // Creamos la respuesta pasando las cabeceras modificadas
-    response = NextResponse.next({
+    const response = NextResponse.next({
       request: {
         headers: secureHeaders,
       },
@@ -189,16 +161,16 @@ export async function middleware(request: NextRequest) {
       cookiesToSet.forEach((cookie) => {
         response.cookies.set(cookie.name, cookie.value, cookie.options);
       });
-      // Deshabilitamos la caché de middleware para garantizar la frescura de los tokens
       response.headers.set("x-middleware-cache", "no-cache");
-      // Evitamos agresivamente que el navegador o WebView del PWA cachee la respuesta
       response.headers.set(
         "Cache-Control",
         "no-store, no-cache, must-revalidate, max-age=0",
       );
       response.headers.set("Pragma", "no-cache");
     }
+
+    return response;
   }
 
-  return response;
+  return NextResponse.next();
 }
