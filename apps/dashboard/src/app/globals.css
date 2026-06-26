@@ -36,3 +36,10 @@
     padding-top: 1rem !important;
   }
 }
+
+/* Hide Mapbox default navigation control group on mobile viewports */
+@media (max-width: 768px) {
+  .mapboxgl-ctrl-group {
+    display: none !important;
+  }
+}

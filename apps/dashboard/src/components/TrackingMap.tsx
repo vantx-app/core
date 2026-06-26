@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import { io, Socket } from "socket.io-client";
-import { ShieldCheck, Navigation, Compass, MapPin } from "lucide-react";
+import { ShieldCheck, Navigation, Compass, MapPin, Info } from "lucide-react";
 import axios from "axios";
 import {
   DEFAULT_MAP_CONFIG,
@@ -31,18 +31,18 @@ const statusConfig = {
     color: "#10b981",
   },
   IDLING: {
-    label: "En ralentí",
+    label: "En espera",
     badgeClass:
       "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400",
     dotClass: "bg-amber-500",
     color: "#f59e0b",
   },
   EXCESSIVE_IDLING: {
-    label: "Ralentí excesivo",
+    label: "En espera",
     badgeClass:
-      "bg-rose-500/10 border-rose-500/20 text-rose-700 dark:text-rose-400",
-    dotClass: "bg-rose-500",
-    color: "#ef4444",
+      "bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400",
+    dotClass: "bg-amber-500",
+    color: "#f59e0b",
   },
   STOPPED: {
     label: "Detenido",
@@ -457,7 +457,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
       {/* Contenedor flotante de la tarjeta de detalles (sólido y ultra-compacto para pantallas móviles) */}
       <div className="absolute top-4 left-4 right-4 md:right-auto md:w-80 z-10 animate-in fade-in slide-in-from-top-4 duration-300">
         <div className="bg-base-100 border border-base-300/60 shadow-md rounded-2xl p-4 flex flex-col gap-2.5">
-          {/* Fila superior: Placa del vehículo y Estado del vehículo */}
+          {/* Fila superior: Placa del vehículo, cliente y estado con tooltip de aviso */}
           <div className="flex items-center justify-between text-xs pb-2">
             <div className="flex items-center gap-1.5 font-bold font-mono text-base-content/85">
               <ShieldCheck className="size-4 text-primary" />
@@ -465,7 +465,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
             </div>
             <div className="flex items-center text-xs">
               {details.clientName ? (
-                <span className="text-sm font-bold text-base-content/90 truncate max-w-[150px] py-0.5">
+                <span className="text-sm font-bold text-base-content/90 truncate max-w-[120px] py-0.5">
                   {details.clientName}
                 </span>
               ) : (
@@ -474,50 +474,53 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
                 </span>
               )}
             </div>
-            <span
-              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${currentStatusConfig.badgeClass}`}
-            >
+            <div className="flex items-center gap-1">
               <span
-                className={`size-1.5 rounded-full ${currentStatusConfig.dotClass} ${details.currentStatus === "MOVING" && "animate-ping"}`}
-              />
-              {currentStatusConfig.label}
-            </span>
-          </div>
-
-          {/* Botones de acción en cuadrícula de 2 columnas */}
-          <div className="grid grid-cols-2 gap-2 mt-0.5">
-            {isFollowing ? (
-              <button
-                onClick={handleCenterMap}
-                className="btn btn-sm btn-primary text-white w-full gap-1 font-bold shadow-sm transition-all rounded-xl text-xs"
+                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${currentStatusConfig.badgeClass}`}
               >
-                <Compass className="size-3.5" />
-                Siguiendo
-              </button>
-            ) : (
-              <button
-                onClick={handleCenterMap}
-                className="btn btn-primary btn-sm w-full gap-1 text-white font-bold shadow-md hover:shadow-lg transition-all rounded-xl text-xs animate-in fade-in zoom-in-95 duration-200"
-              >
-                <Navigation className="size-3.5 fill-current rotate-45" />
-                Seguir vehíc.
-              </button>
-            )}
-
-            <button
-              onClick={handleShowUserLocation}
-              disabled={isLocating}
-              className={`btn btn-sm gap-1 font-bold shadow-sm rounded-xl text-xs transition-all ${
-                userLocation
-                  ? "btn-secondary text-white"
-                  : "btn-outline btn-secondary"
-              }`}
-            >
-              <MapPin
-                className={`size-3.5 ${isLocating ? "animate-pulse" : ""}`}
-              />
-              {isLocating ? "Ubicando..." : "Mi ubicación"}
-            </button>
+                <span
+                  className={`size-1.5 rounded-full ${currentStatusConfig.dotClass} ${details.currentStatus === "MOVING" && "animate-ping"}`}
+                />
+                {currentStatusConfig.label}
+              </span>
+              <div className="dropdown dropdown-end dropdown-hover">
+                <div
+                  tabIndex={0}
+                  role="button"
+                  className="text-base-content/50 hover:text-base-content transition-colors p-1"
+                >
+                  <Info className="size-3.5" />
+                </div>
+                <div
+                  tabIndex={0}
+                  className="dropdown-content z-20 card card-compact w-64 p-3 shadow-md bg-base-100 border border-base-300 text-[11px] text-base-content/75 leading-normal font-normal animate-in fade-in duration-200 space-y-2.5"
+                >
+                  <p className="font-bold text-base-content/90 border-b border-base-200 pb-1.5 text-xs">
+                    Información de Rastreo
+                  </p>
+                  <p className="text-[10px] text-base-content/60 leading-normal">
+                    La ubicación del vehículo se actualiza periódicamente, no en tiempo real. Úsese como una referencia visual de la proximidad del vehículo.
+                  </p>
+                  <div className="border-t border-base-200 pt-2 space-y-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                      <span className="font-semibold text-base-content/95">En movimiento:</span>
+                      <span className="text-base-content/60">Vehículo circulando.</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                      <span className="font-semibold text-base-content/95">En espera:</span>
+                      <span className="text-base-content/60">Parada temporal (ej. tráfico).</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                      <span className="font-semibold text-base-content/95">Detenido:</span>
+                      <span className="text-base-content/60">Vehículo apagado/estacionado.</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Mensajes de error de ubicación */}
@@ -539,6 +542,42 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Controladores flotantes HUD (estilo Google Maps) */}
+      <div className="absolute bottom-6 md:bottom-28 right-4 z-10 flex flex-col gap-2">
+        {/* Centrar/Seguir Vehículo */}
+        <button
+          onClick={handleCenterMap}
+          className={`btn btn-circle shadow-md border transition-all ${
+            isFollowing
+              ? "btn-primary text-white border-primary"
+              : "bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200"
+          }`}
+          title={isFollowing ? "Siguiendo vehículo" : "Seguir vehículo"}
+        >
+          {isFollowing ? (
+            <Compass className="size-5" />
+          ) : (
+            <Navigation className="size-5 fill-current rotate-45" />
+          )}
+        </button>
+
+        {/* Mi Ubicación (Geolocalización) */}
+        <button
+          onClick={handleShowUserLocation}
+          disabled={isLocating}
+          className={`btn btn-circle shadow-md border transition-all ${
+            userLocation
+              ? "btn-primary text-white border-primary"
+              : "bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200"
+          }`}
+          title="Mi ubicación"
+        >
+          <MapPin
+            className={`size-5 ${isLocating ? "animate-pulse" : ""}`}
+          />
+        </button>
       </div>
     </div>
   );
