@@ -26,9 +26,9 @@ const statusConfig = {
   MOVING: {
     label: "En movimiento",
     badgeClass:
-      "bg-emerald-500/10 border-emerald-500/20 text-emerald-700 dark:text-emerald-400",
-    dotClass: "bg-emerald-500",
-    color: "#10b981",
+      "bg-blue-500/10 border-blue-500/20 text-blue-700 dark:text-blue-400",
+    dotClass: "bg-blue-500",
+    color: "#3b82f6",
   },
   IDLING: {
     label: "En espera",
@@ -504,7 +504,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
               <span className="text-base-content/65 font-medium">
                 Distancia a ti:
               </span>
-              <span className="font-bold text-secondary bg-secondary/10 px-2.5 py-0.5 rounded-lg border border-secondary/15">
+              <span className="font-bold text-base-content/90">
                 {formatDistance(distance)}
               </span>
             </div>
@@ -536,7 +536,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
             </p>
             <div className="border-t border-base-200 pt-2 space-y-1.5">
               <div className="flex items-center gap-2">
-                <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="size-2 rounded-full bg-blue-500 shrink-0" />
                 <span className="font-semibold text-base-content/95">En movimiento:</span>
                 <span className="text-base-content/60">Vehículo circulando.</span>
               </div>
@@ -564,11 +564,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
           }`}
           title={isFollowing ? "Siguiendo vehículo" : "Seguir vehículo"}
         >
-          {isFollowing ? (
-            <Compass className="size-5 md:size-6" />
-          ) : (
-            <Navigation className="size-5 md:size-6 fill-current rotate-45" />
-          )}
+          <Compass className="size-5 md:size-6" />
         </button>
 
         {/* Mi Ubicación (Geolocalización con spinner de carga) */}
