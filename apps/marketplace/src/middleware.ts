@@ -118,11 +118,24 @@ export async function middleware(request: NextRequest) {
       secureHeaders.set("cookie", newCookieStr);
     }
 
-    // Creamos una respuesta pasando los headers modificados para Next.js 15/16
-    response = NextResponse.next({
+    // Creamos una respuesta limpia
+    response = NextResponse.next();
+
+    // Generamos las cabeceras de anulación nativas de Next.js de manera segura utilizando una respuesta temporal (dummy)
+    const dummyRes = NextResponse.next({
       request: {
         headers: secureHeaders,
       },
+    });
+
+    // Copiamos las cabeceras de anulación a la respuesta real
+    dummyRes.headers.forEach((value, key) => {
+      if (
+        key === "x-middleware-override-headers" ||
+        key.startsWith("x-middleware-request-")
+      ) {
+        response.headers.set(key, value);
+      }
     });
 
     // Si refrescamos el token, propagamos las nuevas cookies en el response 200 OK
