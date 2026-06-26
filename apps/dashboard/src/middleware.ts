@@ -16,6 +16,7 @@ export const config = {
 
 export async function middleware(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
+  console.log(`DEBUG [Middleware]: Enter middleware for pathname: ${pathname}`);
   const accessToken = request.cookies.get("access_token")?.value;
   const refreshToken = request.cookies.get("refresh_token")?.value;
 
@@ -82,7 +83,7 @@ export async function middleware(request: NextRequest) {
   let cookiesToSet: any[] | undefined = undefined;
 
   if (!accessToken || isTokenExpired(accessToken)) {
-    console.log("DEBUG [Middleware]: Access token is missing or expired. Attempting refresh...");
+    console.log(`DEBUG [Middleware]: Access token is missing or expired for ${pathname}. Attempting refresh...`);
     try {
       const result = await refreshSessionInMiddleware({
         refreshToken,
