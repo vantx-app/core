@@ -1,5 +1,5 @@
 import * as bcrypt from 'bcrypt';
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from 'src/users/users.service';
 import { UserWithoutPassword } from 'src/users/entities/user.entity';
@@ -57,9 +57,13 @@ export class AuthService {
     const payload = await this.verifyJwtToken(refreshToken);
     const session = await this.sessionService.validate(payload.sessionId);
 
-    const user = await this.prisma.user.findUniqueOrThrow({
+    const user = await this.prisma.user.findUnique({
       where: { id: session.userId },
     });
+
+    if (!user) {
+      throw new UnauthorizedException('Usuario no encontrado');
+    }
 
     // 2. Extender la vida de la sesión en la base de datos (CRÍTICO)
     // Sincroniza la expiración real en Postgres con los 7 días del nuevo JWT.
@@ -113,13 +117,18 @@ export class AuthService {
 
   private async verifyJwtToken(refreshToken: string) {
     const jwtSecret = this.configService.get<string>('JWT_SECRET');
-    const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
-      refreshToken,
-      {
-        secret: jwtSecret,
-      },
-    );
-
-    return payload;
+    try {
+      const payload = await this.jwtService.verifyAsync<RefreshTokenPayload>(
+        refreshToken,
+        {
+          secret: jwtSecret,
+        },
+      );
+      return payload;
+    } catch (error) {
+      throw new UnauthorizedException(
+        'Token de actualización inválido o expirado',
+      );
+    }
   }
 }
