@@ -82,6 +82,7 @@ export async function middleware(request: NextRequest) {
   let cookiesToSet: any[] | undefined = undefined;
 
   if (!accessToken || isTokenExpired(accessToken)) {
+    console.log("DEBUG [Middleware]: Access token is missing or expired. Attempting refresh...");
     try {
       const result = await refreshSessionInMiddleware({
         refreshToken,
@@ -89,6 +90,8 @@ export async function middleware(request: NextRequest) {
         internalApiUrl: process.env.INTERNAL_API_URL || "http://localhost:8000",
         host,
       });
+
+      console.log("DEBUG [Middleware]: Refresh result success =", result.success);
 
       if (!result.success) {
         throw new Error(result.errorType || "TRANSIENT_ERROR");
@@ -98,6 +101,7 @@ export async function middleware(request: NextRequest) {
       validAccessToken = newToken;
       cookiesToSet = result.cookiesToSet;
     } catch (error: any) {
+      console.error("DEBUG [Middleware]: Error during refresh:", error.message);
       console.error("[Auth] Error crítico en middleware:", error);
 
       // Si es un error de red o de servidor (5xx, timeouts), no borramos sesión ni redirigimos.
@@ -167,6 +171,9 @@ export async function middleware(request: NextRequest) {
         .join("; ");
       secureHeaders.set("cookie", newCookieStr);
     }
+
+    console.log("DEBUG [Middleware]: Forwarding x-user-role =", secureHeaders.get("x-user-role"));
+    console.log("DEBUG [Middleware]: Forwarding Authorization =", secureHeaders.get("Authorization") ? "present" : "missing");
 
     // Creamos la respuesta pasando las cabeceras modificadas
     response = NextResponse.next({
