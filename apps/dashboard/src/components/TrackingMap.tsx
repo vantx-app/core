@@ -164,10 +164,17 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
       container: mapContainer.current,
       center: [initialLng, initialLat],
       zoom: 15,
+      attributionControl: false, // Disable default bottom-right attribution
     });
 
     // Add navigation controls
     map.current.addControl(new mapboxgl.NavigationControl(), "bottom-right");
+
+    // Add compact attribution control to bottom-left corner to avoid overlapping custom HUD buttons
+    map.current.addControl(
+      new mapboxgl.AttributionControl({ compact: true }),
+      "bottom-left"
+    );
 
     // Pause auto-follow if the user manually drags/zooms/pans the map
     map.current.on("movestart", (e) => {
@@ -457,7 +464,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
       {/* Contenedor flotante de la tarjeta de detalles (sólido y ultra-compacto para pantallas móviles) */}
       <div className="absolute top-4 left-4 right-4 md:right-auto md:w-80 z-10 animate-in fade-in slide-in-from-top-4 duration-300">
         <div className="bg-base-100 border border-base-300/60 shadow-md rounded-2xl p-4 flex flex-col gap-2.5">
-          {/* Fila superior: Placa del vehículo, cliente y estado con tooltip de aviso */}
+          {/* Fila superior: Placa del vehículo, cliente y estado */}
           <div className="flex items-center justify-between text-xs pb-2">
             <div className="flex items-center gap-1.5 font-bold font-mono text-base-content/85">
               <ShieldCheck className="size-4 text-primary" />
@@ -465,7 +472,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
             </div>
             <div className="flex items-center text-xs">
               {details.clientName ? (
-                <span className="text-sm font-bold text-base-content/90 truncate max-w-[120px] py-0.5">
+                <span className="text-sm font-bold text-base-content/90 truncate max-w-[150px] py-0.5">
                   {details.clientName}
                 </span>
               ) : (
@@ -474,53 +481,14 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1">
+            <span
+              className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${currentStatusConfig.badgeClass}`}
+            >
               <span
-                className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold border ${currentStatusConfig.badgeClass}`}
-              >
-                <span
-                  className={`size-1.5 rounded-full ${currentStatusConfig.dotClass} ${details.currentStatus === "MOVING" && "animate-ping"}`}
-                />
-                {currentStatusConfig.label}
-              </span>
-              <div className="dropdown dropdown-end dropdown-hover">
-                <div
-                  tabIndex={0}
-                  role="button"
-                  className="text-base-content/50 hover:text-base-content transition-colors p-1"
-                >
-                  <Info className="size-3.5" />
-                </div>
-                <div
-                  tabIndex={0}
-                  className="dropdown-content z-20 card card-compact w-64 p-3 shadow-md bg-base-100 border border-base-300 text-[11px] text-base-content/75 leading-normal font-normal animate-in fade-in duration-200 space-y-2.5"
-                >
-                  <p className="font-bold text-base-content/90 border-b border-base-200 pb-1.5 text-xs">
-                    Información de Rastreo
-                  </p>
-                  <p className="text-[10px] text-base-content/60 leading-normal">
-                    La ubicación del vehículo se actualiza periódicamente, no en tiempo real. Úsese como una referencia visual de la proximidad del vehículo.
-                  </p>
-                  <div className="border-t border-base-200 pt-2 space-y-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
-                      <span className="font-semibold text-base-content/95">En movimiento:</span>
-                      <span className="text-base-content/60">Vehículo circulando.</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-amber-500 shrink-0" />
-                      <span className="font-semibold text-base-content/95">En espera:</span>
-                      <span className="text-base-content/60">Parada temporal (ej. tráfico).</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="size-2 rounded-full bg-slate-400 shrink-0" />
-                      <span className="font-semibold text-base-content/95">Detenido:</span>
-                      <span className="text-base-content/60">Vehículo apagado/estacionado.</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                className={`size-1.5 rounded-full ${currentStatusConfig.dotClass} ${details.currentStatus === "MOVING" && "animate-ping"}`}
+              />
+              {currentStatusConfig.label}
+            </span>
           </div>
 
           {/* Mensajes de error de ubicación */}
@@ -530,13 +498,13 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
             </div>
           )}
 
-          {/* Distancia dinámica al vehículo */}
+          {/* Distancia dinámica al vehículo (con mayor espaciado superior) */}
           {distance !== null && (
-            <div className="flex items-center justify-between text-xs py-1.5 border-t border-base-300 mt-1.5 animate-in fade-in duration-300">
+            <div className="flex items-center justify-between text-xs pt-4 mt-4 border-t border-base-300 animate-in fade-in duration-300">
               <span className="text-base-content/65 font-medium">
                 Distancia a ti:
               </span>
-              <span className="font-bold text-secondary bg-secondary/10 px-2 py-0.5 rounded-lg border border-secondary/15">
+              <span className="font-bold text-secondary bg-secondary/10 px-2.5 py-0.5 rounded-lg border border-secondary/15">
                 {formatDistance(distance)}
               </span>
             </div>
@@ -545,11 +513,51 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
       </div>
 
       {/* Controladores flotantes HUD (estilo Google Maps) */}
-      <div className="absolute bottom-6 md:bottom-28 right-4 z-10 flex flex-col gap-2">
+      <div className="absolute bottom-6 md:bottom-28 right-4 z-10 flex flex-col gap-2.5">
+        {/* Info Legend Tooltip (estilo botón flotante) */}
+        <div className="dropdown dropdown-left dropdown-hover">
+          <div
+            tabIndex={0}
+            role="button"
+            className="btn btn-circle bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200 shadow-md w-12 h-12 md:w-14 md:h-14 flex items-center justify-center transition-all"
+            title="Información de rastreo"
+          >
+            <Info className="size-5 md:size-6" />
+          </div>
+          <div
+            tabIndex={0}
+            className="dropdown-content z-20 mr-2 card card-compact w-64 p-3 shadow-md bg-base-100 border border-base-300 text-[11px] text-base-content/75 leading-normal font-normal animate-in fade-in duration-200 space-y-2.5"
+          >
+            <p className="font-bold text-base-content/90 border-b border-base-200 pb-1.5 text-xs">
+              Información de Rastreo
+            </p>
+            <p className="text-[10px] text-base-content/60 leading-normal">
+              La ubicación del vehículo se actualiza periódicamente, no en tiempo real. Úsese como una referencia visual de la proximidad del vehículo.
+            </p>
+            <div className="border-t border-base-200 pt-2 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="size-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="font-semibold text-base-content/95">En movimiento:</span>
+                <span className="text-base-content/60">Vehículo circulando.</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="size-2 rounded-full bg-amber-500 shrink-0" />
+                <span className="font-semibold text-base-content/95">En espera:</span>
+                <span className="text-base-content/60">Parada temporal (ej. tráfico).</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="size-2 rounded-full bg-slate-400 shrink-0" />
+                <span className="font-semibold text-base-content/95">Detenido:</span>
+                <span className="text-base-content/60">Vehículo apagado/estacionado.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Centrar/Seguir Vehículo */}
         <button
           onClick={handleCenterMap}
-          className={`btn btn-circle shadow-md border transition-all ${
+          className={`btn btn-circle shadow-md border transition-all w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
             isFollowing
               ? "btn-primary text-white border-primary"
               : "bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200"
@@ -557,26 +565,28 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
           title={isFollowing ? "Siguiendo vehículo" : "Seguir vehículo"}
         >
           {isFollowing ? (
-            <Compass className="size-5" />
+            <Compass className="size-5 md:size-6" />
           ) : (
-            <Navigation className="size-5 fill-current rotate-45" />
+            <Navigation className="size-5 md:size-6 fill-current rotate-45" />
           )}
         </button>
 
-        {/* Mi Ubicación (Geolocalización) */}
+        {/* Mi Ubicación (Geolocalización con spinner de carga) */}
         <button
           onClick={handleShowUserLocation}
           disabled={isLocating}
-          className={`btn btn-circle shadow-md border transition-all ${
+          className={`btn btn-circle shadow-md border transition-all w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
             userLocation
               ? "btn-primary text-white border-primary"
               : "bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200"
           }`}
           title="Mi ubicación"
         >
-          <MapPin
-            className={`size-5 ${isLocating ? "animate-pulse" : ""}`}
-          />
+          {isLocating ? (
+            <span className="loading loading-spinner loading-sm"></span>
+          ) : (
+            <MapPin className="size-5 md:size-6" />
+          )}
         </button>
       </div>
     </div>
