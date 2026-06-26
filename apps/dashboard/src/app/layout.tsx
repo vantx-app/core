@@ -45,7 +45,7 @@ export default function RootLayout({
       */}
       <style>{`
         @keyframes pageEntry {
-          from { opacity: 0; }
+          from { opacity: 0; background: #f8fafc; }
           to   { opacity: 1; }
         }
         html {
@@ -57,8 +57,8 @@ export default function RootLayout({
       `}</style>
       <body>
         <PWARegistration />
-        {/* Cross-app transition overlay — outside {children} to persist across navigations */}
-        <CrossAppTransitionOverlay />
+        {/* Cross-app transition overlay — background matches dashboard's light canvas */}
+        <CrossAppTransitionOverlay background="#f8fafc" />
         {/* Same-app route progress bar — Suspense required for useSearchParams in App Router */}
         <Suspense fallback={null}>
           <RouteProgressBar />

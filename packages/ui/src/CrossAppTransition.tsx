@@ -50,11 +50,23 @@ export function navigateToCrossApp(
 
 // ─── Overlay Component ────────────────────────────────────────────────────────
 
+interface OverlayProps {
+  /**
+   * Canvas background color of the host app.
+   * Should match the page background so the overlay feels like a natural
+   * extension of the current surface rather than a jarring color flash.
+   *
+   * - Dashboard (light): "#ffffff" or "#f8fafc"
+   * - Marketplace (dark): "#020617"
+   */
+  background?: string;
+}
+
 /**
  * Full-screen branded overlay that appears during cross-app navigations.
  * Must be placed once in each app's root layout, outside {children}.
  */
-export function CrossAppTransitionOverlay() {
+export function CrossAppTransitionOverlay({ background = "#f8fafc" }: OverlayProps) {
   const [overlay, setOverlay] = useState<OverlayState>({
     visible: false,
     variant: "owner",
@@ -120,6 +132,9 @@ export function CrossAppTransitionOverlay() {
       ? "rgba(16, 185, 129, 0.15)"
       : "rgba(29, 78, 216, 0.15)";
 
+  const isDarkBg = background === "#020617" || background.includes("020617") || background.includes("dark");
+  const logoVariant = isDarkBg ? "dark" : "light";
+
   return (
     <div
       role="status"
@@ -129,7 +144,7 @@ export function CrossAppTransitionOverlay() {
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        backgroundColor: "#020617",
+        backgroundColor: background,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -195,13 +210,13 @@ export function CrossAppTransitionOverlay() {
             justifyContent: "center",
           }}
         >
-          <Logo size={28} showText={false} variant="dark" />
+          <Logo size={28} showText={false} variant={logoVariant} />
         </div>
       </div>
 
       {/* Wordmark — subtle pulse animation */}
       <div style={{ animation: "crossapp-wordmark-pulse 1.8s ease-in-out infinite" }}>
-        <Logo size="md" showText variant="dark" />
+        <Logo size="md" showText variant={logoVariant} />
       </div>
 
       {/* Escape hatch — fades in after 3 seconds */}
