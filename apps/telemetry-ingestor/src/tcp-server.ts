@@ -12,6 +12,22 @@ const server = net.createServer((socket) => {
   let isHandshakeComplete = false;
   let deviceImei = "";
   let dataBuffer = Buffer.alloc(0);
+  let isProcessing = false;
+  const packetQueue: Buffer[] = [];
+
+  const processQueue = async () => {
+    if (isProcessing || packetQueue.length === 0) return;
+    isProcessing = true;
+    while (packetQueue.length > 0) {
+      const packet = packetQueue.shift()!;
+      try {
+        await processTelemetry(packet, deviceImei, socket);
+      } catch (err: any) {
+        logger.error(`Error processing queued packet for ${deviceImei}:`, err.message);
+      }
+    }
+    isProcessing = false;
+  };
 
   // 1. Prevenir Ghost Connections
   socket.setTimeout(180000);
@@ -56,11 +72,17 @@ const server = net.createServer((socket) => {
 
       const completePacket = dataBuffer.subarray(0, totalRequiredLength);
 
-      // Procesamiento asíncrono
-      processTelemetry(completePacket, deviceImei, socket);
+      // Encolar y procesar secuencialmente
+      packetQueue.push(completePacket);
 
       // Limpiar buffer
       dataBuffer = dataBuffer.subarray(totalRequiredLength);
+    }
+
+    if (packetQueue.length > 0) {
+      processQueue().catch((err) =>
+        logger.error(`Error en cola de procesamiento para ${deviceImei}:`, err.message),
+      );
     }
   });
 
