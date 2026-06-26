@@ -68,7 +68,7 @@ export async function saveTelemetryBatchData({
   // 4. Delete the ghost trips physically
   for (const tripId of tripsToDelete) {
     transactionPromises.push(
-      prisma.trip.delete({
+      prisma.trip.deleteMany({
         where: { id: tripId },
       }),
     );

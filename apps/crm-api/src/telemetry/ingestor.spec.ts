@@ -5,6 +5,7 @@ jest.mock('@prisma/client', () => {
   const mockCreate = jest.fn();
   const mockUpdate = jest.fn();
   const mockDelete = jest.fn();
+  const mockDeleteMany = jest.fn();
   const mockCreateMany = jest.fn();
   const mockUpsert = jest.fn();
   const mock$transaction = jest.fn().mockImplementation(async (arr) => arr);
@@ -16,8 +17,9 @@ jest.mock('@prisma/client', () => {
       create: mockCreate,
       update: mockUpdate,
       delete: mockDelete,
+      deleteMany: mockDeleteMany,
     },
-    telemetryLog: { createMany: mockCreateMany },
+    telemetryLog: { createMany: mockCreateMany, updateMany: jest.fn() },
     vehicleLiveState: { upsert: mockUpsert },
     mapLink: { findMany: jest.fn().mockResolvedValue([]) },
     $transaction: mock$transaction,
@@ -898,6 +900,147 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       // Debe conservar las coordenadas originales debido a los pocos satélites
       expect(telemetryPushed.latitude).toBe(8.98);
       expect(telemetryPushed.longitude).toBe(-79.52);
+    });
+
+    it('debe realizar eliminaciones idempotentes usando deleteMany para evitar fallos si el viaje no existe', async () => {
+      const mockVehicleId = 'vehicle-uuid-idempotent';
+      const mockImei = 'imei-idempotent';
+      mockPrisma.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Idempotent',
+        deviceProfile: 'TELTONIKA_STANDARD',
+      });
+
+      // Simular un viaje fantasma que ya existía (se resolverá findFirst del docker restart guard)
+      mockPrisma.trip.findFirst.mockResolvedValueOnce({
+        id: 'trip-ghost-uuid',
+        startTime: new Date(1716570000000), // Mismo tiempo para simular que está activo y es de corta duración (fantasma)
+      });
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000), // En el pasado
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 0,
+            250: 0,
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      // Verificamos que se llame a deleteMany y no a delete para la eliminación física
+      expect(mockPrisma.trip.deleteMany).toHaveBeenCalledWith({
+        where: { id: 'trip-ghost-uuid' },
+      });
+      expect(mockPrisma.trip.delete).not.toHaveBeenCalled();
+    });
+
+    it('debe evitar ensuciar el caché global de viajes activos si la transacción de base de datos falla', async () => {
+      const mockVehicleId = 'vehicle-uuid-cache-fail';
+      const mockImei = 'imei-cache-fail';
+      mockPrisma.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Cache Fail',
+        deviceProfile: 'TELTONIKA_STANDARD',
+      });
+      mockPrisma.trip.findFirst.mockResolvedValue(null);
+
+      // Primer lote: Inicia un viaje, pero la transacción falla
+      mockPrisma.$transaction.mockRejectedValueOnce(new Error('Error de conexión a la base de datos'));
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1,
+            250: 1,
+          },
+        },
+      ];
+
+      await expect(processDataBatch(records, mockImei)).rejects.toThrow('Error de conexión a la base de datos');
+
+      // Segundo lote (reintento): la transacción ahora tiene éxito.
+      // Si el caché global no se ensució, debe volver a intentar crear un nuevo viaje
+      // en lugar de asumir que el viaje anterior fue creado y tratar de actualizarlo.
+      mockPrisma.$transaction.mockResolvedValueOnce([]);
+
+      await processDataBatch(records, mockImei);
+
+      // Debe haber intentado crear un viaje de nuevo
+      expect(mockPrisma.trip.create).toHaveBeenCalled();
+    });
+
+    it('debe ignorar un viaje activo en el futuro cuando se procesan registros históricos (diferidos) del pasado', async () => {
+      const mockVehicleId = 'vehicle-uuid-future-trip';
+      const mockImei = 'imei-future-trip';
+      mockPrisma.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Future Trip',
+        deviceProfile: 'TELTONIKA_STANDARD',
+      });
+
+      // Simulamos que hay un viaje activo en el futuro en la base de datos (ej. viaje en tiempo real)
+      const futureStartTime = new Date(1716570000000 + 3600000); // 1 hora en el futuro
+      mockPrisma.trip.findFirst.mockResolvedValueOnce({
+        id: 'future-active-trip-uuid',
+        startTime: futureStartTime,
+      });
+
+      // Procesamos registros del pasado (hace 1 hora)
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1,
+            250: 1,
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      // No debe haber intentado actualizar ni borrar el viaje del futuro
+      expect(mockPrisma.trip.deleteMany).not.toHaveBeenCalledWith({
+        where: { id: 'future-active-trip-uuid' },
+      });
+      expect(mockPrisma.trip.update).not.toHaveBeenCalledWith({
+        where: { id: 'future-active-trip-uuid' },
+        data: expect.anything(),
+      });
+
+      // Debe haber creado un nuevo viaje diferente en el pasado
+      expect(mockPrisma.trip.create).toHaveBeenCalled();
+      const createdTripCall = mockPrisma.trip.create.mock.calls[mockPrisma.trip.create.mock.calls.length - 1][0];
+      expect(createdTripCall.data.id).not.toBe('future-active-trip-uuid');
     });
   });
 });

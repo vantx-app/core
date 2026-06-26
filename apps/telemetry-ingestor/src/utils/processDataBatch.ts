@@ -71,7 +71,10 @@ export async function processDataBatch(records: any[], imei: string) {
     }
   }
 
-  let currentTrip = activeTripsCache.get(vehicle.id);
+  let localActiveTrip = activeTripsCache.get(vehicle.id);
+  let localLastClosedTrip = lastClosedTripCache.get(vehicle.id);
+  let currentTrip = localActiveTrip;
+
   const newTripsCreatedInBatch = new Set<string>();
   const tripsToCreate = new Map<
     string,
@@ -250,9 +253,14 @@ export async function processDataBatch(records: any[], imei: string) {
         : trueIgnition;
 
     // Lógica de Viajes (Trips)
-    if (!currentTrip && tripActive) {
+    // Guard: Si el viaje actual en memoria inició después del timestamp de este registro,
+    // significa que este registro pertenece al pasado (diferido) y no al viaje activo actual.
+    const isRecordBeforeCurrentTrip = currentTrip && (rec.timestamp as Date).getTime() < currentTrip.startTime.getTime();
+    const effectiveTrip = isRecordBeforeCurrentTrip ? undefined : currentTrip;
+
+    if (!effectiveTrip && tripActive) {
       // Guard 2: verificar si podemos reabrir un viaje cerrado recientemente (dentro del debounce)
-      const lastClosed = lastClosedTripCache.get(vehicle.id);
+      const lastClosed = localLastClosedTrip;
       const recTimeMs = (rec.timestamp as Date).getTime();
 
       if (
@@ -261,7 +269,7 @@ export async function processDataBatch(records: any[], imei: string) {
       ) {
         const reopenedTripId = lastClosed.id;
         currentTrip = { id: reopenedTripId, startTime: lastClosed.startTime };
-        activeTripsCache.set(vehicle.id, currentTrip);
+        localActiveTrip = currentTrip;
 
         // Restaurar estado si fue marcado como eliminado o descartado
         tripsToDelete.delete(reopenedTripId);
@@ -281,12 +289,12 @@ export async function processDataBatch(records: any[], imei: string) {
         }
 
         // Remover del caché de cierre ya que vuelve a estar activo
-        lastClosedTripCache.delete(vehicle.id);
+        localLastClosedTrip = undefined;
         logger.log(`🚗 Viaje Reabierto (Diferido): ${vehicle.alias}`);
       } else {
         const newTripId = uuidv7();
         currentTrip = { id: newTripId, startTime: rec.timestamp };
-        activeTripsCache.set(vehicle.id, currentTrip);
+        localActiveTrip = currentTrip;
         newTripsCreatedInBatch.add(newTripId);
         tripsToCreate.set(newTripId, {
           id: newTripId,
@@ -294,11 +302,11 @@ export async function processDataBatch(records: any[], imei: string) {
         });
         logger.log(`🚗 Viaje Iniciado (Diferido): ${vehicle.alias}`);
       }
-    } else if (currentTrip && !tripActive) {
+    } else if (effectiveTrip && !tripActive) {
       // Guard 1: calcular duración desde caché — sin lectura extra a la DB
       const durationMs =
-        (rec.timestamp as Date).getTime() - currentTrip.startTime.getTime();
-      const tripId = currentTrip.id;
+        (rec.timestamp as Date).getTime() - effectiveTrip.startTime.getTime();
+      const tripId = effectiveTrip.id;
 
       if (durationMs < MIN_TRIP_DURATION_MS) {
         // Viaje fantasma
@@ -336,18 +344,22 @@ export async function processDataBatch(records: any[], imei: string) {
       }
 
       // Registrar info de cierre para el debounce / posible reapertura
-      lastClosedTripCache.set(vehicle.id, {
+      localLastClosedTrip = {
         id: tripId,
-        startTime: currentTrip.startTime,
+        startTime: effectiveTrip.startTime,
         closeTime: (rec.timestamp as Date).getTime(),
-      });
+      };
       currentTrip = undefined;
-      activeTripsCache.delete(vehicle.id);
+      localActiveTrip = undefined;
     }
+
+    const recordTripId = (currentTrip && (rec.timestamp as Date).getTime() >= currentTrip.startTime.getTime())
+      ? currentTrip.id
+      : null;
 
     telemetryLogs.push({
       vehicleId: vehicle.id,
-      tripId: currentTrip?.id ?? null,
+      tripId: recordTripId,
       timestamp: rec.timestamp,
       latitude: rec.latitude,
       longitude: rec.longitude,
@@ -398,6 +410,19 @@ export async function processDataBatch(records: any[], imei: string) {
     newVinDetected,
     newFuelTypeDetected,
   });
+
+  // Actualizar cachés globales solo tras escritura exitosa en DB
+  if (localActiveTrip) {
+    activeTripsCache.set(vehicle.id, localActiveTrip);
+  } else {
+    activeTripsCache.delete(vehicle.id);
+  }
+
+  if (localLastClosedTrip) {
+    lastClosedTripCache.set(vehicle.id, localLastClosedTrip);
+  } else {
+    lastClosedTripCache.delete(vehicle.id);
+  }
 
   // El WebSocket ahora escupirá EXCESSIVE_IDLING sin titubear
   notifyApi(vehicle, lastRecord).catch((err) =>
