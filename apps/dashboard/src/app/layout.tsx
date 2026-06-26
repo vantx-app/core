@@ -1,6 +1,9 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import PWARegistration from "@/components/PWARegistration";
+import { RouteProgressBar } from "@/components/RouteProgressBar";
+import { CrossAppTransitionOverlay } from "@vantx/ui";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -35,10 +38,34 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" data-theme="light">
+      {/*
+        pageEntry animation: fades the page in from the canvas background color.
+        Runs before React hydrates — pure CSS, no framework dependency.
+        Masks the visual flash when arriving from a cross-app transition.
+      */}
+      <style>{`
+        @keyframes pageEntry {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        html {
+          animation: pageEntry 250ms ease forwards;
+        }
+        @media (prefers-reduced-motion: reduce) {
+          html { animation: none; }
+        }
+      `}</style>
       <body>
         <PWARegistration />
+        {/* Cross-app transition overlay — outside {children} to persist across navigations */}
+        <CrossAppTransitionOverlay />
+        {/* Same-app route progress bar — Suspense required for useSearchParams in App Router */}
+        <Suspense fallback={null}>
+          <RouteProgressBar />
+        </Suspense>
         {children}
       </body>
     </html>
   );
 }
+

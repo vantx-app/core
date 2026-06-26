@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { ROLES } from "@/utils/enums";
 import { NAV_LINKS } from "@/utils/client";
 import { useTranslation } from "@/hooks/useTranslation";
+import { navigateToCrossApp } from "@vantx/ui";
 
 export function NavigationMenu() {
   const pathname = usePathname();
@@ -38,26 +39,47 @@ export function NavigationMenu() {
             ? `${link.href}${link.href.includes("?") ? "&" : "?"}targetOrgId=${targetOrgId}`
             : link.href;
 
-          const LinkComponent = link.isExternal ? "a" : Link;
+          const LinkComponent = link.isExternal ? "button" : Link;
+
+          // Resolve the full marketplace URL for external links
+          const marketplaceUrl =
+            process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002";
 
           return (
-            <li
+              <li
               key={link.href}
               className={`w-full ${link.overrideClassNames ? link.overrideClassNames : ""}`}
             >
-              <LinkComponent
-                href={href}
-                className={`flex items-center justify-between w-full p-3 transition-colors rounded-lg ${
-                  isActive
-                    ? "bg-primary/10 text-primary font-bold"
-                    : "hover:bg-base-200"
-                }`}
-              >
-                <span>{t(link.key || link.label)}</span>
-                <Icon
-                  className={`size-5 ${isActive ? "text-primary" : "text-base-content/70"}`}
-                />
-              </LinkComponent>
+              {link.isExternal ? (
+                <button
+                  type="button"
+                  onClick={() => navigateToCrossApp(marketplaceUrl, "driver")}
+                  className={`flex items-center justify-between w-full p-3 transition-colors rounded-lg ${
+                    isActive
+                      ? "bg-primary/10 text-primary font-bold"
+                      : "hover:bg-base-200"
+                  }`}
+                >
+                  <span>{t(link.key || link.label)}</span>
+                  <Icon
+                    className={`size-5 ${isActive ? "text-primary" : "text-base-content/70"}`}
+                  />
+                </button>
+              ) : (
+                <LinkComponent
+                  href={href}
+                  className={`flex items-center justify-between w-full p-3 transition-colors rounded-lg ${
+                    isActive
+                      ? "bg-primary/10 text-primary font-bold"
+                      : "hover:bg-base-200"
+                  }`}
+                >
+                  <span>{t(link.key || link.label)}</span>
+                  <Icon
+                    className={`size-5 ${isActive ? "text-primary" : "text-base-content/70"}`}
+                  />
+                </LinkComponent>
+              )}
             </li>
           );
         })}

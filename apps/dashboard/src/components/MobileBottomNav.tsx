@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { ROLES } from "@/utils/enums";
 import { useTranslation } from "@/hooks/useTranslation";
+import { navigateToCrossApp } from "@vantx/ui";
 
 export function MobileBottomNav() {
   const pathname = usePathname();
@@ -43,10 +44,39 @@ export function MobileBottomNav() {
           ? `${link.href}${link.href.includes("?") ? "&" : "?"}targetOrgId=${targetOrgId}`
           : link.href;
 
-        const LinkComponent = link.isExternal ? "a" : Link;
+        const marketplaceUrl =
+          process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002";
+
+        if (link.isExternal) {
+          return (
+            <button
+              key={link.href}
+              type="button"
+              onClick={() => navigateToCrossApp(marketplaceUrl, "driver")}
+              className={`relative flex flex-col items-center justify-center flex-1 h-full transition-colors ${
+                isActive
+                  ? "text-primary"
+                  : "text-base-content/70 hover:text-base-content"
+              }`}
+            >
+              <div
+                className={`relative flex items-center justify-center px-5 py-1 rounded-full transition-all duration-300 ${
+                  isActive
+                    ? "bg-primary/10 text-primary scale-100"
+                    : "bg-transparent text-base-content/70 scale-95"
+                }`}
+              >
+                <Icon className="size-5" strokeWidth={isActive ? 2.5 : 2} />
+              </div>
+              <span className="text-[10px] font-bold mt-1 tracking-tight">
+                {t(link.key || link.label)}
+              </span>
+            </button>
+          );
+        }
 
         return (
-          <LinkComponent
+          <Link
             key={link.href}
             href={href}
             className={`relative flex flex-col items-center justify-center flex-1 h-full transition-colors ${
@@ -67,7 +97,7 @@ export function MobileBottomNav() {
             <span className="text-[10px] font-bold mt-1 tracking-tight">
               {t(link.key || link.label)}
             </span>
-          </LinkComponent>
+          </Link>
         );
       })}
     </div>

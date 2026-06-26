@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import Cookies from "js-cookie";
 import { getCookieSettings } from "@vantx/auth";
-import { Logo } from "@vantx/ui";
+import { Logo, navigateToCrossApp } from "@vantx/ui";
 
 interface UserProfile {
   id: string;
@@ -274,8 +274,9 @@ export function MarketplaceClientView({
 
           <div className="flex items-center gap-4">
             {user && (
-              <a
-                href={dashboardUrl}
+              <button
+                type="button"
+                onClick={() => navigateToCrossApp(dashboardUrl, "owner")}
                 title="Volver al Dashboard"
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold transition-all shadow-sm group"
               >
@@ -283,7 +284,7 @@ export function MarketplaceClientView({
                 <span className="hidden sm:inline text-slate-600 group-hover:text-slate-900 transition-colors">
                   Dashboard
                 </span>
-              </a>
+              </button>
             )}
             {user ? (
               <div className="flex items-center gap-3">
@@ -292,7 +293,7 @@ export function MarketplaceClientView({
                     if (canViewAsDriver) {
                       setActiveTab("profile");
                     } else {
-                      window.location.href = dashboardUrl;
+                      navigateToCrossApp(dashboardUrl, "owner");
                     }
                   }}
                   title={
