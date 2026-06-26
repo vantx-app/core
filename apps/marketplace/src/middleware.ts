@@ -19,28 +19,6 @@ export async function middleware(request: NextRequest) {
   const accessToken = request.cookies.get("access_token")?.value;
   const refreshToken = request.cookies.get("refresh_token")?.value;
 
-  // Resolución robusta del host del cliente (evitando 0.0.0.0 cuando Next.js corre en un contenedor con HOSTNAME=0.0.0.0)
-  let host =
-    request.headers.get("x-forwarded-host") ||
-    request.headers.get("host") ||
-    request.nextUrl.host;
-  if (host.startsWith("0.0.0.0")) {
-    host = host.replace("0.0.0.0", "localhost");
-  }
-
-  const isLocalhost =
-    host.startsWith("localhost") ||
-    host.startsWith("127.0.0.1") ||
-    host.startsWith("0.0.0.0");
-
-  // En producción, forzamos HTTPS para evitar rechazos de cookies seguras si el proxy no propaga x-forwarded-proto.
-  let protocol = "https";
-  if (isLocalhost) {
-    const protoHeader =
-      request.headers.get("x-forwarded-proto") || request.nextUrl.protocol;
-    protocol = protoHeader.replace(/:$/, "");
-  }
-
   // Solo nos interesa la página principal u otras vistas del Marketplace
   if (pathname !== "/" && !pathname.startsWith("/drivers/"))
     return NextResponse.next();
@@ -58,7 +36,10 @@ export async function middleware(request: NextRequest) {
         refreshToken,
         userAgent: request.headers.get("user-agent") || "VantX-Middleware",
         internalApiUrl: process.env.CRM_API_URL || "http://localhost:8000",
-        host,
+        host:
+          request.headers.get("x-forwarded-host") ||
+          request.headers.get("host") ||
+          request.nextUrl.host,
       });
 
       if (!result.success) {
