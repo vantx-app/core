@@ -385,7 +385,7 @@ export default function VehicleForm({
                 <option value="">-</option>
                 {devices.map((device) => (
                   <option key={device.id} value={device.id}>
-                    {device.model} - ...{device.imei.slice(-4)} {device.id === originalDeviceId ? '(Actual)' : ''}
+                    {device.model} - {device.imei.slice(-4)}
                   </option>
                 ))}
               </select>
