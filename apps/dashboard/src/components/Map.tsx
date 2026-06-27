@@ -447,7 +447,7 @@ export default function FleetMap() {
         masterDiv.style.alignItems = "center";
         masterDiv.style.justifyContent = "center";
         masterDiv.style.cursor = "pointer";
-        masterDiv.style.position = "relative";
+        // No sobreescribir a "relative" para mantener "absolute" de Mapbox y evitar apilamiento
         masterDiv.style.overflow = "visible";
         // En Safari, los filtros CSS en el elemento padre son mucho más eficientes
         // que los filtros SVG individuales que causan re-rasterización continua.

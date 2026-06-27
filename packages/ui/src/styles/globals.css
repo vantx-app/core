@@ -201,7 +201,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
+  /* No usar relative para evitar que los marcadores se apilen en el DOM */
 }
 
 .user-location-dot {

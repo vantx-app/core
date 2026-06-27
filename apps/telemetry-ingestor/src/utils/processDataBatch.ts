@@ -26,7 +26,34 @@ const lastClosedTripCache = new Map<
 const MIN_TRIP_DURATION_MS = 60_000; // 1 minuto mínimo para que un viaje sea válido
 const POST_CLOSE_DEBOUNCE_MS = 90_000; // 90 s de silencio tras el cierre
 
-export async function processDataBatch(records: any[], imei: string) {
+// Active promise chain queue per IMEI to serialize concurrent ingestion requests locally
+const ingestionQueue = new Map<string, Promise<void>>();
+
+export async function processDataBatch(records: any[], imei: string): Promise<void> {
+  const previousPromise = ingestionQueue.get(imei) || Promise.resolve();
+
+  const executeNext = async () => {
+    try {
+      await previousPromise;
+    } catch (err) {
+      // Ignore previous execution failure to let the next request run
+    }
+    try {
+      await processDataBatchInternal(records, imei);
+    } finally {
+      if (ingestionQueue.get(imei) === currentPromise) {
+        ingestionQueue.delete(imei);
+      }
+    }
+  };
+
+  const currentPromise = executeNext();
+  ingestionQueue.set(imei, currentPromise);
+
+  return currentPromise;
+}
+
+async function processDataBatchInternal(records: any[], imei: string) {
   const vehicle = await prisma.vehicle.findUnique({
     where: { imei },
     select: {

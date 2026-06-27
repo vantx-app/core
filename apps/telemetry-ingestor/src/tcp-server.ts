@@ -8,6 +8,8 @@ import { Logger } from "@vantx/telemetry-parser";
 const logger = new Logger("TCP");
 const { INGESTOR_HOST, INGESTOR_PORT } = process.env;
 
+const activeSockets = new Map<string, net.Socket>();
+
 const server = net.createServer((socket) => {
   let isHandshakeComplete = false;
   let deviceImei = "";
@@ -55,6 +57,14 @@ const server = net.createServer((socket) => {
         .replace(/[^a-zA-Z0-9]/g, "");
       logger.log(`Handshake accepted for IMEI: ${deviceImei}`);
 
+      // Close duplicate/stale socket connection for the same IMEI if it exists
+      const oldSocket = activeSockets.get(deviceImei);
+      if (oldSocket) {
+        logger.log(`⚠️ Terminating stale socket session for IMEI: ${deviceImei}`);
+        oldSocket.destroy();
+      }
+      activeSockets.set(deviceImei, socket);
+
       const acceptBuffer = Buffer.alloc(1);
       acceptBuffer.writeInt8(1, 0);
       socket.write(acceptBuffer);
@@ -92,12 +102,20 @@ const server = net.createServer((socket) => {
     }
   });
 
-  socket.on("error", (err) =>
-    logger.error(`Error en socket (${deviceImei}):`, err.message),
-  );
-  socket.on("close", (hadError) =>
-    logger.log(`Connection closed for ${deviceImei}`, hadError),
-  );
+  const cleanupSocket = () => {
+    if (deviceImei && activeSockets.get(deviceImei) === socket) {
+      activeSockets.delete(deviceImei);
+    }
+  };
+
+  socket.on("error", (err) => {
+    logger.error(`Error en socket (${deviceImei}):`, err.message);
+    cleanupSocket();
+  });
+  socket.on("close", (hadError) => {
+    logger.log(`Connection closed for ${deviceImei}`, hadError);
+    cleanupSocket();
+  });
 });
 
 server.listen({ host: INGESTOR_HOST, port: Number(INGESTOR_PORT) }, () => {
