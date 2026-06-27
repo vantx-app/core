@@ -156,33 +156,7 @@ export class TelemetryGateway implements OnGatewayConnection {
     }
 
     try {
-      // Validar si el vehículo tiene telemetría activa (trial o suscripción de pago)
-      const vehicle = await this.prismaService.vehicle.findUnique({
-        where: { id: payload.vehicleId },
-        include: { organization: true },
-      });
-
-      if (!vehicle) return;
-
-      const isTrialActive =
-        vehicle.trialActivated &&
-        vehicle.trialExpiresAt &&
-        new Date() < new Date(vehicle.trialExpiresAt);
-
-      const isOrgSubActive =
-        vehicle.organization?.subscriptionStatus === 'ACTIVE' &&
-        (!vehicle.organization?.subscriptionExpiresAt ||
-          new Date() < new Date(vehicle.organization.subscriptionExpiresAt));
-
-      const isSubscribedActive =
-        vehicle.subscriptionTier === 'ACTIVE' && isOrgSubActive;
-
-      // Si no tiene prueba activa ni plan de pago activo, ignoramos la transmisión
-      if (!isTrialActive && !isSubscribedActive) {
-        return;
-      }
-
-      // 1. Emit to internal authenticated rooms
+      // 1. Emit to internal authenticated rooms (SUPER_ADMIN global map, OWNER organization, and DRIVER assigned vehicle)
       this.server
         .to(`org_${payload.orgId}`)
         .to(`vehicle_${payload.vehicleId}`)

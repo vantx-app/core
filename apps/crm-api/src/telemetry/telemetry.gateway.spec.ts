@@ -370,15 +370,6 @@ describe('TelemetryGateway', () => {
         status: 'MOVING',
       };
 
-      prismaServiceMock.vehicle.findUnique.mockResolvedValue({
-        id: 'vehicle-uuid',
-        subscriptionTier: 'ACTIVE',
-        organization: {
-          subscriptionStatus: 'ACTIVE',
-          subscriptionExpiresAt: new Date(Date.now() + 60000),
-        },
-      });
-
       const mockLinks = [{ id: 'link-uuid-1' }, { id: 'link-uuid-2' }];
       prismaServiceMock.trackingLink.findMany.mockResolvedValue(mockLinks);
 
