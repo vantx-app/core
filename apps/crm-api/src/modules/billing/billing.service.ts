@@ -319,6 +319,7 @@ export class BillingService {
         vehicles: {
           include: {
             VehicleGlobalStats: true,
+            device: true,
           },
         },
       },
@@ -469,7 +470,7 @@ export class BillingService {
         doc.text(vehicle.alias || vehicle.plateNumber, 50, doc.y, {
           width: 150,
         });
-        doc.text(vehicle.deviceModel, 200, doc.y, { width: 100 });
+        doc.text(vehicle.device?.model || 'N/A', 200, doc.y, { width: 100 });
         doc.text(
           `${Math.round(vehicle.VehicleGlobalStats?.totalKm ?? 0).toLocaleString()} km`,
           300,

@@ -7,6 +7,7 @@ import {
   Logger,
   parseEcoAxesValue,
   mapObdFuelType,
+  getTelemetryProfile,
 } from "@vantx/telemetry-parser";
 import { snapTelemetryRecords } from "./snapTelemetry";
 import { saveTelemetryBatchData } from "./dbTelemetryWriter";
@@ -54,15 +55,19 @@ export async function processDataBatch(records: any[], imei: string): Promise<vo
 }
 
 async function processDataBatchInternal(records: any[], imei: string) {
-  const vehicle = await prisma.vehicle.findUnique({
-    where: { imei },
+  const vehicle = await prisma.vehicle.findFirst({
+    where: { device: { imei } },
     select: {
       id: true,
       orgId: true,
       alias: true,
-      deviceProfile: true,
       vin: true,
       fuelType: true,
+      device: {
+        select: {
+          model: true,
+        },
+      },
     },
   });
 
@@ -71,9 +76,10 @@ async function processDataBatchInternal(records: any[], imei: string) {
     return;
   }
 
-  // 1. Resolve mapping configuration using deviceProfile from database
+  // 1. Resolve mapping configuration using deviceModel from database
+  const profileName = getTelemetryProfile(vehicle.device?.model);
   const mapping =
-    DEVICE_PROFILES[vehicle.deviceProfile] ||
+    DEVICE_PROFILES[profileName] ||
     DEVICE_PROFILES.TELTONIKA_STANDARD;
 
   // 2. Perform Local Road Snapping using optimized chunked queries

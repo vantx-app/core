@@ -86,6 +86,7 @@ export interface FleetVehicle {
   year?: number | null;
   vin?: string | null;
   imei?: string | null;
+  device?: Device | null;
   isFromSocket?: boolean;
   lastSocketUpdate?: number;
   ignition?: boolean;
@@ -221,7 +222,8 @@ export interface ActiveAssignment {
 export interface VehicleDetail {
   id: string;
   orgId: string;
-  imei: string;
+  imei?: string | null;
+  device?: Device | null;
   alias: string | null;
   plateNumber: string;
   vin: string | null;
@@ -1198,6 +1200,7 @@ export interface AssignDriverFormProps {
 export interface VehicleFormValues {
   orgId?: string;
   imei?: string;
+  deviceId?: string;
   alias?: string;
   plateNumber: string;
   make?: string;
@@ -1284,4 +1287,28 @@ export interface NavLink {
   overrideClassNames?: string;
   hideInMobileBottomNavForRoles?: ROLES[];
   isExternal?: boolean;
+}
+
+export interface Device {
+  id: string;
+  imei: string;
+  model: string;
+  status: string;
+  firmware?: string | null;
+  source: string;
+  lastSeen?: string | null;
+  vehicleId?: string | null;
+  simCardId?: string | null;
+  simCard?: SimCard | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SimCard {
+  id: string;
+  iccid: string;
+  phoneNumber?: string | null;
+  carrier?: string | null;
+  createdAt: string;
+  updatedAt: string;
 }

@@ -21,10 +21,10 @@ export class CreateVehicleDto {
   @ApiProperty()
   orgId: string;
 
-  @IsString()
+  @IsUUID()
   @IsOptional()
   @ApiPropertyOptional()
-  imei?: string;
+  deviceId?: string;
 
   @IsString()
   @IsOptional()

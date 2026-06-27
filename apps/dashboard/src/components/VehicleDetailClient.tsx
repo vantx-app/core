@@ -762,8 +762,8 @@ export function VehicleDetailClient({
             </div>
 
             {/* Diagnósticos CAN J1939 (Sólo FMC150 y FMC650) */}
-            {(vehicle.deviceModel === "FMC150" ||
-              vehicle.deviceModel === "FMC650") && (
+            {(vehicle.device?.model === "FMC150" ||
+              vehicle.device?.model === "FMC650") && (
               <div className="glass-card p-6 space-y-4">
                 <h3 className="text-base font-bold flex items-center gap-2">
                   <Activity className="text-primary size-5" />
@@ -860,7 +860,7 @@ export function VehicleDetailClient({
                   />
                   <DetailRow
                     label="IMEI del Dispositivo GPS"
-                    value={<span className="font-mono">{vehicle.imei}</span>}
+                    value={<span className="font-mono">{vehicle.device?.imei || "Sin dispositivo"}</span>}
                   />
                   <DetailRow
                     label="Estado Administrativo"

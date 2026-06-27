@@ -1,7 +1,6 @@
 model Vehicle {
   id                    String                 @id @default(uuid()) @db.Uuid
   orgId                 String                 @db.Uuid
-  imei                  String?                @unique
   alias                 String?
   plateNumber           String
   vin                   String?
@@ -10,7 +9,6 @@ model Vehicle {
   year                  Int?
   status                VehicleStatus          @default(ACTIVE)
   subscriptionTier      SubscriptionTier       @default(NONE)
-  deviceModel           String                 @default("FMC003")
   trialActivated        Boolean                @default(false)
   trialExpiresAt        DateTime?
   scoringProfileId      String?                @db.Uuid
@@ -22,7 +20,7 @@ model Vehicle {
   hasOptionToBuy        Boolean                @default(false)
 
   createdAt             DateTime               @default(now())
-  deviceProfile         String                 @default("TELTONIKA_STANDARD")
+  device                Device?
   initialOdometer       Float                  @default(0)
   assignments           Assignment[]
   DailyTelemetryRollup  DailyTelemetryRollup[]

@@ -22,12 +22,14 @@ import {
   Sparkles,
   UploadCloud,
   Briefcase,
+  Cpu,
 } from "lucide-react";
 import Link from "next/link";
 import { AdminCard } from "@/components/dashboard/AdminCard";
 import api from "@/utils/client/api-client";
 import { useTranslation } from "@/hooks/useTranslation";
 import axios from "axios";
+import { DevicesTab } from "@/components/dashboard/DevicesTab";
 
 // ─── Billing Tab Types ────────────────────────────────────────────────────────
 
@@ -644,7 +646,7 @@ function BillingTab() {
 
 // ─── Tab definitions ──────────────────────────────────────────────────────────
 
-type TabKey = "overview" | "billing";
+type TabKey = "overview" | "billing" | "devices";
 
 const TABS: {
   key: TabKey;
@@ -663,6 +665,12 @@ const TABS: {
     label: "Facturación",
     icon: CreditCard,
     roles: [ROLES.OWNER, ROLES.ADMIN],
+  },
+  {
+    key: "devices",
+    label: "Dispositivos",
+    icon: Cpu,
+    roles: [ROLES.SUPER_ADMIN],
   },
 ];
 
@@ -831,7 +839,9 @@ function AdminPageContent() {
   // Leer el tab activo desde los query params
   const tabParam = searchParams.get("tab") as TabKey | null;
   const activeTab: TabKey =
-    tabParam === "billing" && [ROLES.OWNER, ROLES.ADMIN].includes(role)
+    tabParam === "devices" && role === ROLES.SUPER_ADMIN
+      ? "devices"
+      : tabParam === "billing" && [ROLES.OWNER, ROLES.ADMIN].includes(role)
       ? "billing"
       : "overview";
 
@@ -893,6 +903,7 @@ function AdminPageContent() {
       <div className="animate-in fade-in duration-200">
         {activeTab === "overview" && <AdminOverviewTab />}
         {activeTab === "billing" && <BillingTab />}
+        {activeTab === "devices" && <DevicesTab />}
       </div>
     </div>
   );

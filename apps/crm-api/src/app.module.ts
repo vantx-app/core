@@ -35,6 +35,7 @@ import { BillingModule } from './modules/billing/billing.module';
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { HttpModule } from '@nestjs/axios';
+import { DevicesModule } from './devices/devices.module';
 
 @Module({
   controllers: [
@@ -77,6 +78,7 @@ import { HttpModule } from '@nestjs/axios';
     DriverDocumentsModule,
     BillingModule,
     HttpModule,
+    DevicesModule,
   ],
 })
 export class AppModule {}

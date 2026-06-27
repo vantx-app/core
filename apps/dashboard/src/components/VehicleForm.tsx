@@ -42,11 +42,15 @@ export default function VehicleForm({
   const [originalOdometer, setOriginalOdometer] = useState<string>("");
   const [fetchedLastOdometer, setFetchedLastOdometer] = useState<number>(0);
   const [originalImei, setOriginalImei] = useState<string | null>(null);
+  const [originalDeviceId, setOriginalDeviceId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
   const [selectedOrgName, setSelectedOrgName] = useState("");
 
   const [organizations, setOrganizations] = useState<NewVehiclePageOrg[]>([]);
   const [isLoadingOrgs, setIsLoadingOrgs] = useState(false);
+
+  const [devices, setDevices] = useState<any[]>([]);
+  const [isLoadingDevices, setIsLoadingDevices] = useState(false);
 
   const [pendingPayload, setPendingPayload] = useState<Record<
     string,
@@ -66,7 +70,7 @@ export default function VehicleForm({
   } = useForm<VehicleFormValues>({
     defaultValues: {
       orgId: "",
-      imei: "",
+      deviceId: "",
       alias: "",
       plateNumber: "",
       make: "",
@@ -77,7 +81,9 @@ export default function VehicleForm({
     },
   });
 
-  const watchedImei = watch("imei");
+  const watchedDeviceId = watch("deviceId");
+  const selectedDevice = devices.find((d) => d.id === watchedDeviceId);
+  const watchedImei = selectedDevice?.imei || "";
 
   // Load organizations if super admin (and creating a new vehicle)
   useEffect(() => {
@@ -105,6 +111,22 @@ export default function VehicleForm({
     }
   }, [isSuperAdmin, vehicleId, targetOrgId, setValue]);
 
+  // Load unassigned devices
+  useEffect(() => {
+    const fetchDevices = async () => {
+      try {
+        setIsLoadingDevices(true);
+        const { data } = await api.get("/devices?status=UNASSIGNED");
+        setDevices(data);
+      } catch (err) {
+        console.error("Error fetching devices:", err);
+      } finally {
+        setIsLoadingDevices(false);
+      }
+    };
+    fetchDevices();
+  }, []);
+
   // Load vehicle details if editing
   useEffect(() => {
     if (!vehicleId) return;
@@ -123,10 +145,20 @@ export default function VehicleForm({
           const displayOdo = String(Math.round(initialOdo + lastOdo));
           setOriginalOdometer(displayOdo);
 
-          setOriginalImei(data.imei || null);
+          const dev = data.device;
+          setOriginalImei(dev?.imei || null);
+          setOriginalDeviceId(dev?.id || null);
+
+          if (dev) {
+            setDevices((prev) => {
+              if (prev.some((d) => d.id === dev.id)) return prev;
+              return [...prev, dev];
+            });
+          }
+
           reset({
             alias: data.alias || "",
-            imei: "",
+            deviceId: dev?.id || "",
             plateNumber: data.plateNumber || "",
             make: data.make || "",
             model: data.model || "",
@@ -161,8 +193,7 @@ export default function VehicleForm({
 
       if (!vehicleId) {
         // Modo creación
-        const trimmedImei = data.imei?.trim();
-        payload.imei = trimmedImei || undefined;
+        payload.deviceId = data.deviceId || undefined;
         payload.initialOdometer = data.currentOdometer
           ? Number(data.currentOdometer)
           : 0;
@@ -174,9 +205,8 @@ export default function VehicleForm({
           }
           payload.orgId = data.orgId;
         }
-        // Nota: para roles OWNER/ADMIN, el backend asigna orgId desde el token JWT.
 
-        if (!trimmedImei) {
+        if (!data.deviceId) {
           // Sin dispositivo — solicitar confirmación antes de crear
           setPendingPayload(payload);
           setWarningModalMode("create_no_imei");
@@ -192,23 +222,19 @@ export default function VehicleForm({
             : 0;
         }
 
-        const trimmedImei = data.imei?.trim();
-        // 1. Determine if the IMEI actually changed and is valid
-        const isImeiChanged = trimmedImei && trimmedImei !== originalImei;
+        const isDeviceChanged = data.deviceId !== originalDeviceId;
 
-        if (isImeiChanged) {
-          payload.imei = trimmedImei;
+        if (isDeviceChanged) {
+          payload.deviceId = data.deviceId || null; // Can unbind by setting null
 
-          // 2. Intercept with a warning ONLY if we are overwriting an existing IMEI
-          if (originalImei) {
+          // Intercept with a warning ONLY if we are overwriting an existing device
+          if (originalDeviceId && data.deviceId) {
             setPendingPayload(payload);
             setWarningModalMode("update_imei");
-            return; // Stop execution here; the modal will handle the save later
+            return;
           }
         }
 
-        // 3. Fallthrough: If we didn't return early, save directly 
-        // (Handles both: brand new IMEI added OR no IMEI changes made at all)
         await api.patch(`/vehicles/${vehicleId}`, payload);
       }
 
@@ -329,34 +355,42 @@ export default function VehicleForm({
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            type="text"
-            label={
-              vehicleId
-                ? "Nuevo IMEI del Dispositivo GPS"
-                : "IMEI del Dispositivo GPS (Opcional)"
-            }
-            placeholder="Ej. 863242045551234"
-            className="font-mono pr-12 md:pr-4"
-            disabled={isSubmitting}
-            rightIcon={
-              <button
-                type="button"
-                onClick={() => setIsScannerOpen(true)}
-                className="btn btn-ghost btn-circle btn-sm text-primary hover:bg-primary/10 transition-all duration-200 md:hidden"
-                title="Escanear IMEI"
+          <div className="form-control">
+            <label className="label py-1">
+              <span className="label-text font-bold text-xs text-base-content/85 flex items-center justify-between w-full">
+                <span>Dispositivo GPS</span>
+                <button
+                  type="button"
+                  onClick={() => setIsScannerOpen(true)}
+                  className="btn btn-ghost btn-xs text-primary flex items-center gap-1"
+                  title="Escanear IMEI"
+                  disabled={isSubmitting}
+                >
+                  <Camera className="size-3.5" />
+                  <span>Escanear QR</span>
+                </button>
+              </span>
+            </label>
+            {isLoadingDevices ? (
+              <div className="flex items-center gap-2 text-xs text-base-content/50 py-2">
+                <Loader2 className="size-4 animate-spin text-primary" />
+                Cargando dispositivos...
+              </div>
+            ) : (
+              <select
+                className="select select-bordered w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200 font-mono text-sm"
                 disabled={isSubmitting}
+                {...register("deviceId")}
               >
-                <Camera className="size-4" />
-              </button>
-            }
-            helperText={
-              vehicleId
-                ? "Dejar vacío para mantener el dispositivo actual."
-                : "Código único del dispositivo GPS."
-            }
-            {...register("imei")}
-          />
+                <option value="">Sin dispositivo (No telemático)</option>
+                {devices.map((device) => (
+                  <option key={device.id} value={device.id}>
+                    {device.model} - IMEI: {device.imei} {device.id === originalDeviceId ? '(Asociado)' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
 
           <Input
             type="text"
@@ -467,14 +501,21 @@ export default function VehicleForm({
       <ImeiScannerModal
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
-        onScanSuccess={(scannedImei) => setValue("imei", scannedImei)}
+        onScanSuccess={(scannedImei) => {
+          const matchedDevice = devices.find((d) => d.imei === scannedImei);
+          if (matchedDevice) {
+            setValue("deviceId", matchedDevice.id);
+          } else {
+            setError(`El IMEI escaneado (${scannedImei}) no está registrado como disponible en el inventario.`);
+          }
+        }}
       />
 
       <ImeiWarningModal
         isOpen={warningModalMode !== null}
         mode={warningModalMode}
         currentImei={originalImei}
-        newImei={watchedImei || ""}
+        newImei={watchedImei}
         onConfirm={handleModalConfirm}
         onCancel={handleModalCancel}
       />

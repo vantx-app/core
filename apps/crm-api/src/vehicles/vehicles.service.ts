@@ -52,10 +52,10 @@ export class VehiclesService {
 
     if (
       createVehicleDto.subscriptionTier === 'ACTIVE' &&
-      !createVehicleDto.imei
+      !createVehicleDto.deviceId
     ) {
       throw new BadRequestException(
-        'Se requiere un dispositivo (IMEI) para activar la suscripción del vehículo.',
+        'Se requiere un dispositivo para activar la suscripción del vehículo.',
       );
     }
 
@@ -87,12 +87,26 @@ export class VehiclesService {
       }
     }
 
-    return this.prisma.vehicle.create({
+    const { deviceId, ...restDto } = createVehicleDto;
+
+    const vehicle = await this.prisma.vehicle.create({
       data: {
-        ...createVehicleDto,
+        ...restDto,
         scoringProfileId,
       },
     });
+
+    if (deviceId) {
+      await this.prisma.device.update({
+        where: { id: deviceId },
+        data: {
+          vehicleId: vehicle.id,
+          status: 'ACTIVE',
+        },
+      });
+    }
+
+    return vehicle;
   }
 
   async update(id: string, updateVehicleDto: UpdateVehicleDto) {
@@ -105,7 +119,7 @@ export class VehiclesService {
 
     const vehicle = await this.prisma.vehicle.findUnique({
       where: { id },
-      include: { scoringProfile: true },
+      include: { scoringProfile: true, device: true },
     });
 
     if (!vehicle) {
@@ -116,21 +130,19 @@ export class VehiclesService {
       updateVehicleDto.subscriptionTier !== undefined
         ? updateVehicleDto.subscriptionTier
         : vehicle.subscriptionTier;
-    const targetImei =
-      updateVehicleDto.imei !== undefined
-        ? updateVehicleDto.imei
-        : vehicle.imei;
+    const hasDevice =
+      updateVehicleDto.deviceId !== undefined
+        ? !!updateVehicleDto.deviceId
+        : !!vehicle.device;
 
-    if (targetTier === 'ACTIVE' && !targetImei) {
+    if (targetTier === 'ACTIVE' && !hasDevice) {
       throw new BadRequestException(
-        'Se requiere un dispositivo (IMEI) para activar la suscripción del vehículo.',
+        'Se requiere un dispositivo para activar la suscripción del vehículo.',
       );
     }
 
-    const { imei, vin, ...rest } = updateVehicleDto;
+    const { deviceId, vin, ...rest } = updateVehicleDto;
     const dataToUpdate: any = { ...rest };
-    if (updateVehicleDto.imei !== undefined)
-      dataToUpdate.imei = updateVehicleDto.imei;
     if (updateVehicleDto.vin !== undefined)
       dataToUpdate.vin = updateVehicleDto.vin;
 
@@ -181,10 +193,29 @@ export class VehiclesService {
       }
     }
 
-    return this.prisma.vehicle.update({
+    const updatedVehicle = await this.prisma.vehicle.update({
       where: { id },
       data: dataToUpdate,
     });
+
+    if (deviceId !== undefined) {
+      // 1. Desvincular el dispositivo anterior
+      if (vehicle.device && vehicle.device.id !== deviceId) {
+        await this.prisma.device.update({
+          where: { id: vehicle.device.id },
+          data: { vehicleId: null, status: 'UNASSIGNED' },
+        });
+      }
+      // 2. Vincular el nuevo dispositivo
+      if (deviceId) {
+        await this.prisma.device.update({
+          where: { id: deviceId },
+          data: { vehicleId: id, status: 'ACTIVE' },
+        });
+      }
+    }
+
+    return updatedVehicle;
   }
 
   async findAllByOrgId(orgId?: string, liveState?: boolean) {
@@ -200,6 +231,7 @@ export class VehiclesService {
         where: orgId ? { orgId } : {},
         include: {
           liveState: true,
+          device: true,
           assignments: {
             where: { to: null },
             include: {
@@ -261,6 +293,7 @@ export class VehiclesService {
         },
         include: {
           liveState: true,
+          device: true,
           assignments: {
             where: { to: null },
             include: {
@@ -305,6 +338,7 @@ export class VehiclesService {
       include: {
         liveState: true,
         VehicleGlobalStats: true,
+        device: true,
         vehicleScoreSnapshots: {
           orderBy: [{ year: 'desc' }, { weekNumber: 'desc' }],
           take: 10,

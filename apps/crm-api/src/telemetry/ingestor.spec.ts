@@ -11,7 +11,7 @@ jest.mock('@prisma/client', () => {
   const mock$transaction = jest.fn().mockImplementation(async (arr) => arr);
 
   const mockInstance = {
-    vehicle: { findUnique: mockFindUnique, update: mockUpdateVehicle },
+    vehicle: { findFirst: mockFindUnique, update: mockUpdateVehicle },
     trip: {
       findFirst: mockFindFirst,
       create: mockCreate,
@@ -131,11 +131,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe mapear datos crudos a base de datos usando el perfil estático e iniciar un viaje mediante AVL ID 250', async () => {
       const mockVehicleId = 'vehicle-uuid-1';
       const mockImei = 'imei-1';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Test',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'EXISTINGVIN123',
       });
 
@@ -164,15 +164,19 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       // Debe consultar el vehículo en la BD
-      expect(mockPrisma.vehicle.findUnique).toHaveBeenCalledWith({
-        where: { imei: mockImei },
+      expect(mockPrisma.vehicle.findFirst).toHaveBeenCalledWith({
+        where: { device: { imei: mockImei } },
         select: {
           id: true,
           orgId: true,
           alias: true,
-          deviceProfile: true,
           vin: true,
           fuelType: true,
+          device: {
+            select: {
+              model: true,
+            },
+          },
         },
       });
 
@@ -215,11 +219,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe terminar el viaje cuando AVL ID 250 es 0 (Inactive)', async () => {
       const mockVehicleId = 'vehicle-uuid-2';
       const mockImei = 'imei-2';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Test',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'EXISTINGVIN123',
       });
       // Simulamos que ya hay un viaje activo en caché/BD
@@ -263,11 +267,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe retroceder a la lógica de ignición si el perfil del dispositivo no define tripStatus', async () => {
       const mockVehicleId = 'vehicle-uuid-3';
       const mockImei = 'imei-3';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Test',
-        deviceProfile: 'NO_TRIP_STATUS_PROFILE',
+        device: { model: 'NO_TRIP_STATUS_PROFILE' },
         vin: 'EXISTINGVIN123',
       });
 
@@ -307,11 +311,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe actualizar el VIN del vehículo si el dispositivo lo reporta y el vehículo no tiene uno asignado', async () => {
       const mockVehicleId = 'vehicle-uuid-vin-test';
       const mockImei = 'imei-vin-test';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck VIN Test',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: null, // No VIN assigned
       });
       mockPrisma.vehicle.update.mockResolvedValue({});
@@ -346,11 +350,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('no debe actualizar el VIN si el vehículo ya tiene uno configurado en la base de datos', async () => {
       const mockVehicleId = 'vehicle-uuid-vin-test-2';
       const mockImei = 'imei-vin-test-2';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck VIN Test 2',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'EXISTINGVIN12345', // Existing VIN
       });
 
@@ -381,11 +385,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe actualizar el fuelType del vehículo si el dispositivo lo reporta y el vehículo no tiene uno asignado', async () => {
       const mockVehicleId = 'vehicle-uuid-fuel-test';
       const mockImei = 'imei-fuel-test';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Fuel Test',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         fuelType: null, // No fuelType assigned
       });
       mockPrisma.vehicle.update.mockResolvedValue({});
@@ -420,11 +424,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('no debe actualizar el fuelType si el vehículo ya tiene uno configurado en la base de datos', async () => {
       const mockVehicleId = 'vehicle-uuid-fuel-test-2';
       const mockImei = 'imei-fuel-test-2';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Fuel Test 2',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         fuelType: 'GASOLINE', // Existing fuelType
       });
 
@@ -455,11 +459,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe ignorar el fallback de voltaje si el perfil del dispositivo define ignition y se reporta como inactivo', async () => {
       const mockVehicleId = 'vehicle-uuid-voltage-test-1';
       const mockImei = 'imei-voltage-test-1';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Voltage Test 1',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'EXISTINGVIN123',
       });
 
@@ -493,11 +497,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe usar el fallback de voltaje si el perfil del dispositivo no define ignition y el voltaje es alto', async () => {
       const mockVehicleId = 'vehicle-uuid-voltage-test-2';
       const mockImei = 'imei-voltage-test-2';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Voltage Test 2',
-        deviceProfile: 'NO_IGNITION_PROFILE',
+        device: { model: 'NO_IGNITION_PROFILE' },
         vin: 'EXISTINGVIN123',
       });
 
@@ -538,11 +542,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe procesar eventos de Advanced Eco-Driving con datos de 3 ejes y registrar valores correctamente', async () => {
       const mockVehicleId = 'vehicle-uuid-eco-test';
       const mockImei = 'imei-eco-test';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Eco Test',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'EXISTINGVIN123',
       });
 
@@ -587,11 +591,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe descartar en memoria un viaje fantasma iniciado y terminado en el mismo lote', async () => {
       const mockVehicleId = 'vehicle-uuid-ghost-mem';
       const mockImei = 'imei-ghost-mem';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Ghost Truck',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'VIN123',
       });
 
@@ -645,11 +649,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe crear un viaje con endTime poblado si inicia y termina en el mismo lote y dura > 1 min', async () => {
       const mockVehicleId = 'vehicle-uuid-valid-mem';
       const mockImei = 'imei-valid-mem';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Valid Truck',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'VIN123',
       });
 
@@ -713,11 +717,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe procesar un lote para FMC150/FMC650 usando mapeos de LVCAN y escalar la temperatura del refrigerante', async () => {
       const mockVehicleId = 'vehicle-uuid-lvcan-test';
       const mockImei = 'imei-lvcan-test';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'LVCAN Truck',
-        deviceProfile: 'TELTONIKA_FMC150',
+        device: { model: 'TELTONIKA_FMC150' },
         vin: null,
       });
       mockPrisma.vehicle.update.mockResolvedValue({});
@@ -770,11 +774,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe aplicar snapping a la calle si la ignición está encendida', async () => {
       const mockVehicleId = 'vehicle-uuid-snap-on';
       const mockImei = 'imei-snap-on';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Snap On',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'VIN123',
       });
 
@@ -819,11 +823,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe saltarse el snapping si la ignición está apagada', async () => {
       const mockVehicleId = 'vehicle-uuid-snap-off';
       const mockImei = 'imei-snap-off';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Snap Off',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'VIN123',
       });
 
@@ -868,11 +872,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe saltarse el snapping si la precisión del GPS es baja (satélites < 5)', async () => {
       const mockVehicleId = 'vehicle-uuid-snap-low-gps';
       const mockImei = 'imei-snap-low-gps';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Snap Low GPS',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
         vin: 'VIN123',
       });
 
@@ -917,11 +921,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe realizar eliminaciones idempotentes usando deleteMany para evitar fallos si el viaje no existe', async () => {
       const mockVehicleId = 'vehicle-uuid-idempotent';
       const mockImei = 'imei-idempotent';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Idempotent',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
       });
 
       // Simular un viaje fantasma que ya existía (se resolverá findFirst del docker restart guard)
@@ -960,11 +964,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe evitar ensuciar el caché global de viajes activos si la transacción de base de datos falla', async () => {
       const mockVehicleId = 'vehicle-uuid-cache-fail';
       const mockImei = 'imei-cache-fail';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Cache Fail',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
       });
       mockPrisma.trip.findFirst.mockResolvedValue(null);
 
@@ -1009,11 +1013,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe ignorar un viaje activo en el futuro cuando se procesan registros históricos (diferidos) del pasado', async () => {
       const mockVehicleId = 'vehicle-uuid-future-trip';
       const mockImei = 'imei-future-trip';
-      mockPrisma.vehicle.findUnique.mockResolvedValue({
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
         alias: 'Truck Future Trip',
-        deviceProfile: 'TELTONIKA_STANDARD',
+        device: { model: 'TELTONIKA_STANDARD' },
       });
 
       // Simulamos que hay un viaje activo en el futuro en la base de datos (ej. viaje en tiempo real)

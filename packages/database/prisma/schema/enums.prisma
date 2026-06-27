@@ -57,6 +57,23 @@ enum FuelType {
   HYBRID
 }
 
+enum DeviceModel {
+  FMC003
+  FMC150
+  FMC650
+}
+
+enum DeviceStatus {
+  UNASSIGNED
+  ACTIVE
+}
+
+enum DeviceSource {
+  FOTA
+  MANUAL
+}
+
+
 
 
 
