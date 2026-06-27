@@ -193,15 +193,22 @@ export default function VehicleForm({
         }
 
         const trimmedImei = data.imei?.trim();
-        if (trimmedImei) {
-          // Usuario ingresó un nuevo IMEI — solicitar confirmación
+        // 1. Determine if the IMEI actually changed and is valid
+        const isImeiChanged = trimmedImei && trimmedImei !== originalImei;
+
+        if (isImeiChanged) {
           payload.imei = trimmedImei;
-          setPendingPayload(payload);
-          setWarningModalMode("update_imei");
-          return;
+
+          // 2. Intercept with a warning ONLY if we are overwriting an existing IMEI
+          if (originalImei) {
+            setPendingPayload(payload);
+            setWarningModalMode("update_imei");
+            return; // Stop execution here; the modal will handle the save later
+          }
         }
 
-        // Sin cambio de IMEI — no incluir en el payload
+        // 3. Fallthrough: If we didn't return early, save directly 
+        // (Handles both: brand new IMEI added OR no IMEI changes made at all)
         await api.patch(`/vehicles/${vehicleId}`, payload);
       }
 

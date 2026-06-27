@@ -20,6 +20,9 @@ export default function ImeiScannerModal({
   const [hasTorch, setHasTorch] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState(0);
+
+  const handleRetry = () => setRetryKey((prev) => prev + 1);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const isUnmountedRef = useRef(false);
@@ -165,6 +168,18 @@ export default function ImeiScannerModal({
       isUnmountedRef.current = true;
       clearTimeout(timeoutId);
 
+      // Manually stop any active media tracks in our container to prevent device lock
+      try {
+        const container = document.getElementById("imei-scanner-reader");
+        const videoEl = container?.querySelector("video");
+        if (videoEl && videoEl.srcObject) {
+          const stream = videoEl.srcObject as MediaStream;
+          stream.getTracks().forEach((track) => track.stop());
+        }
+      } catch (e) {
+        console.error("Error stopping video tracks manually:", e);
+      }
+
       // Gracefully clear scanner instance
       if (html5QrCode.isScanning) {
         html5QrCode
@@ -181,7 +196,7 @@ export default function ImeiScannerModal({
         } catch (e) {}
       }
     };
-  }, [isOpen]);
+  }, [isOpen, retryKey]);
 
   if (!isOpen) return null;
   if (typeof window === "undefined") return null;
@@ -269,12 +284,20 @@ export default function ImeiScannerModal({
                 cargar el sitio en un entorno seguro (HTTPS).
               </p>
             </div>
-            <button
-              onClick={onClose}
-              className="btn btn-outline btn-sm text-white/80 border-white/20 hover:bg-white/10"
-            >
-              Entendido
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={handleRetry}
+                className="btn btn-primary btn-sm text-white border-none bg-emerald-600 hover:bg-emerald-700"
+              >
+                Reintentar
+              </button>
+              <button
+                onClick={onClose}
+                className="btn btn-outline btn-sm text-white/80 border-white/20 hover:bg-white/10"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         )}
       </div>

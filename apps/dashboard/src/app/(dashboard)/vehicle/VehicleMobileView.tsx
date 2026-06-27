@@ -10,9 +10,8 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
 import { ROLES } from "@/utils/enums";
-import { Car, Plus, Pencil, UserCog, Eye, Route } from "lucide-react";
+import { Plus, Pencil, UserCog, Eye, Route } from "lucide-react";
 import { MobileDrawer } from "@/components/MobileDrawer";
-import VehicleForm from "@/components/VehicleForm";
 import AssignDriverForm from "@/components/AssignDriverForm";
 
 export function VehicleMobileView({
@@ -26,29 +25,17 @@ export function VehicleMobileView({
   );
 
   // Drawer states
-  const [activeDrawer, setActiveDrawer] = useState<
-    "new" | "edit" | "assign" | null
-  >(null);
+  const [activeDrawer, setActiveDrawer] = useState<"assign" | null>(null);
   const [selectedVehicle, setSelectedVehicle] =
     useState<MobileViewVehicleSummary | null>(null);
   const [currentDriver, setCurrentDriver] =
     useState<AssignVehicleDriver | null>(null);
-
-  const handleOpenEdit = (vehicle: MobileViewVehicleSummary) => {
-    setSelectedVehicle(vehicle);
-    setActiveDrawer("edit");
-  };
 
   const handleOpenAssign = (vehicle: MobileViewVehicleSummary) => {
     setSelectedVehicle(vehicle);
     const driver = vehicle.assignments?.[0]?.driver || null;
     setCurrentDriver(driver);
     setActiveDrawer("assign");
-  };
-
-  const handleOpenNew = () => {
-    setSelectedVehicle(null);
-    setActiveDrawer("new");
   };
 
   const closeDrawer = () => {
@@ -163,13 +150,17 @@ export function VehicleMobileView({
           <Route className="size-3.5" />
           Viajes
         </Link>
-        <button
-          onClick={() => handleOpenEdit(vehicle)}
+        <Link
+          href={
+            targetOrgId
+              ? `/vehicle/${vehicle.id}/edit?targetOrgId=${targetOrgId}`
+              : `/vehicle/${vehicle.id}/edit`
+          }
           className="btn btn-outline border-base-300 hover:bg-base-200 btn-sm gap-1.5 rounded-xl text-xs text-base-content font-semibold"
         >
           <Pencil className="size-3.5" />
           Editar
-        </button>
+        </Link>
         <button
           onClick={() => handleOpenAssign(vehicle)}
           className="btn btn-primary btn-sm gap-1.5 rounded-xl text-xs text-white font-semibold"
@@ -218,13 +209,17 @@ export function VehicleMobileView({
     <div className="space-y-6">
       {/* Mobile Registration Button */}
       {canCreate && (
-        <button
-          onClick={handleOpenNew}
+        <Link
+          href={
+            targetOrgId
+              ? `/vehicle/new?targetOrgId=${targetOrgId}`
+              : "/vehicle/new"
+          }
           className="btn btn-primary bg-gradient-to-r from-blue-600 to-indigo-600 border-none text-white w-full shadow-lg shadow-blue-500/20 py-3 rounded-xl font-bold flex items-center justify-center gap-2"
         >
           <Plus className="size-5" />
           Registrar Nuevo Vehículo
-        </button>
+        </Link>
       )}
 
       {/* Cards Grid */}
@@ -267,37 +262,7 @@ export function VehicleMobileView({
         </div>
       )}
 
-      {/* New/Edit Vehicle Drawer */}
-      <MobileDrawer
-        open={activeDrawer === "new" || activeDrawer === "edit"}
-        onOpenChange={(open) => {
-          if (!open) closeDrawer();
-        }}
-        title={
-          activeDrawer === "new" ? "Registrar Vehículo" : "Editar Vehículo"
-        }
-        subtitle={
-          activeDrawer === "new"
-            ? "Nueva Unidad en Flota"
-            : selectedVehicle?.alias
-        }
-        icon={<Car className="size-5" />}
-        onClose={closeDrawer}
-      >
-        <div className="p-5">
-          <VehicleForm
-            vehicleId={
-              activeDrawer === "edit" ? selectedVehicle?.id : undefined
-            }
-            targetOrgId={targetOrgId}
-            onSuccess={() => {
-              closeDrawer();
-              router.refresh();
-            }}
-            onCancel={closeDrawer}
-          />
-        </div>
-      </MobileDrawer>
+      {/* New/Edit Vehicle Drawer was removed - now handled by dedicated subpages /vehicle/new and /vehicle/[id]/edit */}
 
       {/* Assign Driver Drawer */}
       <MobileDrawer
