@@ -382,10 +382,10 @@ export default function VehicleForm({
                 disabled={isSubmitting}
                 {...register("deviceId")}
               >
-                <option value="">Sin dispositivo (No telemático)</option>
+                <option value="">-</option>
                 {devices.map((device) => (
                   <option key={device.id} value={device.id}>
-                    {device.model} - IMEI: {device.imei} {device.id === originalDeviceId ? '(Asociado)' : ''}
+                    {device.model} - ...{device.imei.slice(-4)} {device.id === originalDeviceId ? '(Actual)' : ''}
                   </option>
                 ))}
               </select>

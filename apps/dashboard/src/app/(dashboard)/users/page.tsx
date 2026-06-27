@@ -436,7 +436,7 @@ function UsersPageContent() {
                   return (
                     <div
                       key={group.id}
-                      className="collapse collapse-arrow bg-base-100/40 border border-base-200 shadow-md rounded-2xl overflow-hidden backdrop-blur-md"
+                      className="collapse  bg-base-100/40 border border-base-200 shadow-md rounded-2xl overflow-hidden backdrop-blur-md"
                     >
                       <input
                         type="checkbox"
