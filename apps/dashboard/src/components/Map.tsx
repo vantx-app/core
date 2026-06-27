@@ -41,12 +41,14 @@ const VehicleListItem = memo(
   }) => {
     const statusColor =
       vehicle.status === "MOVING"
-        ? "bg-success"
+        ? "var(--color-status-moving)"
         : vehicle.status === "IDLING"
-          ? "bg-warning"
+          ? "var(--color-status-idling)"
           : vehicle.status === "EXCESSIVE_IDLING"
-            ? "bg-error"
-            : "bg-slate-400";
+            ? "var(--color-status-excessive)"
+            : vehicle.status === "STOPPED"
+              ? "var(--color-status-stopped)"
+              : "var(--color-status-offline)";
 
     // const driverName = vehicle.assignments?.[0]?.driver
     //   ? `${vehicle.assignments[0].driver.firstName} ${vehicle.assignments[0].driver.lastName}`
@@ -57,7 +59,10 @@ const VehicleListItem = memo(
         onClick={() => onSelect(id)}
         className="w-full text-left p-4 hover:bg-base-300 rounded-sm transition-colors flex items-center gap-3 border-b border-base-200 last:border-none"
       >
-        <div className={`w-3 h-3 rounded-full ${statusColor} shadow-sm`} />
+        <div
+          className="w-3 h-3 rounded-full shadow-sm flex-shrink-0"
+          style={{ backgroundColor: statusColor }}
+        />
         <div className="flex-1 overflow-hidden">
           <div className="font-bold truncate">
             {vehicle.alias || vehicle.plateNumber}
