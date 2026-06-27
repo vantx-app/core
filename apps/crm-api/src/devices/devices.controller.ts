@@ -10,7 +10,7 @@ import { ROLES } from '../common/enums/roles.enum';
 @Controller('devices')
 @Roles(ROLES.SUPER_ADMIN)
 export class DevicesController {
-  constructor(private readonly devicesService: DevicesService) {}
+  constructor(private readonly devicesService: DevicesService) { }
 
   @Post()
   async createDevice(@Body() dto: CreateDeviceDto) {
@@ -20,6 +20,11 @@ export class DevicesController {
   @Get()
   async findAllDevices(@Query('status') status?: DeviceStatus) {
     return this.devicesService.findAllDevices(status);
+  }
+
+  @Get('sim-cards')
+  async findAllSimCards() {
+    return this.devicesService.findAllSimCards();
   }
 
   @Get(':id')
@@ -46,11 +51,6 @@ export class DevicesController {
   @Post('sim-cards')
   async createSimCard(@Body() dto: CreateSimCardDto) {
     return this.devicesService.createSimCard(dto);
-  }
-
-  @Get('sim-cards')
-  async findAllSimCards() {
-    return this.devicesService.findAllSimCards();
   }
 
   @Post('sync-fota')
