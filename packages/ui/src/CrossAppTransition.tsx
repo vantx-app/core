@@ -14,13 +14,24 @@ interface OverlayState {
 
 // ─── Singleton event bus ──────────────────────────────────────────────────────
 // Coordinates between navigateToCrossApp() and the overlay component
-// without requiring a shared React context (works across subtrees).
+// using a global event bus on the window object to prevent bundle-splitting isolation.
 
 type OverlayListener = (state: OverlayState) => void;
-const listeners = new Set<OverlayListener>();
+const GLOBAL_KEY = "__vantx_crossapp_listeners__";
+
+function getGlobalListeners(): Set<OverlayListener> {
+  if (typeof window === "undefined") {
+    return new Set<OverlayListener>();
+  }
+  if (!(window as any)[GLOBAL_KEY]) {
+    (window as any)[GLOBAL_KEY] = new Set<OverlayListener>();
+  }
+  return (window as any)[GLOBAL_KEY];
+}
 
 function notifyListeners(state: OverlayState) {
-  listeners.forEach((fn) => fn(state));
+  const list = getGlobalListeners();
+  list.forEach((fn) => fn(state));
 }
 
 // ─── Public helper ────────────────────────────────────────────────────────────
@@ -66,9 +77,7 @@ interface OverlayProps {
  * Full-screen branded overlay that appears during cross-app navigations.
  * Must be placed once in each app's root layout, outside {children}.
  */
-export function CrossAppTransitionOverlay({
-  background,
-}: OverlayProps) {
+export function CrossAppTransitionOverlay({ background }: OverlayProps) {
   const [overlay, setOverlay] = useState<OverlayState>({
     visible: false,
     variant: "owner",
@@ -128,9 +137,11 @@ export function CrossAppTransitionOverlay({
         setIsDismissing(false);
       }
     };
-    listeners.add(handler);
+    const list = getGlobalListeners();
+    list.add(handler);
     return () => {
-      listeners.delete(handler);
+      const list = getGlobalListeners();
+      list.delete(handler);
     };
   }, []);
 
@@ -167,12 +178,11 @@ export function CrossAppTransitionOverlay({
       role="status"
       aria-live="polite"
       aria-label="Cargando aplicación..."
-      className="bg-base-100"
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        backgroundColor: background || undefined,
+        backgroundColor: background || "hsl(var(--b1))",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -254,7 +264,7 @@ export function CrossAppTransitionOverlay({
       {/* Escape hatch — fades in after 3 seconds */}
       <button
         onClick={() => dismiss(false)}
-        className="text-base-content/50 hover:text-base-content underline"
+        className="crossapp-cancel-btn"
         style={{
           position: "absolute",
           bottom: "2rem",
@@ -263,9 +273,11 @@ export function CrossAppTransitionOverlay({
           background: "none",
           border: "none",
           cursor: "pointer",
+          color: "hsl(var(--bc) / 0.6)",
           fontSize: "0.75rem",
+          textDecoration: "underline",
           opacity: showCancel ? 1 : 0,
-          transition: "opacity 300ms ease",
+          transition: "opacity 300ms ease, color 200ms ease",
           pointerEvents: showCancel ? "auto" : "none",
         }}
         aria-hidden={!showCancel}
@@ -276,6 +288,9 @@ export function CrossAppTransitionOverlay({
 
       {/* Keyframe styles — injected inline to avoid CSS module dependency */}
       <style>{`
+        .crossapp-cancel-btn:hover {
+          color: hsl(var(--bc)) !important;
+        }
         @keyframes crossapp-spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }

@@ -42,8 +42,11 @@ export function NavigationMenu() {
           const LinkComponent = link.isExternal ? "button" : Link;
 
           // Resolve the full marketplace URL for external links
-          const marketplaceUrl =
+          const rawMarketplaceUrl =
             process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002";
+          const marketplaceUrl = rawMarketplaceUrl.endsWith("/marketplace")
+            ? rawMarketplaceUrl
+            : `${rawMarketplaceUrl}/marketplace`;
 
           return (
             <li

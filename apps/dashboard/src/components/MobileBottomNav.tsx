@@ -44,8 +44,11 @@ export function MobileBottomNav() {
           ? `${link.href}${link.href.includes("?") ? "&" : "?"}targetOrgId=${targetOrgId}`
           : link.href;
 
-        const marketplaceUrl =
+        const rawMarketplaceUrl =
           process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002";
+        const marketplaceUrl = rawMarketplaceUrl.endsWith("/marketplace")
+          ? rawMarketplaceUrl
+          : `${rawMarketplaceUrl}/marketplace`;
 
         if (link.isExternal) {
           return (
