@@ -167,13 +167,15 @@ async function processDataBatchInternal(records: any[], imei: string) {
     (a, b) => (a.timestamp as Date).getTime() - (b.timestamp as Date).getTime(),
   );
 
+  const latestLiveTime = liveTripState.activeTrip
+    ? liveTripState.activeTrip.startTime.getTime()
+    : (liveTripState.lastClosedTrip
+        ? liveTripState.lastClosedTrip.closeTime
+        : 0);
+
   // Buscar si hay registros históricos en este lote para bootstrap de historicalTripState
   const firstHistoricalRecord = sortedRecords.find((rec) => {
-    return (
-      liveTripState.activeTrip &&
-      (rec.timestamp as Date).getTime() <
-        liveTripState.activeTrip.startTime.getTime()
-    );
+    return (rec.timestamp as Date).getTime() < latestLiveTime;
   });
 
   if (firstHistoricalRecord) {
@@ -241,9 +243,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
     // Guard: Si el viaje actual en memoria inició después del timestamp de este registro,
     // significa que este registro pertenece al pasado (diferido) y no al viaje activo actual.
     const isRecordBeforeCurrentTrip =
-      liveTripState.activeTrip &&
-      (rec.timestamp as Date).getTime() <
-        liveTripState.activeTrip.startTime.getTime();
+      (rec.timestamp as Date).getTime() < latestLiveTime;
 
     let recordTripId: string | null = null;
 

@@ -1069,6 +1069,58 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       expect(createdTripCall.data.id).not.toBe('future-active-trip-uuid');
     });
 
+    it('debe evitar reabrir un viaje cerrado si el registro es del pasado (histórico/diferido) y no hay viaje activo', async () => {
+      const mockVehicleId = 'vehicle-uuid-hist-reopen-test';
+      const mockImei = 'imei-hist-reopen-test';
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Hist Reopen Test',
+        device: { model: 'TELTONIKA_STANDARD' },
+      });
+
+      // Simulamos que el último viaje en la base de datos terminó hace poco
+      const lastClosedEndTime = new Date(1716570000000);
+      mockPrisma.trip.findFirst.mockResolvedValueOnce(null); // activeTrip: null
+      mockPrisma.trip.findFirst.mockResolvedValueOnce({
+        id: 'recent-closed-trip-uuid',
+        startTime: new Date(1716570000000 - 3600000), // Iniciado 1 hora antes
+        endTime: lastClosedEndTime,
+      });
+
+      // Procesamos un registro del pasado (hace 2 horas, anterior al inicio y fin del viaje cerrado)
+      const records = [
+        {
+          timestamp: new Date(1716570000000 - 7200000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1,
+            250: 1,
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      // No debe haber intentado actualizar (reabrir) el viaje cerrado
+      expect(mockPrisma.trip.update).not.toHaveBeenCalled();
+
+      // Debe haber creado un nuevo viaje diferente para el registro del pasado
+      expect(mockPrisma.trip.create).toHaveBeenCalled();
+      const createdTripCall =
+        mockPrisma.trip.create.mock.calls[
+          mockPrisma.trip.create.mock.calls.length - 1
+        ][0];
+      expect(createdTripCall.data.id).not.toBe('recent-closed-trip-uuid');
+    });
+
     it('debe mantener lastClosedTripCache cuando se procesan lotes estacionarios (heartbeats) y cargarlo de la DB si se vacía', async () => {
       const mockVehicleId = 'vehicle-uuid-cache-preservation';
       const mockImei = 'imei-cache-preservation';

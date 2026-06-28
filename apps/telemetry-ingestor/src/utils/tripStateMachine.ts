@@ -57,6 +57,7 @@ export function transitionTripState({
     const lastClosed = state.lastClosedTrip;
     if (
       lastClosed &&
+      recTimeMs >= lastClosed.closeTime &&
       recTimeMs - lastClosed.closeTime < POST_CLOSE_DEBOUNCE_MS
     ) {
       const reopenedTripId = lastClosed.id;
