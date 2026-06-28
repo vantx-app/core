@@ -182,7 +182,7 @@ export function CrossAppTransitionOverlay({ background }: OverlayProps) {
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        backgroundColor: background || "hsl(var(--b1))",
+        backgroundColor: background || (isDark ? "#020617" : "#f8fafc"),
         display: "flex",
         flexDirection: "column",
         alignItems: "center",

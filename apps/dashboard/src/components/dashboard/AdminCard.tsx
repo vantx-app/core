@@ -1,6 +1,10 @@
+"use client";
+
+import React from "react";
 import { AdminCardProps } from "@/types";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { navigateToCrossApp } from "@vantx/ui";
 
 export function AdminCard({
   href,
@@ -15,6 +19,14 @@ export function AdminCard({
   isExternalLink = false,
 }: AdminCardProps) {
   const LinkComponent = isExternalLink ? "a" : Link;
+
+  const handleClick = (e: React.MouseEvent<any>) => {
+    if (isExternalLink) {
+      e.preventDefault();
+      navigateToCrossApp(href, "driver");
+    }
+  };
+
 
   if (disabled) {
     return (
@@ -47,6 +59,7 @@ export function AdminCard({
   return (
     <LinkComponent
       href={href}
+      onClick={isExternalLink ? handleClick : undefined}
       className="card bg-base-100/60 backdrop-blur-sm border border-base-200 shadow-md hover:shadow-2xl hover:border-primary/30 hover:-translate-y-1 transition-all duration-300 group flex flex-col justify-between"
     >
       <div className="card-body p-6 space-y-4">
