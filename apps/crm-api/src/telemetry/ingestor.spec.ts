@@ -22,6 +22,7 @@ jest.mock('@prisma/client', () => {
     telemetryLog: { createMany: mockCreateMany, updateMany: jest.fn() },
     vehicleLiveState: { upsert: mockUpsert },
     mapLink: { findMany: jest.fn().mockResolvedValue([]) },
+    $queryRaw: jest.fn().mockResolvedValue([]),
     $transaction: mock$transaction,
   };
 
@@ -790,7 +791,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         speedLimit: 50,
         geometry: '-79.5201,8.9801;-79.5202,8.9802',
       };
-      mockPrisma.mapLink.findMany.mockResolvedValue([mockLink]);
+      mockPrisma.$queryRaw.mockResolvedValue([mockLink]);
 
       const records = [
         {
@@ -839,7 +840,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         speedLimit: 50,
         geometry: '-79.5201,8.9801;-79.5202,8.9802',
       };
-      mockPrisma.mapLink.findMany.mockResolvedValue([mockLink]);
+      mockPrisma.$queryRaw.mockResolvedValue([mockLink]);
 
       const records = [
         {
@@ -888,7 +889,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         speedLimit: 50,
         geometry: '-79.5201,8.9801;-79.5202,8.9802',
       };
-      mockPrisma.mapLink.findMany.mockResolvedValue([mockLink]);
+      mockPrisma.$queryRaw.mockResolvedValue([mockLink]);
 
       const records = [
         {

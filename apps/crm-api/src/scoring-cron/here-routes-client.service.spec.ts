@@ -25,8 +25,8 @@ describe('HereRoutesClientService', () => {
     };
 
     prismaMock = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       mapLink: {
-        findMany: jest.fn().mockResolvedValue([]),
         upsert: jest.fn().mockResolvedValue({}),
       },
     };

@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
 import { PrismaService } from '../prisma.service';
+import { MapLink } from '@prisma/client';
 import { snapPointToLinks } from '@vantx/telemetry-parser';
 import {
   RouteSpanWithSpeedLimit,
@@ -62,14 +63,10 @@ export class HereRoutesClientService {
       const minLng = Math.min(...coordinates.map((c) => c.lng)) - 0.005;
       const maxLng = Math.max(...coordinates.map((c) => c.lng)) + 0.005;
 
-      const cachedLinks = await this.prisma.mapLink.findMany({
-        where: {
-          minLat: { lte: maxLat },
-          maxLat: { gte: minLat },
-          minLng: { lte: maxLng },
-          maxLng: { gte: minLng },
-        },
-      });
+      const cachedLinks = await this.prisma.$queryRaw<MapLink[]>`
+        SELECT * FROM "MapLink"
+        WHERE box(point("minLng", "minLat"), point("maxLng", "maxLat")) && box(point(${minLng}, ${minLat}), point(${maxLng}, ${maxLat}))
+      `;
 
       if (cachedLinks.length > 0) {
         const parsedLinks = cachedLinks.map((link) => {

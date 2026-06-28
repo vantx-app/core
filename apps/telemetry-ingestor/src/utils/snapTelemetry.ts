@@ -1,4 +1,4 @@
-import { PrismaClient } from "@vantx/database";
+import { PrismaClient, MapLink } from "@vantx/database";
 import { snapPointToLinks, Logger, AvlMapping } from "@vantx/telemetry-parser";
 
 const logger = new Logger("SnapTelemetry");
@@ -43,14 +43,10 @@ export async function snapTelemetryRecords(
         continue;
       }
 
-      const cachedLinks = await (prisma as any).mapLink.findMany({
-        where: {
-          minLat: { lte: maxLat },
-          maxLat: { gte: minLat },
-          minLng: { lte: maxLng },
-          maxLng: { gte: minLng },
-        },
-      });
+      const cachedLinks = await (prisma as any).$queryRaw<MapLink[]>`
+        SELECT * FROM "MapLink"
+        WHERE box(point("minLng", "minLat"), point("maxLng", "maxLat")) && box(point(${minLng}, ${minLat}), point(${maxLng}, ${maxLat}))
+      `;
 
       if (cachedLinks && cachedLinks.length > 0) {
         const parsedLinks = cachedLinks.map((link: any) => {
