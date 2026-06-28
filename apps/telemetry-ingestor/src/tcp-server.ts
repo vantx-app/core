@@ -60,7 +60,9 @@ const server = net.createServer((socket) => {
       // Close duplicate/stale socket connection for the same IMEI if it exists
       const oldSocket = activeSockets.get(deviceImei);
       if (oldSocket) {
-        logger.log(`⚠️ Terminating stale socket session for IMEI: ${deviceImei}`);
+        logger.log(
+          `⚠️ Terminating stale socket session for IMEI: ${deviceImei}`,
+        );
         oldSocket.destroy();
       }
       activeSockets.set(deviceImei, socket);

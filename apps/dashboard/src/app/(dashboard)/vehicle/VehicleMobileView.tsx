@@ -117,7 +117,7 @@ export function VehicleMobileView({
           {vehicle.assignments?.[0]?.driver ? (
             <span className="font-bold text-base-content/90">
               {vehicle.assignments[0].driver.firstName &&
-                vehicle.assignments[0].driver.lastName
+              vehicle.assignments[0].driver.lastName
                 ? `${vehicle.assignments[0].driver.firstName} ${vehicle.assignments[0].driver.lastName}`
                 : vehicle.assignments[0].driver.nationalId}
             </span>

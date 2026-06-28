@@ -120,7 +120,11 @@ export class HereRoutesClientService {
           this.logger.log(
             `Cache HIT: Viaje procesado localmente con ${cachedLinks.length} segmentos de la BD.`,
           );
-          const hybridPts = buildHybridPolyline(coordinates, parsedLinks, 0.035);
+          const hybridPts = buildHybridPolyline(
+            coordinates,
+            parsedLinks,
+            0.035,
+          );
           const polyline = encodeFlexiblePolyline(hybridPts);
           return { spans, geometry: snappedGeometry, polyline };
         }

@@ -88,7 +88,11 @@ export class OverspeedCalculationService {
     logs: TelemetryLog[],
     fallbackOverspeedThreshold: number,
     category: VehicleCategory,
-  ): Promise<{ overspeedCount: number; overspeedSeverity: number; polyline?: string }> {
+  ): Promise<{
+    overspeedCount: number;
+    overspeedSeverity: number;
+    polyline?: string;
+  }> {
     const validLogs = logs.filter(
       (log) => log.latitude !== 0 && log.longitude !== 0,
     );

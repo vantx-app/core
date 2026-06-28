@@ -842,8 +842,8 @@ function AdminPageContent() {
     tabParam === "devices" && role === ROLES.SUPER_ADMIN
       ? "devices"
       : tabParam === "billing" && [ROLES.OWNER, ROLES.ADMIN].includes(role)
-      ? "billing"
-      : "overview";
+        ? "billing"
+        : "overview";
 
   const setTab = (key: TabKey) => {
     const params = new URLSearchParams(searchParams.toString());

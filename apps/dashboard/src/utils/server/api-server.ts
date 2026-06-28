@@ -17,7 +17,6 @@ export async function fetchServer(endpoint: string, options: RequestInit = {}) {
     token = cookieStore.get("access_token")?.value;
   }
 
-
   // Si no hay token y se consulta /users/me, es un invitado
   if (endpoint === "/users/me" && !token) {
     return null;

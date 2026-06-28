@@ -2,10 +2,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getRoleFromToken, isTokenExpired, NAV_LINKS } from "./utils/client";
-import {
-  getCookieSettings,
-  refreshSessionInMiddleware,
-} from "@vantx/auth";
+import { getCookieSettings, refreshSessionInMiddleware } from "@vantx/auth";
 
 export const config = {
   matcher: [
@@ -88,7 +85,6 @@ export async function middleware(request: NextRequest) {
         internalApiUrl: process.env.INTERNAL_API_URL || "http://localhost:8000",
         host,
       });
-
 
       if (!result.success) {
         throw new Error(result.errorType || "TRANSIENT_ERROR");

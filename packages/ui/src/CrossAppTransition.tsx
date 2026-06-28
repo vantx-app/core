@@ -66,7 +66,9 @@ interface OverlayProps {
  * Full-screen branded overlay that appears during cross-app navigations.
  * Must be placed once in each app's root layout, outside {children}.
  */
-export function CrossAppTransitionOverlay({ background = "#f8fafc" }: OverlayProps) {
+export function CrossAppTransitionOverlay({
+  background = "#f8fafc",
+}: OverlayProps) {
   const [overlay, setOverlay] = useState<OverlayState>({
     visible: false,
     variant: "owner",
@@ -132,7 +134,10 @@ export function CrossAppTransitionOverlay({ background = "#f8fafc" }: OverlayPro
       ? "rgba(16, 185, 129, 0.15)"
       : "rgba(29, 78, 216, 0.15)";
 
-  const isDarkBg = background === "#020617" || background.includes("020617") || background.includes("dark");
+  const isDarkBg =
+    background === "#020617" ||
+    background.includes("020617") ||
+    background.includes("dark");
   const logoVariant = isDarkBg ? "dark" : "light";
 
   return (
@@ -215,7 +220,11 @@ export function CrossAppTransitionOverlay({ background = "#f8fafc" }: OverlayPro
       </div>
 
       {/* Wordmark — subtle pulse animation */}
-      <div style={{ animation: "crossapp-wordmark-pulse 1.8s ease-in-out infinite" }}>
+      <div
+        style={{
+          animation: "crossapp-wordmark-pulse 1.8s ease-in-out infinite",
+        }}
+      >
         <Logo size="md" showText variant={logoVariant} />
       </div>
 

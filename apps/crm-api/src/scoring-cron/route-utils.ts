@@ -315,7 +315,10 @@ export function buildHybridPolyline(
     if (res.snapped && res.matchedLink) {
       const linkPoints = res.matchedLink.points; // [lng, lat][]
 
-      if (lastMatchedLinkPoints && res.matchedLink.points === lastMatchedLinkPoints) {
+      if (
+        lastMatchedLinkPoints &&
+        res.matchedLink.points === lastMatchedLinkPoints
+      ) {
         // En el mismo link, interpolar los puntos intermedios de la geometría del link
         const prevProjIdx = findClosestPointOnLine(
           hybridGeometry[hybridGeometry.length - 1][0], // lat es el primer elemento de hybridGeometry
@@ -328,15 +331,19 @@ export function buildHybridPolyline(
           linkPoints,
         );
 
-        if (prevProjIdx !== -1 && currProjIdx !== -1 && prevProjIdx !== currProjIdx) {
+        if (
+          prevProjIdx !== -1 &&
+          currProjIdx !== -1 &&
+          prevProjIdx !== currProjIdx
+        ) {
           const startIdx = Math.min(prevProjIdx, currProjIdx);
           const endIdx = Math.max(prevProjIdx, currProjIdx);
-          
+
           const intermediate = linkPoints.slice(startIdx + 1, endIdx);
           if (prevProjIdx > currProjIdx) {
             intermediate.reverse();
           }
-          
+
           // Guardar en formato [lat, lng] para codificación de polilínea
           for (const p of intermediate) {
             hybridGeometry.push([p[1], p[0]]);

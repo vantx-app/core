@@ -39,25 +39,33 @@ export interface ParsedTelemetry {
 export function parseTelemetryRecord(rec: any, mapping: any): ParsedTelemetry {
   // Resolución de valores dinámicos a partir de la configuración de mapeo
   const rawRpm = mapping.rpm !== undefined ? (rec.ioData[mapping.rpm] ?? 0) : 0;
-  const rawVoltage = mapping.voltage !== undefined ? (rec.ioData[mapping.voltage] ?? 0) : 0;
+  const rawVoltage =
+    mapping.voltage !== undefined ? (rec.ioData[mapping.voltage] ?? 0) : 0;
   const rawIgnitionPin =
     mapping.ignition !== undefined ? rec.ioData[mapping.ignition] === 1 : false;
   const movement =
     mapping.movement !== undefined ? rec.ioData[mapping.movement] === 1 : false;
   const obdSpeed =
-    mapping.obdSpeed !== undefined ? (rec.ioData[mapping.obdSpeed] ?? null) : null;
+    mapping.obdSpeed !== undefined
+      ? (rec.ioData[mapping.obdSpeed] ?? null)
+      : null;
   const speedToUse = obdSpeed ?? rec.gpsSpeed;
 
   const isHardwareExcessiveIdling =
     mapping.excessiveIdling !== undefined
-      ? rec.eventId === mapping.excessiveIdling || rec.ioData[mapping.excessiveIdling] === 1
+      ? rec.eventId === mapping.excessiveIdling ||
+        rec.ioData[mapping.excessiveIdling] === 1
       : false;
 
   const engineLoad =
-    mapping.engineLoad !== undefined ? (rec.ioData[mapping.engineLoad] ?? null) : null;
+    mapping.engineLoad !== undefined
+      ? (rec.ioData[mapping.engineLoad] ?? null)
+      : null;
 
   let coolantTemp =
-    mapping.coolantTemp !== undefined ? (rec.ioData[mapping.coolantTemp] ?? null) : null;
+    mapping.coolantTemp !== undefined
+      ? (rec.ioData[mapping.coolantTemp] ?? null)
+      : null;
 
   // Escalar la temperatura del refrigerante del motor LVCAN (AVL ID 115) de 1/10 °C a grados Celsius
   if (mapping.coolantTemp === 115 && coolantTemp !== null) {
@@ -69,29 +77,44 @@ export function parseTelemetryRecord(rec: any, mapping: any): ParsedTelemetry {
       ? rec.ioData[mapping.odometer] / 1000.0
       : null;
 
-  const vin = mapping.vin !== undefined ? (rec.ioData[mapping.vin] ?? null) : null;
-  const dtcCount = mapping.dtcCount !== undefined ? (rec.ioData[mapping.dtcCount] ?? 0) : 0;
+  const vin =
+    mapping.vin !== undefined ? (rec.ioData[mapping.vin] ?? null) : null;
+  const dtcCount =
+    mapping.dtcCount !== undefined ? (rec.ioData[mapping.dtcCount] ?? 0) : 0;
   const faultCodes =
-    mapping.faultCodes !== undefined ? (rec.ioData[mapping.faultCodes] ?? null) : null;
+    mapping.faultCodes !== undefined
+      ? (rec.ioData[mapping.faultCodes] ?? null)
+      : null;
   const powerSupply = rawVoltage / 1000;
 
   const isUnplugged =
-    mapping.unplugged !== undefined ? rec.ioData[mapping.unplugged] === 1 : false;
+    mapping.unplugged !== undefined
+      ? rec.ioData[mapping.unplugged] === 1
+      : false;
 
   // Detectar tipo de combustible
-  const rawFuelType = mapping.fuelType !== undefined ? rec.ioData[mapping.fuelType] : null;
+  const rawFuelType =
+    mapping.fuelType !== undefined ? rec.ioData[mapping.fuelType] : null;
   const detectedFuelType = mapObdFuelType(rawFuelType);
 
   // Conducción Ecológica (Eco Driving)
   const ecoDrivingType =
-    mapping.ecoDrivingType !== undefined ? rec.ioData[mapping.ecoDrivingType] : undefined;
+    mapping.ecoDrivingType !== undefined
+      ? rec.ioData[mapping.ecoDrivingType]
+      : undefined;
   const rawSeverity =
-    mapping.ecoDrivingValueMax !== undefined ? rec.ioData[mapping.ecoDrivingValueMax] : undefined;
+    mapping.ecoDrivingValueMax !== undefined
+      ? rec.ioData[mapping.ecoDrivingValueMax]
+      : undefined;
   const ecoDrivingSeverity = parseEcoAxesValue(rawSeverity) ?? 10;
   const ecoDrivingDuration =
-    mapping.ecoDrivingDuration !== undefined ? (rec.ioData[mapping.ecoDrivingDuration] ?? null) : null;
+    mapping.ecoDrivingDuration !== undefined
+      ? (rec.ioData[mapping.ecoDrivingDuration] ?? null)
+      : null;
   const rawAverage =
-    mapping.ecoDrivingAverage !== undefined ? rec.ioData[mapping.ecoDrivingAverage] : undefined;
+    mapping.ecoDrivingAverage !== undefined
+      ? rec.ioData[mapping.ecoDrivingAverage]
+      : undefined;
   const ecoDrivingAverage = parseEcoAxesValue(rawAverage);
 
   let harshAcceleration = 0;
@@ -149,7 +172,8 @@ export function parseTelemetryRecord(rec: any, mapping: any): ParsedTelemetry {
 
   // Detección de viaje por hardware (AVL ID 250) o fallback de ignición
   const tripActive =
-    mapping.tripStatus !== undefined && rec.ioData[mapping.tripStatus] !== undefined
+    mapping.tripStatus !== undefined &&
+    rec.ioData[mapping.tripStatus] !== undefined
       ? rec.ioData[mapping.tripStatus] === 1
       : trueIgnition;
 

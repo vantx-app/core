@@ -118,8 +118,6 @@ describe('ScoringCronService', () => {
     expect(service).toBeDefined();
   });
 
-
-
   describe('runDailyRollup date calculation', () => {
     beforeEach(() => {
       jest.useFakeTimers();
@@ -164,8 +162,6 @@ describe('ScoringCronService', () => {
       expect(serializedCall).toContain('2026-06-01');
     });
   });
-
-
 
   describe('runDailyRollup post-processing with HERE', () => {
     let configService: ConfigService;

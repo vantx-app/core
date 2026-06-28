@@ -46,7 +46,7 @@ export function NavigationMenu() {
             process.env.NEXT_PUBLIC_MARKETPLACE_URL || "http://localhost:3002";
 
           return (
-              <li
+            <li
               key={link.href}
               className={`w-full ${link.overrideClassNames ? link.overrideClassNames : ""}`}
             >

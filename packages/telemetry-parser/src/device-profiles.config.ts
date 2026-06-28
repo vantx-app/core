@@ -1,13 +1,15 @@
 export enum DeviceModel {
-  FMC003 = 'FMC003',
-  FMC150 = 'FMC150',
-  FMC650 = 'FMC650',
+  FMC003 = "FMC003",
+  FMC150 = "FMC150",
+  FMC650 = "FMC650",
 }
 
-export function getTelemetryProfile(model: DeviceModel | string | null | undefined): string {
-  if (!model) return 'TELTONIKA_STANDARD';
-  if (model === DeviceModel.FMC150) return 'TELTONIKA_FMC150';
-  if (model === DeviceModel.FMC650) return 'TELTONIKA_FMC650';
+export function getTelemetryProfile(
+  model: DeviceModel | string | null | undefined,
+): string {
+  if (!model) return "TELTONIKA_STANDARD";
+  if (model === DeviceModel.FMC150) return "TELTONIKA_FMC150";
+  if (model === DeviceModel.FMC650) return "TELTONIKA_FMC650";
   // Fallback for custom or test profile names
   return model;
 }

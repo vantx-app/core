@@ -159,15 +159,15 @@ export function VehicleDetailClient({
         </div>
 
         {day.overspeedCount > 0 ||
-          totalHarsh > 0 ||
-          (!!day.deviceUnpluggedCount && day.deviceUnpluggedCount > 0) ||
-          day.activeFaultCodesCount > 0 ||
-          (day.highRpmCount ?? 0) > 0 ||
-          (day.coldEngineStrainCount ?? 0) > 0 ||
-          (day.coastingInNeutralCount ?? 0) > 0 ||
-          (day.engineLuggingCount ?? 0) > 0 ||
-          (day.highLoadStrainCount ?? 0) > 0 ||
-          (day.criticalOverheatingCount ?? 0) > 0 ? (
+        totalHarsh > 0 ||
+        (!!day.deviceUnpluggedCount && day.deviceUnpluggedCount > 0) ||
+        day.activeFaultCodesCount > 0 ||
+        (day.highRpmCount ?? 0) > 0 ||
+        (day.coldEngineStrainCount ?? 0) > 0 ||
+        (day.coastingInNeutralCount ?? 0) > 0 ||
+        (day.engineLuggingCount ?? 0) > 0 ||
+        (day.highLoadStrainCount ?? 0) > 0 ||
+        (day.criticalOverheatingCount ?? 0) > 0 ? (
           <div className="flex flex-wrap gap-2 pt-1">
             {day.overspeedCount > 0 && (
               <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-rose-500/10 text-rose-600 border border-rose-500/20 font-bold font-mono text-[10px] gap-1">
@@ -608,30 +608,33 @@ export function VehicleDetailClient({
       <div className="tabs tabs-boxed bg-base-200/50 p-1 rounded-xl w-full max-w-md shrink-0 border border-base-200/60 backdrop-blur-md">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "overview"
-            ? "tab-active bg-base-100 shadow-sm text-primary"
-            : "text-base-content/60"
-            }`}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "overview"
+              ? "tab-active bg-base-100 shadow-sm text-primary"
+              : "text-base-content/60"
+          }`}
         >
           <Info className="size-3.5 mr-1.5" />
           Resumen
         </button>
         <button
           onClick={() => setActiveTab("scores")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "scores"
-            ? "tab-active bg-base-100 shadow-sm text-primary"
-            : "text-base-content/60"
-            }`}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "scores"
+              ? "tab-active bg-base-100 shadow-sm text-primary"
+              : "text-base-content/60"
+          }`}
         >
           <Eye className="size-3.5 mr-1.5" />
           Desempeño
         </button>
         <button
           onClick={() => setActiveTab("rollups")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "rollups"
-            ? "tab-active bg-base-100 shadow-sm text-primary"
-            : "text-base-content/60"
-            }`}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "rollups"
+              ? "tab-active bg-base-100 shadow-sm text-primary"
+              : "text-base-content/60"
+          }`}
         >
           <Activity className="size-3.5 mr-1.5" />
           Actividad Diaria
@@ -776,67 +779,67 @@ export function VehicleDetailClient({
             {/* Diagnósticos CAN J1939 (Sólo FMC150 y FMC650) */}
             {(vehicle.device?.model === "FMC150" ||
               vehicle.device?.model === "FMC650") && (
-                <div className="glass-card p-6 space-y-4">
-                  <h3 className="text-base font-bold flex items-center gap-2">
-                    <Activity className="text-primary size-5" />
-                    Diagnósticos CAN J1939
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                    <div className="border border-base-200/60 p-4 rounded-2xl space-y-2 flex flex-col justify-between">
-                      <div>
-                        <span className="text-base-content/40 block font-semibold uppercase tracking-wider text-[10px]">
-                          Nivel de Combustible
-                        </span>
-                        <span className="text-2xl font-black font-mono tracking-tight text-primary mt-1 block">
-                          74.5%
-                        </span>
-                      </div>
-                      <div className="w-full bg-base-200/50 rounded-full h-1.5 mt-2">
-                        <div
-                          className="bg-primary h-1.5 rounded-full"
-                          style={{ width: "74.5%" }}
-                        ></div>
-                      </div>
+              <div className="glass-card p-6 space-y-4">
+                <h3 className="text-base font-bold flex items-center gap-2">
+                  <Activity className="text-primary size-5" />
+                  Diagnósticos CAN J1939
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                  <div className="border border-base-200/60 p-4 rounded-2xl space-y-2 flex flex-col justify-between">
+                    <div>
+                      <span className="text-base-content/40 block font-semibold uppercase tracking-wider text-[10px]">
+                        Nivel de Combustible
+                      </span>
+                      <span className="text-2xl font-black font-mono tracking-tight text-primary mt-1 block">
+                        74.5%
+                      </span>
                     </div>
-
-                    <div className="border border-base-200/60 p-4 rounded-2xl space-y-2 flex flex-col justify-between">
-                      <div>
-                        <span className="text-base-content/40 block font-semibold uppercase tracking-wider text-[10px]">
-                          Consumo de Combustible
-                        </span>
-                        <span className="text-2xl font-black font-mono tracking-tight text-primary mt-1 block">
-                          {vehicle.liveState?.lastIgnition
-                            ? `${(8.5 + (vehicle.liveState?.lastSpeed || 0) * 0.25).toFixed(1)} L/h`
-                            : "0.0 L/h"}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-base-content/50 italic leading-relaxed">
-                        {vehicle.liveState?.lastIgnition
-                          ? "Motor encendido - Lectura en tiempo real"
-                          : "Motor apagado"}
-                      </p>
-                    </div>
-
-                    <div className="border border-base-200/60 p-4 rounded-2xl space-y-2 flex flex-col justify-between">
-                      <div>
-                        <span className="text-base-content/40 block font-semibold uppercase tracking-wider text-[10px]">
-                          Estado de Tacógrafo
-                        </span>
-                        <span className="text-xl font-black tracking-tight text-emerald-600 mt-1 block">
-                          {vehicle.liveState?.lastIgnition
-                            ? (vehicle.liveState?.lastSpeed || 0) > 0
-                              ? "CONDUCCIÓN"
-                              : "TRABAJO"
-                            : "DESCANSO"}
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-base-content/50 leading-relaxed">
-                        Límites de tiempo de conducción J1939 / DTCO en regla.
-                      </p>
+                    <div className="w-full bg-base-200/50 rounded-full h-1.5 mt-2">
+                      <div
+                        className="bg-primary h-1.5 rounded-full"
+                        style={{ width: "74.5%" }}
+                      ></div>
                     </div>
                   </div>
+
+                  <div className="border border-base-200/60 p-4 rounded-2xl space-y-2 flex flex-col justify-between">
+                    <div>
+                      <span className="text-base-content/40 block font-semibold uppercase tracking-wider text-[10px]">
+                        Consumo de Combustible
+                      </span>
+                      <span className="text-2xl font-black font-mono tracking-tight text-primary mt-1 block">
+                        {vehicle.liveState?.lastIgnition
+                          ? `${(8.5 + (vehicle.liveState?.lastSpeed || 0) * 0.25).toFixed(1)} L/h`
+                          : "0.0 L/h"}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-base-content/50 italic leading-relaxed">
+                      {vehicle.liveState?.lastIgnition
+                        ? "Motor encendido - Lectura en tiempo real"
+                        : "Motor apagado"}
+                    </p>
+                  </div>
+
+                  <div className="border border-base-200/60 p-4 rounded-2xl space-y-2 flex flex-col justify-between">
+                    <div>
+                      <span className="text-base-content/40 block font-semibold uppercase tracking-wider text-[10px]">
+                        Estado de Tacógrafo
+                      </span>
+                      <span className="text-xl font-black tracking-tight text-emerald-600 mt-1 block">
+                        {vehicle.liveState?.lastIgnition
+                          ? (vehicle.liveState?.lastSpeed || 0) > 0
+                            ? "CONDUCCIÓN"
+                            : "TRABAJO"
+                          : "DESCANSO"}
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-base-content/50 leading-relaxed">
+                      Límites de tiempo de conducción J1939 / DTCO en regla.
+                    </p>
+                  </div>
                 </div>
-              )}
+              </div>
+            )}
 
             {/* Technical Specifications Card */}
             <div className="glass-card p-6 space-y-4">
@@ -872,7 +875,11 @@ export function VehicleDetailClient({
                   />
                   <DetailRow
                     label="IMEI del Dispositivo GPS"
-                    value={<span className="font-mono">{vehicle.device?.imei || "Sin dispositivo"}</span>}
+                    value={
+                      <span className="font-mono">
+                        {vehicle.device?.imei || "Sin dispositivo"}
+                      </span>
+                    }
                   />
                   <DetailRow
                     label="Estado Administrativo"
@@ -1062,7 +1069,7 @@ export function VehicleDetailClient({
                           {Math.round(
                             ((snap.maintenanceScore ?? 100) +
                               (snap.fuelEfficiency ?? 100)) /
-                            2,
+                              2,
                           )}{" "}
                           pts
                         </span>
@@ -1084,10 +1091,10 @@ export function VehicleDetailClient({
               ))}
               {(!vehicle.vehicleScoreSnapshots ||
                 vehicle.vehicleScoreSnapshots.length === 0) && (
-                  <div className="text-center text-base-content/40 py-8 bg-base-200/30 border border-base-200/60 rounded-2xl text-xs">
-                    No hay historial de puntajes semanales registrado aún.
-                  </div>
-                )}
+                <div className="text-center text-base-content/40 py-8 bg-base-200/30 border border-base-200/60 rounded-2xl text-xs">
+                  No hay historial de puntajes semanales registrado aún.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1130,27 +1137,27 @@ export function VehicleDetailClient({
           <div className="block md:hidden space-y-3">
             {showRollupGrouping
               ? monthKeys.map((monthKey) => (
-                <div
-                  key={monthKey}
-                  className="collapse bg-base-100/40 border border-base-200 shadow-md rounded-2xl overflow-hidden backdrop-blur-md"
-                >
-                  <input
-                    type="checkbox"
-                    defaultChecked={monthKey === firstMonthKey}
-                    className="peer"
-                    aria-label={`Mostrar logs de ${monthKey}`}
-                  />
-                  <div className="collapse-title text-sm font-bold flex items-center gap-2 pr-10 text-base-content bg-base-200/20 capitalize text-left">
-                    <span>{monthKey}</span>
-                    <span className="badge badge-neutral badge-sm ml-2 font-mono font-bold bg-base-300 border-none text-base-content/85">
-                      {groupedRollups[monthKey].length}
-                    </span>
+                  <div
+                    key={monthKey}
+                    className="collapse bg-base-100/40 border border-base-200 shadow-md rounded-2xl overflow-hidden backdrop-blur-md"
+                  >
+                    <input
+                      type="checkbox"
+                      defaultChecked={monthKey === firstMonthKey}
+                      className="peer"
+                      aria-label={`Mostrar logs de ${monthKey}`}
+                    />
+                    <div className="collapse-title text-sm font-bold flex items-center gap-2 pr-10 text-base-content bg-base-200/20 capitalize text-left">
+                      <span>{monthKey}</span>
+                      <span className="badge badge-neutral badge-sm ml-2 font-mono font-bold bg-base-300 border-none text-base-content/85">
+                        {groupedRollups[monthKey].length}
+                      </span>
+                    </div>
+                    <div className="collapse-content p-4 bg-base-100/10 space-y-3">
+                      {groupedRollups[monthKey].map(renderRollupCard)}
+                    </div>
                   </div>
-                  <div className="collapse-content p-4 bg-base-100/10 space-y-3">
-                    {groupedRollups[monthKey].map(renderRollupCard)}
-                  </div>
-                </div>
-              ))
+                ))
               : rollups.map(renderRollupCard)}
             {rollups.length === 0 && (
               <div className="text-center text-base-content/40 py-8 bg-base-200/30 border border-base-200/60 rounded-2xl text-xs">

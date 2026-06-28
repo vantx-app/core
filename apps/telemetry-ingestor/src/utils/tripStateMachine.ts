@@ -60,7 +60,10 @@ export function transitionTripState({
       recTimeMs - lastClosed.closeTime < POST_CLOSE_DEBOUNCE_MS
     ) {
       const reopenedTripId = lastClosed.id;
-      state.activeTrip = { id: reopenedTripId, startTime: lastClosed.startTime };
+      state.activeTrip = {
+        id: reopenedTripId,
+        startTime: lastClosed.startTime,
+      };
 
       // Restaurar estado si fue marcado como eliminado o descartado
       tripsToDelete.delete(reopenedTripId);

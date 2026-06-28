@@ -173,7 +173,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
     // Add compact attribution control to bottom-left corner to avoid overlapping custom HUD buttons
     map.current.addControl(
       new mapboxgl.AttributionControl({ compact: true }),
-      "bottom-left"
+      "bottom-left",
     );
 
     // Pause auto-follow if the user manually drags/zooms/pans the map
@@ -532,23 +532,37 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
               Información de Rastreo
             </p>
             <p className="text-[10px] text-base-content/60 leading-normal">
-              La ubicación del vehículo se actualiza periódicamente, no en tiempo real. Úsese como una referencia visual de la proximidad del vehículo.
+              La ubicación del vehículo se actualiza periódicamente, no en
+              tiempo real. Úsese como una referencia visual de la proximidad del
+              vehículo.
             </p>
             <div className="border-t border-base-200 pt-2 space-y-1.5">
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-blue-500 shrink-0" />
-                <span className="font-semibold text-base-content/95">En movimiento:</span>
-                <span className="text-base-content/60">Vehículo circulando.</span>
+                <span className="font-semibold text-base-content/95">
+                  En movimiento:
+                </span>
+                <span className="text-base-content/60">
+                  Vehículo circulando.
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-amber-500 shrink-0" />
-                <span className="font-semibold text-base-content/95">En espera:</span>
-                <span className="text-base-content/60">Parada temporal (ej. tráfico).</span>
+                <span className="font-semibold text-base-content/95">
+                  En espera:
+                </span>
+                <span className="text-base-content/60">
+                  Parada temporal (ej. tráfico).
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="size-2 rounded-full bg-slate-400 shrink-0" />
-                <span className="font-semibold text-base-content/95">Detenido:</span>
-                <span className="text-base-content/60">Vehículo apagado/estacionado.</span>
+                <span className="font-semibold text-base-content/95">
+                  Detenido:
+                </span>
+                <span className="text-base-content/60">
+                  Vehículo apagado/estacionado.
+                </span>
               </div>
             </div>
           </div>

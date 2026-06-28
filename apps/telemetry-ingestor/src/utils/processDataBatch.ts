@@ -26,7 +26,10 @@ const lastClosedTripCache = new Map<
 // Active promise chain queue per IMEI to serialize concurrent ingestion requests locally
 const ingestionQueue = new Map<string, Promise<void>>();
 
-export async function processDataBatch(records: any[], imei: string): Promise<void> {
+export async function processDataBatch(
+  records: any[],
+  imei: string,
+): Promise<void> {
   const previousPromise = ingestionQueue.get(imei) || Promise.resolve();
 
   const executeNext = async () => {
@@ -77,8 +80,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
   // 1. Resolve mapping configuration using deviceModel from database
   const profileName = getTelemetryProfile(vehicle.device?.model);
   const mapping =
-    DEVICE_PROFILES[profileName] ||
-    DEVICE_PROFILES.TELTONIKA_STANDARD;
+    DEVICE_PROFILES[profileName] || DEVICE_PROFILES.TELTONIKA_STANDARD;
 
   // 2. Perform Local Road Snapping using optimized chunked queries
   const snappedRecords = await snapTelemetryRecords(records, prisma, mapping);
@@ -107,7 +109,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
 
   // Wrappers de estado mutables para pasar por referencia
   const liveTripState: TripState = {
-    activeTrip: localActiveTrip ? { id: localActiveTrip.id, startTime: localActiveTrip.startTime } : undefined,
+    activeTrip: localActiveTrip
+      ? { id: localActiveTrip.id, startTime: localActiveTrip.startTime }
+      : undefined,
     lastClosedTrip: localLastClosedTrip
       ? {
           id: localLastClosedTrip.id,
@@ -168,7 +172,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
     // significa que este registro pertenece al pasado (diferido) y no al viaje activo actual.
     const isRecordBeforeCurrentTrip =
       liveTripState.activeTrip &&
-      (rec.timestamp as Date).getTime() < liveTripState.activeTrip.startTime.getTime();
+      (rec.timestamp as Date).getTime() <
+        liveTripState.activeTrip.startTime.getTime();
 
     let recordTripId: string | null = null;
 

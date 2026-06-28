@@ -142,9 +142,13 @@ export default function VehicleForm({
 
           const lastOdo = data.liveState?.lastOdometer ?? 0;
           const initialOdo = data.initialOdometer ?? 0;
-          const isAbsolute = data.odometerSource === "ABSOLUTE" || (data.odometerSource === "AUTO" && data.isOdometerAbsolute);
+          const isAbsolute =
+            data.odometerSource === "ABSOLUTE" ||
+            (data.odometerSource === "AUTO" && data.isOdometerAbsolute);
           setFetchedLastOdometer(lastOdo);
-          const displayOdo = String(Math.round(isAbsolute ? lastOdo : initialOdo + lastOdo));
+          const displayOdo = String(
+            Math.round(isAbsolute ? lastOdo : initialOdo + lastOdo),
+          );
           setOriginalOdometer(displayOdo);
 
           const dev = data.device;
@@ -472,11 +476,16 @@ export default function VehicleForm({
               {...register("odometerSource")}
             >
               <option value="AUTO">Autodetectar (Recomendado)</option>
-              <option value="ABSOLUTE">Kilometraje real del tablero (OBD/CAN)</option>
-              <option value="RELATIVE">Kilometraje estimado por GPS (Suma al inicial)</option>
+              <option value="ABSOLUTE">
+                Kilometraje real del tablero (OBD/CAN)
+              </option>
+              <option value="RELATIVE">
+                Kilometraje estimado por GPS (Suma al inicial)
+              </option>
             </select>
             <span className="text-[10px] text-base-content/50 mt-1 pl-1">
-              Decide si el odómetro del dispositivo es real o debe sumarse al valor inicial.
+              Decide si el odómetro del dispositivo es real o debe sumarse al
+              valor inicial.
             </span>
           </div>
 
@@ -531,7 +540,9 @@ export default function VehicleForm({
           if (matchedDevice) {
             setValue("deviceId", matchedDevice.id);
           } else {
-            setError(`El IMEI escaneado (${scannedImei}) no está registrado como disponible en el inventario.`);
+            setError(
+              `El IMEI escaneado (${scannedImei}) no está registrado como disponible en el inventario.`,
+            );
           }
         }}
       />

@@ -79,7 +79,12 @@ export function RouteProgressBar() {
       if (!href) return;
 
       // Ignore external or non-http links
-      if (href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) return;
+      if (
+        href.startsWith("mailto:") ||
+        href.startsWith("tel:") ||
+        href.startsWith("javascript:")
+      )
+        return;
 
       // Ignore links with target="_blank"
       const target = anchorNode.getAttribute("target");
@@ -110,19 +115,30 @@ export function RouteProgressBar() {
       }
 
       // Ignore if clicking the exact same URL (pathname + query)
-      if (targetUrl.pathname === currentUrl.pathname && targetUrl.search === currentUrl.search) {
+      if (
+        targetUrl.pathname === currentUrl.pathname &&
+        targetUrl.search === currentUrl.search
+      ) {
         return;
       }
 
       // Only left clicks without keys held
-      if (event.button === 0 && !event.metaKey && !event.ctrlKey && !event.shiftKey && !event.altKey) {
+      if (
+        event.button === 0 &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.shiftKey &&
+        !event.altKey
+      ) {
         startLoading();
       }
     };
 
     document.addEventListener("click", handleAnchorClick, { capture: true });
     return () => {
-      document.removeEventListener("click", handleAnchorClick, { capture: true });
+      document.removeEventListener("click", handleAnchorClick, {
+        capture: true,
+      });
       if (completeTimer.current) clearTimeout(completeTimer.current);
       if (hideTimer.current) clearTimeout(hideTimer.current);
       if (growTimer.current) clearTimeout(growTimer.current);

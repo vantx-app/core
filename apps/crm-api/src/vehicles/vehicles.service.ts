@@ -17,7 +17,10 @@ import {
   RuleEngineConfig,
   DEFAULT_RULE_ENGINE_CONFIG,
 } from 'src/scoring-cron/scoring.interfaces';
-import { decodeFlexiblePolyline, haversineDistance } from 'src/scoring-cron/route-utils';
+import {
+  decodeFlexiblePolyline,
+  haversineDistance,
+} from 'src/scoring-cron/route-utils';
 
 @Injectable()
 export class VehiclesService {
@@ -531,12 +534,17 @@ export class VehiclesService {
         return decoded.polyline.map((p) => {
           const lat = p[0];
           const lng = p[1];
-          
+
           let closestLog = rawLogs[0];
           let minDist = Infinity;
-          
+
           for (const log of rawLogs) {
-            const dist = haversineDistance(lat, lng, log.latitude, log.longitude);
+            const dist = haversineDistance(
+              lat,
+              lng,
+              log.latitude,
+              log.longitude,
+            );
             if (dist < minDist) {
               minDist = dist;
               closestLog = log;

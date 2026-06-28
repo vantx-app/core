@@ -18,7 +18,7 @@ import {
   Calendar,
   Eye,
   Info,
-  UploadCloud
+  UploadCloud,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -50,7 +50,11 @@ export function DevicesTab() {
 
   // Forms state
   const [newDevice, setNewDevice] = useState({ imei: "", model: "FMC003" });
-  const [newSim, setNewSim] = useState({ iccid: "", phoneNumber: "", carrier: "" });
+  const [newSim, setNewSim] = useState({
+    iccid: "",
+    phoneNumber: "",
+    carrier: "",
+  });
   const [selectedSimId, setSelectedSimId] = useState<string>("");
   const [selectedVehicleId, setSelectedVehicleId] = useState<string>("");
 
@@ -86,7 +90,7 @@ export function DevicesTab() {
       const { data } = await api.post("/devices/sync-fota");
       if (data.success) {
         setSuccess(
-          `Sincronización exitosa con FOTA Web: ${data.syncedCount} dispositivos procesados (${data.createdCount} nuevos, ${data.updatedCount} actualizados).`
+          `Sincronización exitosa con FOTA Web: ${data.syncedCount} dispositivos procesados (${data.createdCount} nuevos, ${data.updatedCount} actualizados).`,
         );
         fetchData();
       }
@@ -126,7 +130,9 @@ export function DevicesTab() {
       fetchData();
     } catch (err: any) {
       console.error(err);
-      setError(err.response?.data?.message || "Error al registrar la tarjeta SIM.");
+      setError(
+        err.response?.data?.message || "Error al registrar la tarjeta SIM.",
+      );
     }
   };
 
@@ -158,7 +164,9 @@ export function DevicesTab() {
       }
     } catch (err: any) {
       console.error("CSV import error:", err);
-      setError(err.response?.data?.message || "Error al importar el archivo CSV.");
+      setError(
+        err.response?.data?.message || "Error al importar el archivo CSV.",
+      );
     } finally {
       setImporting(false);
       e.target.value = "";
@@ -219,11 +227,11 @@ export function DevicesTab() {
 
   // Filter lists of available options
   const availableSims = simCards.filter(
-    (sim) => !sim.device || sim.device.id === selectedDevice?.id
+    (sim) => !sim.device || sim.device.id === selectedDevice?.id,
   );
-  
+
   const availableVehicles = vehicles.filter(
-    (v) => !v.device || v.device.id === selectedDevice?.id
+    (v) => !v.device || v.device.id === selectedDevice?.id,
   );
 
   return (
@@ -235,7 +243,9 @@ export function DevicesTab() {
             <span className="text-[10px] font-extrabold uppercase text-base-content/50 tracking-wider">
               Total Dispositivos
             </span>
-            <p className="text-2xl font-black text-base-content mt-1">{devices.length}</p>
+            <p className="text-2xl font-black text-base-content mt-1">
+              {devices.length}
+            </p>
           </div>
           <div className="p-3 bg-primary/10 rounded-2xl text-primary">
             <Cpu className="size-6" />
@@ -261,7 +271,9 @@ export function DevicesTab() {
             <span className="text-[10px] font-extrabold uppercase text-base-content/50 tracking-wider">
               Total Tarjetas SIM
             </span>
-            <p className="text-2xl font-black text-base-content mt-1">{simCards.length}</p>
+            <p className="text-2xl font-black text-base-content mt-1">
+              {simCards.length}
+            </p>
           </div>
           <div className="p-3 bg-teal-500/10 rounded-2xl text-teal-600">
             <Radio className="size-6" />
@@ -291,7 +303,9 @@ export function DevicesTab() {
             Inventario Global de Hardware
           </h2>
           <p className="text-xs text-base-content/60 max-w-xl">
-            Gestiona la asignación física de trackers Teltonika, asócialos con tarjetas SIM del proveedor y vincula dispositivos con los vehículos correspondientes.
+            Gestiona la asignación física de trackers Teltonika, asócialos con
+            tarjetas SIM del proveedor y vincula dispositivos con los vehículos
+            correspondientes.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -369,7 +383,9 @@ export function DevicesTab() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-4">
           <Loader2 className="size-10 animate-spin text-primary" />
-          <p className="text-xs text-base-content/60">Cargando datos del inventario...</p>
+          <p className="text-xs text-base-content/60">
+            Cargando datos del inventario...
+          </p>
         </div>
       ) : subTab === "devices" ? (
         <div className="glass-card overflow-hidden shadow-sm">
@@ -383,23 +399,36 @@ export function DevicesTab() {
                   <th className="font-bold text-base-content/70">Origen</th>
                   <th className="font-bold text-base-content/70">Firmware</th>
                   <th className="font-bold text-base-content/70">SIM Card</th>
-                  <th className="font-bold text-base-content/70">Vehículo Vinculado</th>
-                  <th className="font-bold text-base-content/70 text-right">Acciones</th>
+                  <th className="font-bold text-base-content/70">
+                    Vehículo Vinculado
+                  </th>
+                  <th className="font-bold text-base-content/70 text-right">
+                    Acciones
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {devices.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-8 text-base-content/40">
-                      No hay dispositivos registrados en el sistema. Sincroniza con FOTA Web o agrega uno manualmente.
+                    <td
+                      colSpan={8}
+                      className="text-center py-8 text-base-content/40"
+                    >
+                      No hay dispositivos registrados en el sistema. Sincroniza
+                      con FOTA Web o agrega uno manualmente.
                     </td>
                   </tr>
                 ) : (
                   devices.map((dev) => (
                     <tr key={dev.id} className="hover:bg-base-200/40">
-                      <td className="font-mono font-bold text-base-content/80">{dev.imei}</td>
+                      <td className="font-mono font-bold text-base-content/80">
+                        {dev.imei}
+                      </td>
                       <td>
-                        <Badge variant="ghost" className="font-bold text-xs bg-primary/5 text-primary border-primary/20">
+                        <Badge
+                          variant="ghost"
+                          className="font-bold text-xs bg-primary/5 text-primary border-primary/20"
+                        >
                           {dev.model}
                         </Badge>
                       </td>
@@ -425,7 +454,9 @@ export function DevicesTab() {
                           {dev.source === "FOTA" ? "FOTA Web" : "Manual"}
                         </span>
                       </td>
-                      <td className="font-mono text-base-content/60">{dev.firmware || "—"}</td>
+                      <td className="font-mono text-base-content/60">
+                        {dev.firmware || "—"}
+                      </td>
                       <td>
                         {dev.simCard ? (
                           <div className="flex items-center gap-1.5 text-base-content/80 font-mono">
@@ -433,7 +464,9 @@ export function DevicesTab() {
                             <span>{dev.simCard.iccid}</span>
                           </div>
                         ) : (
-                          <span className="text-base-content/40 italic">Sin SIM</span>
+                          <span className="text-base-content/40 italic">
+                            Sin SIM
+                          </span>
                         )}
                       </td>
                       <td>
@@ -445,7 +478,9 @@ export function DevicesTab() {
                             </span>
                           </div>
                         ) : (
-                          <span className="text-base-content/40 italic">Sin Vehículo</span>
+                          <span className="text-base-content/40 italic">
+                            Sin Vehículo
+                          </span>
                         )}
                       </td>
                       <td className="text-right space-x-1.5">
@@ -480,25 +515,41 @@ export function DevicesTab() {
               <thead>
                 <tr>
                   <th className="font-bold text-base-content/70">ICCID</th>
-                  <th className="font-bold text-base-content/70">Número Telefónico</th>
+                  <th className="font-bold text-base-content/70">
+                    Número Telefónico
+                  </th>
                   <th className="font-bold text-base-content/70">Operador</th>
-                  <th className="font-bold text-base-content/70">Dispositivo Asociado</th>
-                  <th className="font-bold text-base-content/70">Vehículo Vinculado</th>
-                  <th className="font-bold text-base-content/70">Fecha de Creación</th>
+                  <th className="font-bold text-base-content/70">
+                    Dispositivo Asociado
+                  </th>
+                  <th className="font-bold text-base-content/70">
+                    Vehículo Vinculado
+                  </th>
+                  <th className="font-bold text-base-content/70">
+                    Fecha de Creación
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {simCards.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="text-center py-8 text-base-content/40">
-                      No hay tarjetas SIM registradas en el sistema. Agrega una manualmente.
+                    <td
+                      colSpan={6}
+                      className="text-center py-8 text-base-content/40"
+                    >
+                      No hay tarjetas SIM registradas en el sistema. Agrega una
+                      manualmente.
                     </td>
                   </tr>
                 ) : (
                   simCards.map((sim) => (
                     <tr key={sim.id} className="hover:bg-base-200/40">
-                      <td className="font-mono font-bold text-base-content/80">{sim.iccid}</td>
-                      <td className="font-mono text-base-content/70">{sim.phoneNumber || "—"}</td>
+                      <td className="font-mono font-bold text-base-content/80">
+                        {sim.iccid}
+                      </td>
+                      <td className="font-mono text-base-content/70">
+                        {sim.phoneNumber || "—"}
+                      </td>
                       <td>
                         <span className="badge badge-sm badge-outline font-bold text-[10px]">
                           {sim.carrier || "No especificado"}
@@ -509,10 +560,14 @@ export function DevicesTab() {
                           <div className="flex items-center gap-1 text-base-content/80 font-mono">
                             <Cpu className="size-3.5 text-primary" />
                             <span>{sim.device.imei}</span>
-                            <span className="text-[10px] text-base-content/40">({sim.device.model})</span>
+                            <span className="text-[10px] text-base-content/40">
+                              ({sim.device.model})
+                            </span>
                           </div>
                         ) : (
-                          <span className="text-base-content/40 italic">Disponible</span>
+                          <span className="text-base-content/40 italic">
+                            Disponible
+                          </span>
                         )}
                       </td>
                       <td>
@@ -552,7 +607,12 @@ export function DevicesTab() {
             maxLength={15}
             className="font-mono"
             value={newDevice.imei}
-            onChange={(e) => setNewDevice({ ...newDevice, imei: e.target.value.replace(/\D/g, "") })}
+            onChange={(e) =>
+              setNewDevice({
+                ...newDevice,
+                imei: e.target.value.replace(/\D/g, ""),
+              })
+            }
           />
           <div className="form-control">
             <label className="label py-1">
@@ -563,7 +623,9 @@ export function DevicesTab() {
             <select
               className="select select-bordered w-full text-sm"
               value={newDevice.model}
-              onChange={(e) => setNewDevice({ ...newDevice, model: e.target.value })}
+              onChange={(e) =>
+                setNewDevice({ ...newDevice, model: e.target.value })
+              }
             >
               <option value="FMC003">FMC003 (OBDII Standard)</option>
               <option value="FMC150">FMC150 (Special Tracker CAN)</option>
@@ -571,7 +633,11 @@ export function DevicesTab() {
             </select>
           </div>
           <div className="flex gap-2 justify-end pt-2">
-            <Button type="button" variant="ghost" onClick={() => setIsDeviceModalOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsDeviceModalOpen(false)}
+            >
               Cancelar
             </Button>
             <Button type="submit" variant="primary">
@@ -597,14 +663,18 @@ export function DevicesTab() {
             maxLength={20}
             className="font-mono"
             value={newSim.iccid}
-            onChange={(e) => setNewSim({ ...newSim, iccid: e.target.value.replace(/\D/g, "") })}
+            onChange={(e) =>
+              setNewSim({ ...newSim, iccid: e.target.value.replace(/\D/g, "") })
+            }
           />
           <Input
             label="Número Telefónico (Opcional)"
             placeholder="Ej. +507 6000-1234"
             type="text"
             value={newSim.phoneNumber}
-            onChange={(e) => setNewSim({ ...newSim, phoneNumber: e.target.value })}
+            onChange={(e) =>
+              setNewSim({ ...newSim, phoneNumber: e.target.value })
+            }
           />
           <Input
             label="Proveedor / Carrier (Opcional)"
@@ -614,7 +684,11 @@ export function DevicesTab() {
             onChange={(e) => setNewSim({ ...newSim, carrier: e.target.value })}
           />
           <div className="flex gap-2 justify-end pt-2">
-            <Button type="button" variant="ghost" onClick={() => setIsSimModalOpen(false)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setIsSimModalOpen(false)}
+            >
               Cancelar
             </Button>
             <Button type="submit" variant="primary">
@@ -649,7 +723,8 @@ export function DevicesTab() {
               <option value="">Ninguna (Desvincular)</option>
               {availableSims.map((sim) => (
                 <option key={sim.id} value={sim.id}>
-                  ICCID: {sim.iccid} {sim.phoneNumber ? `(${sim.phoneNumber})` : ""}
+                  ICCID: {sim.iccid}{" "}
+                  {sim.phoneNumber ? `(${sim.phoneNumber})` : ""}
                 </option>
               ))}
             </select>

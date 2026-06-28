@@ -6,7 +6,9 @@ export { Logo } from "./Logo";
 export type { LogoProps } from "./Logo";
 export { IdDocumentField } from "./IdDocumentField";
 export type { IdDocumentFieldProps } from "./IdDocumentField";
-export { CrossAppTransitionOverlay, navigateToCrossApp } from "./CrossAppTransition";
+export {
+  CrossAppTransitionOverlay,
+  navigateToCrossApp,
+} from "./CrossAppTransition";
 export type { CrossAppVariant } from "./CrossAppTransition";
 export * from "./license";
-

@@ -1,4 +1,8 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
 import { CreateSimCardDto } from './dto/create-simcard.dto';
@@ -44,17 +48,25 @@ export class DevicesService {
   }
 
   async linkSimCard(deviceId: string, simCardId: string | null) {
-    const device = await this.prisma.device.findUnique({ where: { id: deviceId } });
+    const device = await this.prisma.device.findUnique({
+      where: { id: deviceId },
+    });
     if (!device) throw new NotFoundException('Dispositivo no encontrado.');
 
     if (simCardId) {
-      const sim = await this.prisma.simCard.findUnique({ where: { id: simCardId } });
+      const sim = await this.prisma.simCard.findUnique({
+        where: { id: simCardId },
+      });
       if (!sim) throw new NotFoundException('SIM Card no encontrada.');
-      
+
       // Verify SIM is not already linked to another device
-      const existingLink = await this.prisma.device.findUnique({ where: { simCardId } });
+      const existingLink = await this.prisma.device.findUnique({
+        where: { simCardId },
+      });
       if (existingLink && existingLink.id !== deviceId) {
-        throw new BadRequestException('Esta tarjeta SIM ya está vinculada a otro dispositivo.');
+        throw new BadRequestException(
+          'Esta tarjeta SIM ya está vinculada a otro dispositivo.',
+        );
       }
     }
 
@@ -65,7 +77,9 @@ export class DevicesService {
   }
 
   async linkVehicle(deviceId: string, vehicleId: string | null) {
-    const device = await this.prisma.device.findUnique({ where: { id: deviceId } });
+    const device = await this.prisma.device.findUnique({
+      where: { id: deviceId },
+    });
     if (!device) throw new NotFoundException('Dispositivo no encontrado.');
 
     // If unbinding
@@ -77,7 +91,9 @@ export class DevicesService {
     }
 
     // Verify vehicle exists
-    const vehicle = await this.prisma.vehicle.findUnique({ where: { id: vehicleId } });
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: vehicleId },
+    });
     if (!vehicle) throw new NotFoundException('Vehículo no encontrado.');
 
     // Verify vehicle is not already bound
@@ -85,7 +101,9 @@ export class DevicesService {
       where: { vehicleId },
     });
     if (existingVehicleBind && existingVehicleBind.id !== deviceId) {
-      throw new BadRequestException('Este vehículo ya tiene un dispositivo asociado.');
+      throw new BadRequestException(
+        'Este vehículo ya tiene un dispositivo asociado.',
+      );
     }
 
     return this.prisma.device.update({
@@ -99,7 +117,9 @@ export class DevicesService {
       where: { iccid: dto.iccid },
     });
     if (existing) {
-      throw new BadRequestException('Ya existe una tarjeta SIM con este ICCID.');
+      throw new BadRequestException(
+        'Ya existe una tarjeta SIM con este ICCID.',
+      );
     }
     return this.prisma.simCard.create({
       data: dto,
@@ -150,7 +170,9 @@ export class DevicesService {
           where: { id: existing.id },
           data: {
             firmware: fDevice.firmware || existing.firmware,
-            lastSeen: fDevice.lastSeen ? new Date(fDevice.lastSeen) : existing.lastSeen,
+            lastSeen: fDevice.lastSeen
+              ? new Date(fDevice.lastSeen)
+              : existing.lastSeen,
           },
         });
         updatedCount++;
@@ -194,7 +216,7 @@ export class DevicesService {
 
     if (imeiIdx === -1 || modelIdx === -1) {
       throw new BadRequestException(
-        'El archivo CSV debe contener al menos las columnas "imei" y "model".'
+        'El archivo CSV debe contener al menos las columnas "imei" y "model".',
       );
     }
 
@@ -213,7 +235,9 @@ export class DevicesService {
       const iccid = iccidIdx !== -1 ? values[iccidIdx] : undefined;
 
       if (!imei || imei.length !== 15 || !/^\d+$/.test(imei)) {
-        errors.push(`Línea ${i + 1}: IMEI inválido "${imei}". Debe tener 15 dígitos.`);
+        errors.push(
+          `Línea ${i + 1}: IMEI inválido "${imei}". Debe tener 15 dígitos.`,
+        );
         continue;
       }
 
@@ -254,7 +278,8 @@ export class DevicesService {
             data: {
               model,
               firmware: firmware || existing.firmware,
-              simCardId: simCardId !== undefined ? simCardId : existing.simCardId,
+              simCardId:
+                simCardId !== undefined ? simCardId : existing.simCardId,
             },
           });
           updatedCount++;
@@ -272,7 +297,9 @@ export class DevicesService {
           createdCount++;
         }
       } catch (err: any) {
-        errors.push(`Línea ${i + 1}: Error al procesar IMEI ${imei}: ${err.message}`);
+        errors.push(
+          `Línea ${i + 1}: Error al procesar IMEI ${imei}: ${err.message}`,
+        );
       }
     }
 

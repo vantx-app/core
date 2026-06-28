@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, ParseUUIDPipe, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  Query,
+  ParseUUIDPipe,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { DevicesService } from './devices.service';
 import { CreateDeviceDto } from './dto/create-device.dto';
@@ -10,7 +22,7 @@ import { ROLES } from '../common/enums/roles.enum';
 @Controller('devices')
 @Roles(ROLES.SUPER_ADMIN)
 export class DevicesController {
-  constructor(private readonly devicesService: DevicesService) { }
+  constructor(private readonly devicesService: DevicesService) {}
 
   @Post()
   async createDevice(@Body() dto: CreateDeviceDto) {

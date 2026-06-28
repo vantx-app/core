@@ -67,7 +67,10 @@ describe('SubscriptionGuard', () => {
         guard.canActivate(context as ExecutionContext),
       ).resolves.toBe(true);
 
-      const contextWithUser = createMockContext({ role: 'ADMIN', orgId: 'some-org' });
+      const contextWithUser = createMockContext({
+        role: 'ADMIN',
+        orgId: 'some-org',
+      });
       await expect(
         guard.canActivate(contextWithUser as ExecutionContext),
       ).resolves.toBe(true);
