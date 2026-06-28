@@ -1068,5 +1068,119 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         ][0];
       expect(createdTripCall.data.id).not.toBe('future-active-trip-uuid');
     });
+
+    it('debe mantener lastClosedTripCache cuando se procesan lotes estacionarios (heartbeats) y cargarlo de la DB si se vacía', async () => {
+      const mockVehicleId = 'vehicle-uuid-cache-preservation';
+      const mockImei = 'imei-cache-preservation';
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Cache Preservation',
+        device: { model: 'TELTONIKA_STANDARD' },
+      });
+
+      // 1. Simulamos un lote inicial que cierra un viaje
+      const recordsTripClose = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 0, // Motor apagado
+            250: 0, // Viaje inactivo (Cierra viaje)
+          },
+        },
+      ];
+
+      // Simulamos que el viaje que se va a cerrar ya estaba activo en caché/db
+      mockPrisma.trip.findFirst.mockResolvedValueOnce({
+        id: 'active-trip-to-close',
+        startTime: new Date(1716570000000 - 600000), // Hace 10 min
+      });
+
+      await processDataBatch(recordsTripClose, mockImei);
+
+      // El último viaje cerrado debe haberse registrado en mockPrisma.trip.update
+      expect(mockPrisma.trip.update).toHaveBeenCalled();
+
+      // 2. Procesamos un lote de heartbeat (estacionario)
+      // Este lote no tiene viaje activo ni cierra ninguno
+      const recordsHeartbeat = [
+        {
+          timestamp: new Date(1716570000000 + 30000), // 30s después
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          ioData: {
+            239: 0, // Motor apagado
+            250: 0, // Viaje inactivo
+          },
+        },
+      ];
+
+      // Limpiamos los mocks para monitorear nuevas llamadas
+      jest.clearAllMocks();
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Cache Preservation',
+        device: { model: 'TELTONIKA_STANDARD' },
+      });
+
+      await processDataBatch(recordsHeartbeat, mockImei);
+
+      // Verificamos que no se intentó crear ni actualizar ningún viaje
+      expect(mockPrisma.trip.create).not.toHaveBeenCalled();
+      expect(mockPrisma.trip.update).not.toHaveBeenCalled();
+
+      // 3. Procesamos un nuevo lote con movimiento dentro de los 90s (reapertura)
+      // Debe reabrir el viaje anterior porque el caché no se borró
+      const recordsReopen = [
+        {
+          timestamp: new Date(1716570000000 + 40000), // 40s después (dentro de los 90s)
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Motor encendido
+            250: 1, // Viaje activo
+          },
+        },
+      ];
+
+      jest.clearAllMocks();
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Cache Preservation',
+        device: { model: 'TELTONIKA_STANDARD' },
+      });
+
+      await processDataBatch(recordsReopen, mockImei);
+
+      // Debe haber reabierto el viaje original en vez de crear uno nuevo
+      expect(mockPrisma.trip.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'active-trip-to-close' },
+          data: { endTime: null },
+        }),
+      );
+      expect(mockPrisma.trip.create).not.toHaveBeenCalled();
+    });
   });
 });

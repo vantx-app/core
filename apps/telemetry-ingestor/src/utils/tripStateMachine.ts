@@ -82,9 +82,9 @@ export function transitionTripState({
 
       state.lastClosedTrip = undefined;
       if (isHistorical) {
-        logger.log(`🚗 Viaje Histórico Reabierto: ${vehicleAlias}`);
-      } else {
         logger.log(`🚗 Viaje Reabierto (Diferido): ${vehicleAlias}`);
+      } else {
+        logger.log(`🚗 Viaje Reabierto: ${vehicleAlias}`);
       }
     } else {
       const newTripId = uuidv7();
@@ -95,9 +95,9 @@ export function transitionTripState({
         startTime: rec.timestamp,
       });
       if (isHistorical) {
-        logger.log(`🚗 Viaje Histórico Iniciado: ${vehicleAlias}`);
-      } else {
         logger.log(`🚗 Viaje Iniciado (Diferido): ${vehicleAlias}`);
+      } else {
+        logger.log(`🚗 Viaje Iniciado: ${vehicleAlias}`);
       }
     }
   } else if (state.activeTrip && !tripActive) {
@@ -109,7 +109,7 @@ export function transitionTripState({
         tripsToCreate.delete(tripId);
         if (isHistorical) {
           logger.log(
-            `👻 Viaje histórico fantasma descartado en memoria: ${vehicleAlias} (${durationMs}ms)`,
+            `👻 Viaje fantasma (Diferido) descartado en memoria: ${vehicleAlias} (${durationMs}ms)`,
           );
         } else {
           logger.log(
@@ -121,7 +121,7 @@ export function transitionTripState({
         tripsToUpdate.delete(tripId);
         if (isHistorical) {
           logger.log(
-            `👻 Viaje histórico fantasma en DB programado para eliminación: ${vehicleAlias} (${durationMs}ms)`,
+            `👻 Viaje fantasma (Diferido) en DB programado para eliminación: ${vehicleAlias} (${durationMs}ms)`,
           );
         } else {
           logger.log(
@@ -146,9 +146,9 @@ export function transitionTripState({
         tripsToUpdate.set(tripId, { id: tripId, endTime: rec.timestamp });
       }
       if (isHistorical) {
-        logger.log(`🛑 Viaje Histórico Finalizado: ${vehicleAlias}`);
-      } else {
         logger.log(`🛑 Viaje Finalizado (Diferido): ${vehicleAlias}`);
+      } else {
+        logger.log(`🛑 Viaje Finalizado: ${vehicleAlias}`);
       }
     }
 
