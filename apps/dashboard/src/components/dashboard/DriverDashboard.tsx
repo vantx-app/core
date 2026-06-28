@@ -169,13 +169,13 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
       />
 
       {/* Mobile Tab Navigation */}
-      <div className="flex md:hidden tabs tabs-boxed bg-slate-900/60 border border-slate-800/80 p-1 rounded-xl gap-1">
+      <div className="flex md:hidden tabs tabs-boxed bg-base-200/60 border border-base-300/80 p-1 rounded-xl gap-1">
         <button
           onClick={() => setActiveMobileTab("score")}
           className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
             activeMobileTab === "score"
               ? "tab-active bg-emerald-600 text-white shadow-md"
-              : "text-slate-400 hover:text-slate-200"
+              : "text-base-content/60 hover:text-base-content"
           }`}
         >
           Mi Score
@@ -185,7 +185,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
           className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
             activeMobileTab === "vehiculo"
               ? "tab-active bg-emerald-600 text-white shadow-md"
-              : "text-slate-400 hover:text-slate-200"
+              : "text-base-content/60 hover:text-base-content"
           }`}
         >
           Mi Vehículo
@@ -195,7 +195,7 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
           className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
             activeMobileTab === "historial"
               ? "tab-active bg-emerald-600 text-white shadow-md"
-              : "text-slate-400 hover:text-slate-200"
+              : "text-base-content/60 hover:text-base-content"
           }`}
         >
           Historial

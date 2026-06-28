@@ -73,8 +73,8 @@ export default function RootLayout({
         }
       `}</style>
       <body>
-        {/* Cross-app transition overlay — background matches marketplace's dark canvas */}
-        <CrossAppTransitionOverlay background="#020617" />
+        {/* Cross-app transition overlay — dynamically theme-aware */}
+        <CrossAppTransitionOverlay />
         {/* Same-app route progress bar — Suspense required for useSearchParams in App Router */}
         <Suspense fallback={null}>
           <RouteProgressBar />

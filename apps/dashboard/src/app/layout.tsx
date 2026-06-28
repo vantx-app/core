@@ -57,8 +57,8 @@ export default function RootLayout({
       `}</style>
       <body>
         <PWARegistration />
-        {/* Cross-app transition overlay — background matches dashboard's light canvas */}
-        <CrossAppTransitionOverlay background="#f8fafc" />
+        {/* Cross-app transition overlay — dynamically theme-aware */}
+        <CrossAppTransitionOverlay />
         {/* Same-app route progress bar — Suspense required for useSearchParams in App Router */}
         <Suspense fallback={null}>
           <RouteProgressBar />

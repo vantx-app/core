@@ -67,7 +67,7 @@ interface OverlayProps {
  * Must be placed once in each app's root layout, outside {children}.
  */
 export function CrossAppTransitionOverlay({
-  background = "#f8fafc",
+  background,
 }: OverlayProps) {
   const [overlay, setOverlay] = useState<OverlayState>({
     visible: false,
@@ -75,6 +75,32 @@ export function CrossAppTransitionOverlay({
   });
   const [showCancel, setShowCancel] = useState(false);
   const [isDismissing, setIsDismissing] = useState(false);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const detectDark = () => {
+      const htmlTheme = document.documentElement.getAttribute("data-theme");
+      const isDarkTheme =
+        htmlTheme === "dark" ||
+        htmlTheme === "slate" ||
+        document.documentElement.classList.contains("dark") ||
+        (background
+          ? background === "#020617" ||
+            background.includes("020617") ||
+            background.includes("dark")
+          : false);
+      setIsDark(isDarkTheme);
+    };
+
+    detectDark();
+    const observer = new MutationObserver(detectDark);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class"],
+    });
+
+    return () => observer.disconnect();
+  }, [background]);
 
   const dismiss = useCallback((showError = false) => {
     setIsDismissing(true);
@@ -134,22 +160,19 @@ export function CrossAppTransitionOverlay({
       ? "rgba(16, 185, 129, 0.15)"
       : "rgba(29, 78, 216, 0.15)";
 
-  const isDarkBg =
-    background === "#020617" ||
-    background.includes("020617") ||
-    background.includes("dark");
-  const logoVariant = isDarkBg ? "dark" : "light";
+  const logoVariant = isDark ? "dark" : "light";
 
   return (
     <div
       role="status"
       aria-live="polite"
       aria-label="Cargando aplicación..."
+      className="bg-base-100"
       style={{
         position: "fixed",
         inset: 0,
         zIndex: 9999,
-        backgroundColor: background,
+        backgroundColor: background || undefined,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -231,6 +254,7 @@ export function CrossAppTransitionOverlay({
       {/* Escape hatch — fades in after 3 seconds */}
       <button
         onClick={() => dismiss(false)}
+        className="text-base-content/50 hover:text-base-content underline"
         style={{
           position: "absolute",
           bottom: "2rem",
@@ -239,9 +263,7 @@ export function CrossAppTransitionOverlay({
           background: "none",
           border: "none",
           cursor: "pointer",
-          color: "#64748b",
           fontSize: "0.75rem",
-          textDecoration: "underline",
           opacity: showCancel ? 1 : 0,
           transition: "opacity 300ms ease",
           pointerEvents: showCancel ? "auto" : "none",
