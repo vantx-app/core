@@ -232,6 +232,8 @@ export interface VehicleDetail {
   year: number | null;
   status: string;
   initialOdometer?: number;
+  odometerSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
+  isOdometerAbsolute?: boolean;
   deviceModel?: string;
   liveState?: {
     lastLat: number;
@@ -1207,6 +1209,7 @@ export interface VehicleFormValues {
   model?: string;
   year?: number | "";
   currentOdometer?: string;
+  odometerSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
   fuelType?: string;
 }
 

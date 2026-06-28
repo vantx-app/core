@@ -77,6 +77,14 @@ export function VehicleDetailClient({
     } as VehicleDetail;
   }, [initialVehicle, fleet]);
 
+  const isAbsoluteOdometer =
+    vehicle.odometerSource === "ABSOLUTE" ||
+    (vehicle.odometerSource === "AUTO" && !!vehicle.isOdometerAbsolute);
+
+  const displayOdometer = isAbsoluteOdometer
+    ? (vehicle.liveState?.lastOdometer ?? 0)
+    : (vehicle.initialOdometer ?? 0) + (vehicle.liveState?.lastOdometer ?? 0);
+
   const [activeTab, setActiveTab] = useState<"overview" | "scores" | "rollups">(
     "overview",
   );
@@ -685,26 +693,33 @@ export function VehicleDetailClient({
                     <div className="flex flex-col w-full min-w-0">
                       <div className="flex items-baseline gap-1">
                         <span className="text-xl font-black font-mono tracking-tight">
-                          {Math.round(
-                            (vehicle.initialOdometer ?? 0) +
-                            (vehicle.liveState?.lastOdometer ?? 0),
-                          ).toLocaleString()}
+                          {Math.round(displayOdometer).toLocaleString()}
                         </span>
                         <span className="text-[10px] font-semibold text-base-content/50">
                           km
                         </span>
                       </div>
-                      <span
-                        className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
-                        title="El odómetro es una estimación basada en la distancia calculada por GPS más el kilometraje base inicial."
-                      >
-                        <span className="size-1 bg-amber-500 rounded-full shrink-0 animate-pulse" />
-                        Estimado (Base:{" "}
-                        {Math.round(
-                          vehicle.initialOdometer ?? 0,
-                        ).toLocaleString()}{" "}
-                        + GPS)
-                      </span>
+                      {isAbsoluteOdometer ? (
+                        <span
+                          className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
+                          title="El odómetro es la lectura real reportada por el dispositivo desde la computadora del vehículo (ECU)."
+                        >
+                          <span className="size-1 bg-green-500 rounded-full shrink-0 animate-pulse" />
+                          Lectura real (OBD/CAN)
+                        </span>
+                      ) : (
+                        <span
+                          className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
+                          title="El odómetro es una estimación basada en la distancia calculada por GPS más el kilometraje base inicial."
+                        >
+                          <span className="size-1 bg-amber-500 rounded-full shrink-0 animate-pulse" />
+                          Estimado (Base:{" "}
+                          {Math.round(
+                            vehicle.initialOdometer ?? 0,
+                          ).toLocaleString()}{" "}
+                          + GPS)
+                        </span>
+                      )}
                     </div>
                   }
                 />

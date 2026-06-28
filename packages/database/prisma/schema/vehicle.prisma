@@ -22,6 +22,8 @@ model Vehicle {
   createdAt             DateTime               @default(now())
   device                Device?
   initialOdometer       Float                  @default(0)
+  odometerSource        OdometerSource         @default(AUTO)
+  isOdometerAbsolute    Boolean                @default(false)
   assignments           Assignment[]
   DailyTelemetryRollup  DailyTelemetryRollup[]
   telemetryLogs         TelemetryLog[]

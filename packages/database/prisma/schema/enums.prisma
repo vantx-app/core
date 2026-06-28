@@ -73,6 +73,13 @@ enum DeviceSource {
   MANUAL
 }
 
+enum OdometerSource {
+  AUTO
+  ABSOLUTE
+  RELATIVE
+}
+
+
 
 
 

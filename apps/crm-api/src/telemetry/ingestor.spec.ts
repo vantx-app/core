@@ -172,6 +172,8 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
           alias: true,
           vin: true,
           fuelType: true,
+          isOdometerAbsolute: true,
+          odometerSource: true,
           device: {
             select: {
               model: true,

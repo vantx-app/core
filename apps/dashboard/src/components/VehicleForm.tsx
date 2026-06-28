@@ -77,6 +77,7 @@ export default function VehicleForm({
       model: "",
       year: "",
       currentOdometer: "",
+      odometerSource: "AUTO",
       fuelType: "",
     },
   });
@@ -141,8 +142,9 @@ export default function VehicleForm({
 
           const lastOdo = data.liveState?.lastOdometer ?? 0;
           const initialOdo = data.initialOdometer ?? 0;
+          const isAbsolute = data.odometerSource === "ABSOLUTE" || (data.odometerSource === "AUTO" && data.isOdometerAbsolute);
           setFetchedLastOdometer(lastOdo);
-          const displayOdo = String(Math.round(initialOdo + lastOdo));
+          const displayOdo = String(Math.round(isAbsolute ? lastOdo : initialOdo + lastOdo));
           setOriginalOdometer(displayOdo);
 
           const dev = data.device;
@@ -164,6 +166,7 @@ export default function VehicleForm({
             model: data.model || "",
             year: data.year ? Number(data.year) : "",
             currentOdometer: displayOdo,
+            odometerSource: data.odometerSource || "AUTO",
             fuelType: data.fuelType || "",
           });
         }
@@ -197,6 +200,7 @@ export default function VehicleForm({
         payload.initialOdometer = data.currentOdometer
           ? Number(data.currentOdometer)
           : 0;
+        payload.odometerSource = data.odometerSource || "AUTO";
 
         if (isSuperAdmin) {
           if (!data.orgId) {
@@ -221,6 +225,7 @@ export default function VehicleForm({
             ? Number(data.currentOdometer) - fetchedLastOdometer
             : 0;
         }
+        payload.odometerSource = data.odometerSource || "AUTO";
 
         const isDeviceChanged = data.deviceId !== originalDeviceId;
 
@@ -454,6 +459,26 @@ export default function VehicleForm({
             }
             {...register("currentOdometer")}
           />
+
+          <div className="form-control">
+            <label className="label py-1">
+              <span className="label-text font-bold text-xs text-base-content/85">
+                Origen del Odómetro
+              </span>
+            </label>
+            <select
+              className="select select-bordered w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+              disabled={isSubmitting}
+              {...register("odometerSource")}
+            >
+              <option value="AUTO">Autodetectar (Recomendado)</option>
+              <option value="ABSOLUTE">Kilometraje real del tablero (OBD/CAN)</option>
+              <option value="RELATIVE">Kilometraje estimado por GPS (Suma al inicial)</option>
+            </select>
+            <span className="text-[10px] text-base-content/50 mt-1 pl-1">
+              Decide si el odómetro del dispositivo es real o debe sumarse al valor inicial.
+            </span>
+          </div>
 
           <div className="form-control">
             <label className="label py-1">

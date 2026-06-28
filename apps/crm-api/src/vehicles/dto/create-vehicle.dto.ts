@@ -13,6 +13,7 @@ import {
   SubscriptionTier,
   VehicleCategory,
   FuelType,
+  OdometerSource,
 } from '@prisma/client';
 
 export class CreateVehicleDto {
@@ -68,6 +69,16 @@ export class CreateVehicleDto {
   @IsOptional()
   @ApiPropertyOptional()
   initialOdometer?: number;
+
+  @IsOptional()
+  @IsEnum(OdometerSource, { message: 'Origen de odómetro no válido.' })
+  @ApiPropertyOptional({ enum: OdometerSource })
+  odometerSource?: OdometerSource;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiPropertyOptional()
+  isOdometerAbsolute?: boolean;
 
   @IsOptional()
   @ApiPropertyOptional({ enum: SubscriptionTier })

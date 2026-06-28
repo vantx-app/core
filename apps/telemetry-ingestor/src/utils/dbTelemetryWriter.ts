@@ -5,6 +5,8 @@ export interface TelemetryBatchWriteParams {
   vehicle: {
     id: string;
     alias: string | null;
+    isOdometerAbsolute: boolean;
+    odometerSource: string;
   };
   telemetryLogs: any[];
   tripsToCreate: Map<string, { id: string; startTime: Date; endTime?: Date }>;
@@ -115,6 +117,15 @@ export async function saveTelemetryBatchData({
   }
   if (newFuelTypeDetected) {
     vehicleUpdateData.fuelType = newFuelTypeDetected;
+  }
+
+  // Auto-detectar si el dispositivo está enviando el odómetro real del tablero (> 1000 km)
+  if (
+    lastRecord.odometer !== null &&
+    lastRecord.odometer > 1000 &&
+    !vehicle.isOdometerAbsolute
+  ) {
+    vehicleUpdateData.isOdometerAbsolute = true;
   }
 
   if (Object.keys(vehicleUpdateData).length > 0) {
