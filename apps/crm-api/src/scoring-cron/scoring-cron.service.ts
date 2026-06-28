@@ -135,6 +135,13 @@ export class ScoringCronService {
           overspeedSeverity: result.overspeedSeverity,
         },
       });
+
+      if ('polyline' in result && result.polyline) {
+        await this.prisma.trip.update({
+          where: { id: rollup.tripId! },
+          data: { polyline: result.polyline },
+        });
+      }
     }
 
     this.logger.log(

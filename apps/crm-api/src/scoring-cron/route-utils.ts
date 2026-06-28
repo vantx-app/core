@@ -3,6 +3,7 @@ import {
   haversineDistance,
   calculateHeading,
   getAngleDiff,
+  snapPointToLinks,
 } from '@vantx/telemetry-parser';
 
 export { haversineDistance, calculateHeading, getAngleDiff };
@@ -18,6 +19,7 @@ export interface RouteSpanWithSpeedLimit {
 export interface CalculatedRouteResult {
   spans: RouteSpanWithSpeedLimit[];
   geometry: [number, number][]; // [lng, lat] puntos decodificados de la ruta
+  polyline?: string;
 }
 
 /**
@@ -265,3 +267,92 @@ export function encodeFlexiblePolyline(
 }
 
 // Math helpers calculateHeading and getAngleDiff are imported and re-exported from @vantx/telemetry-parser
+
+/**
+ * Encuentra el índice del punto más cercano en el arreglo de puntos de un link.
+ */
+function findClosestPointOnLine(
+  lat: number,
+  lng: number,
+  points: [number, number][],
+): number {
+  let minDist = Infinity;
+  let closestIdx = -1;
+  for (let i = 0; i < points.length; i++) {
+    const dist = haversineDistance(lat, lng, points[i][1], points[i][0]);
+    if (dist < minDist) {
+      minDist = dist;
+      closestIdx = i;
+    }
+  }
+  return closestIdx;
+}
+
+/**
+ * Construye una polilínea híbrida uniendo las geometrías de los links transitados
+ * cuando están dentro del snapping threshold y usando coordenadas GPS crudas
+ * cuando el vehículo va fuera de ruta.
+ */
+export function buildHybridPolyline(
+  coordinates: { lat: number; lng: number; speed?: number; angle?: number }[],
+  parsedLinks: any[],
+  snappingThresholdKm = 0.035,
+): [number, number][] {
+  const hybridGeometry: [number, number][] = [];
+  let lastMatchedLinkPoints: [number, number][] | null = null;
+
+  for (let i = 0; i < coordinates.length; i++) {
+    const pt = coordinates[i];
+    const res = snapPointToLinks(
+      pt.lat,
+      pt.lng,
+      pt.speed,
+      pt.angle,
+      parsedLinks,
+      snappingThresholdKm,
+    );
+
+    if (res.snapped && res.matchedLink) {
+      const linkPoints = res.matchedLink.points; // [lng, lat][]
+
+      if (lastMatchedLinkPoints && res.matchedLink.points === lastMatchedLinkPoints) {
+        // En el mismo link, interpolar los puntos intermedios de la geometría del link
+        const prevProjIdx = findClosestPointOnLine(
+          hybridGeometry[hybridGeometry.length - 1][0], // lat es el primer elemento de hybridGeometry
+          hybridGeometry[hybridGeometry.length - 1][1], // lng es el segundo elemento de hybridGeometry
+          linkPoints,
+        );
+        const currProjIdx = findClosestPointOnLine(
+          res.latitude,
+          res.longitude,
+          linkPoints,
+        );
+
+        if (prevProjIdx !== -1 && currProjIdx !== -1 && prevProjIdx !== currProjIdx) {
+          const startIdx = Math.min(prevProjIdx, currProjIdx);
+          const endIdx = Math.max(prevProjIdx, currProjIdx);
+          
+          const intermediate = linkPoints.slice(startIdx + 1, endIdx);
+          if (prevProjIdx > currProjIdx) {
+            intermediate.reverse();
+          }
+          
+          // Guardar en formato [lat, lng] para codificación de polilínea
+          for (const p of intermediate) {
+            hybridGeometry.push([p[1], p[0]]);
+          }
+        }
+      }
+
+      // Proyección actual en formato [lat, lng]
+      hybridGeometry.push([res.latitude, res.longitude]);
+      lastMatchedLinkPoints = linkPoints;
+    } else {
+      // Fuera de ruta: usar coordenadas GPS crudas en formato [lat, lng]
+      hybridGeometry.push([pt.lat, pt.lng]);
+      lastMatchedLinkPoints = null;
+    }
+  }
+
+  return hybridGeometry;
+}

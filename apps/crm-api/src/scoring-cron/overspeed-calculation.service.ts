@@ -88,7 +88,7 @@ export class OverspeedCalculationService {
     logs: TelemetryLog[],
     fallbackOverspeedThreshold: number,
     category: VehicleCategory,
-  ): Promise<{ overspeedCount: number; overspeedSeverity: number }> {
+  ): Promise<{ overspeedCount: number; overspeedSeverity: number; polyline?: string }> {
     const validLogs = logs.filter(
       (log) => log.latitude !== 0 && log.longitude !== 0,
     );
@@ -140,7 +140,7 @@ export class OverspeedCalculationService {
       );
     }
 
-    const { spans, geometry } = routeResult;
+    const { spans, geometry, polyline } = routeResult;
 
     // 1. Resolver límites de velocidad, clases funcionales y estados de exceso para cada punto
     const resolvedLogs = this.resolveSpeedLimitsAndClasses(
@@ -151,7 +151,12 @@ export class OverspeedCalculationService {
     );
 
     // 2. Evaluar episodios y calcular duración total ponderada de severidad
-    return this.calculateWeightedOverspeed(resolvedLogs);
+    const overspeedResult = this.calculateWeightedOverspeed(resolvedLogs);
+
+    return {
+      ...overspeedResult,
+      polyline,
+    };
   }
 
   /**

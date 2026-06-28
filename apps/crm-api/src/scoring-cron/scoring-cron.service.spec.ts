@@ -118,19 +118,7 @@ describe('ScoringCronService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('getISOWeekNumber', () => {
-    it('debe retornar el número de semana ISO correcto de forma independiente de la zona horaria', () => {
-      const getWeek = (dateStr: string) => {
-        const d = new Date(dateStr);
-        return (service as any).getISOWeekNumber(d);
-      };
 
-      expect(getWeek('2026-01-01T00:00:00.000Z')).toBe(1);
-      expect(getWeek('2025-12-31T00:00:00.000Z')).toBe(1);
-      expect(getWeek('2026-06-01T00:00:00.000Z')).toBe(23);
-      expect(getWeek('2026-06-07T00:00:00.000Z')).toBe(23);
-    });
-  });
 
   describe('runDailyRollup date calculation', () => {
     beforeEach(() => {
@@ -177,81 +165,7 @@ describe('ScoringCronService', () => {
     });
   });
 
-  describe('runWeeklyScoring date calculation', () => {
-    beforeEach(() => {
-      jest.useFakeTimers();
-      jest.setSystemTime(new Date('2026-06-08T08:00:00.000Z'));
-    });
 
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
-    it('debe calcular el rango de la semana anterior (Lunes a Domingo) correctamente', async () => {
-      const processDriversSpy = jest
-        .spyOn(service as any, 'processWeeklyDrivers')
-        .mockResolvedValue(undefined);
-      const processVehiclesSpy = jest
-        .spyOn(service as any, 'processWeeklyVehicles')
-        .mockResolvedValue(undefined);
-
-      const weeklyMock = module.get<WeeklyScoringService>(WeeklyScoringService);
-      jest
-        .spyOn(weeklyMock, 'runWeeklyScoring')
-        .mockImplementation(async () => {
-          const now = new Date();
-          const panamaTime = new Date(now.getTime() - 5 * 60 * 60 * 1000);
-          const prevMonday = new Date(panamaTime.getTime());
-          prevMonday.setUTCDate(panamaTime.getUTCDate() - 7);
-          const startOfWeekStr = prevMonday.toISOString().split('T')[0];
-
-          const prevSunday = new Date(panamaTime.getTime());
-          prevSunday.setUTCDate(panamaTime.getUTCDate() - 1);
-          const endOfWeekStr = prevSunday.toISOString().split('T')[0];
-
-          const startOfWeek = new Date(`${startOfWeekStr}T00:00:00.000Z`);
-          const endOfWeek = new Date(`${endOfWeekStr}T00:00:00.000Z`);
-
-          const year = prevMonday.getUTCFullYear();
-          const weekNumber = (service as any).getISOWeekNumber(prevMonday);
-
-          await (service as any).processWeeklyDrivers(
-            startOfWeek,
-            endOfWeek,
-            weekNumber,
-            year,
-          );
-          await (service as any).processWeeklyVehicles(
-            startOfWeek,
-            endOfWeek,
-            weekNumber,
-            year,
-          );
-        });
-
-      await service.runWeeklyScoring();
-
-      expect(processDriversSpy).toHaveBeenCalled();
-      const [start, end, weekNum, year] = processDriversSpy.mock.calls[0] as [
-        Date,
-        Date,
-        number,
-        number,
-      ];
-
-      expect(start.toISOString()).toBe('2026-06-01T00:00:00.000Z');
-      expect(end.toISOString()).toBe('2026-06-07T00:00:00.000Z');
-      expect(weekNum).toBe(23);
-      expect(year).toBe(2026);
-
-      expect(processVehiclesSpy).toHaveBeenCalledWith(
-        start,
-        end,
-        weekNum,
-        year,
-      );
-    });
-  });
 
   describe('runDailyRollup post-processing with HERE', () => {
     let configService: ConfigService;

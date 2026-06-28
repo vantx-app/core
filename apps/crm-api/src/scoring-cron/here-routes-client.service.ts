@@ -15,6 +15,7 @@ import {
   calculateHeading,
   getAngleDiff,
   uniformThin,
+  buildHybridPolyline,
 } from './route-utils';
 
 @Injectable()
@@ -119,7 +120,9 @@ export class HereRoutesClientService {
           this.logger.log(
             `Cache HIT: Viaje procesado localmente con ${cachedLinks.length} segmentos de la BD.`,
           );
-          return { spans, geometry: snappedGeometry };
+          const hybridPts = buildHybridPolyline(coordinates, parsedLinks, 0.035);
+          const polyline = encodeFlexiblePolyline(hybridPts);
+          return { spans, geometry: snappedGeometry, polyline };
         }
       }
     } catch (dbError: any) {
@@ -317,7 +320,9 @@ export class HereRoutesClientService {
       }
 
       this.consecutiveErrors = 0;
-      return { spans, geometry: snappedGeometry };
+      const hybridPts = buildHybridPolyline(coordinates, parsedLinks, 0.035);
+      const polyline = encodeFlexiblePolyline(hybridPts);
+      return { spans, geometry: snappedGeometry, polyline };
     } catch (error: any) {
       this.consecutiveErrors++;
       this.logger.error(

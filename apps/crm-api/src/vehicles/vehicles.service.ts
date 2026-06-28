@@ -17,6 +17,7 @@ import {
   RuleEngineConfig,
   DEFAULT_RULE_ENGINE_CONFIG,
 } from 'src/scoring-cron/scoring.interfaces';
+import { decodeFlexiblePolyline, haversineDistance } from 'src/scoring-cron/route-utils';
 
 @Injectable()
 export class VehiclesService {
@@ -514,6 +515,43 @@ export class VehiclesService {
       throw new NotFoundException('Viaje no encontrado para este vehículo');
     }
 
+    if (trip.polyline) {
+      const decoded = decodeFlexiblePolyline(trip.polyline);
+      const rawLogs = await this.prisma.telemetryLog.findMany({
+        where: { tripId },
+        orderBy: { timestamp: 'asc' },
+        select: {
+          latitude: true,
+          longitude: true,
+          speed: true,
+        },
+      });
+
+      if (rawLogs.length > 0) {
+        return decoded.polyline.map((p) => {
+          const lat = p[0];
+          const lng = p[1];
+          
+          let closestLog = rawLogs[0];
+          let minDist = Infinity;
+          
+          for (const log of rawLogs) {
+            const dist = haversineDistance(lat, lng, log.latitude, log.longitude);
+            if (dist < minDist) {
+              minDist = dist;
+              closestLog = log;
+            }
+          }
+
+          return {
+            latitude: lat,
+            longitude: lng,
+            speed: closestLog.speed,
+          };
+        });
+      }
+    }
+
     const route = await this.prisma.telemetryLog.findMany({
       where: { tripId },
       orderBy: { timestamp: 'asc' },
@@ -521,11 +559,6 @@ export class VehiclesService {
         latitude: true,
         longitude: true,
         speed: true,
-        timestamp: true,
-        ignition: true,
-        harshAcceleration: true,
-        harshBraking: true,
-        harshCornering: true,
       },
     });
 
