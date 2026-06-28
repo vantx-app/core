@@ -45,6 +45,7 @@ export default function ImeiScannerModal({
         {
           fps: 20,
           videoConstraints: {
+            deviceId: { exact: cameraId },
             width: { ideal: 1920 },
             height: { ideal: 1080 },
           },
@@ -140,8 +141,19 @@ export default function ImeiScannerModal({
         setHasPermission(true);
 
         if (cameras.length > 0) {
-          // Select the ultra-wide/main back camera accurately on phones
-          const defaultCamera = cameras[cameras.length - 1];
+          // Seleccionar la cámara trasera principal/ultra gran angular con precisión en teléfonos
+          const defaultCamera =
+            cameras.find((cam) => {
+              const label = cam.label.toLowerCase();
+              return (
+                label.includes("back") ||
+                label.includes("rear") ||
+                label.includes("environment") ||
+                label.includes("trasera")
+              );
+            }) ||
+            cameras[cameras.length - 1] ||
+            cameras[0];
           setActiveCameraId(defaultCamera.id);
           await startScanning(defaultCamera.id, html5QrCode);
         } else {
