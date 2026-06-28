@@ -4,6 +4,7 @@ import {
   splitIntoChunks,
   decodeFlexiblePolyline,
 } from './route-utils';
+import { snapPointToLinks } from '@vantx/telemetry-parser';
 
 describe('Route Utils', () => {
   describe('haversineDistance', () => {
@@ -114,6 +115,92 @@ describe('Route Utils', () => {
       expect(decoded.precision).toBeDefined();
       expect(decoded.polyline).toBeInstanceOf(Array);
       expect(decoded.polyline.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('snapPointToLinks - divided highway direction matching', () => {
+    it('debe preferir el carril con la dirección de viaje correcta aunque el carril opuesto esté físicamente más cerca', () => {
+      // Definir dos segmentos paralelos (Carretera dividida)
+      // Segmento 1: Este a Oeste (digitizado hacia el Oeste, rumbo ~270 grados)
+      const linkWestbound = {
+        linkId: 'link-westbound',
+        functionalClass: 1,
+        speedLimit: 110,
+        points: [
+          [-79.519, 8.982], // ptA (Este)
+          [-79.521, 8.982], // ptB (Oeste)
+        ] as [number, number][],
+      };
+
+      // Segmento 2: Oeste a Este (digitizado hacia el Este, rumbo ~90 grados)
+      const linkEastbound = {
+        linkId: 'link-eastbound',
+        functionalClass: 1,
+        speedLimit: 110,
+        points: [
+          [-79.521, 8.9818], // ptA (Oeste)
+          [-79.519, 8.9818], // ptB (Este)
+        ] as [number, number][],
+      };
+
+      // El vehículo viaja hacia el Este (rumbo 90 grados)
+      const vehicleAngle = 90;
+      const vehicleSpeed = 80;
+
+      // El punto GPS está a lat: 8.9821, lng: -79.5200.
+      // Físicamente:
+      // - Distancia al carril Westbound (lat: 8.9820) es menor (~11 metros)
+      // - Distancia al carril Eastbound (lat: 8.9818) es mayor (~33 metros)
+      const gpsLat = 8.9821;
+      const gpsLng = -79.52;
+
+      // Snapping
+      const res = snapPointToLinks(
+        gpsLat,
+        gpsLng,
+        vehicleSpeed,
+        vehicleAngle,
+        [linkWestbound, linkEastbound],
+        0.035, // 35m
+      );
+
+      expect(res.snapped).toBe(true);
+      // Debe haber elegido el carril Eastbound porque coincide con la dirección,
+      // a pesar de que el Westbound estaba más cerca.
+      expect(res.matchedLink?.linkId).toBe('link-eastbound');
+    });
+
+    it('debe snap al único carril disponible en una calle de doble sentido viajando en dirección opuesta', () => {
+      // Calle de doble sentido digitizada de Este a Oeste
+      const linkTwoWay = {
+        linkId: 'link-twoway',
+        functionalClass: 3,
+        speedLimit: 60,
+        points: [
+          [-79.519, 8.982],
+          [-79.521, 8.982],
+        ] as [number, number][],
+      };
+
+      // El vehículo viaja en sentido contrario (Este, rumbo 90 grados)
+      const vehicleAngle = 90;
+      const vehicleSpeed = 50;
+
+      const gpsLat = 8.98205; // 5 metros al norte de la calle
+      const gpsLng = -79.52;
+
+      const res = snapPointToLinks(
+        gpsLat,
+        gpsLng,
+        vehicleSpeed,
+        vehicleAngle,
+        [linkTwoWay],
+        0.035, // 35m
+      );
+
+      // Debe snap correctamente porque es la única opción dentro del rango (35m)
+      expect(res.snapped).toBe(true);
+      expect(res.matchedLink?.linkId).toBe('link-twoway');
     });
   });
 });

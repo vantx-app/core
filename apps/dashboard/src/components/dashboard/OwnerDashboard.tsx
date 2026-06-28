@@ -15,6 +15,7 @@ import {
   Power,
   Gauge,
   ShieldCheck,
+  Clock,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -36,8 +37,12 @@ export function OwnerDashboard({
   vehicles = [],
   drivers = [],
   targetOrgId,
+  fleetStats,
 }: OwnerDashboardProps) {
   const { fleet } = useFleet();
+  const [activeMobileTab, setActiveMobileTab] = useState<
+    "resumen" | "alertas" | "unidades"
+  >("resumen");
 
   const liveVehicles = useMemo(() => {
     return (vehicles || []).map((v) => {
@@ -111,6 +116,8 @@ export function OwnerDashboard({
     countWithStats > 0 ? Math.round(sumEco / countWithStats) : null;
   const avgAsset =
     countWithStats > 0 ? Math.round(sumAsset / countWithStats) : null;
+
+  const finalTotalKm = fleetStats ? fleetStats.totalKm : totalKm;
 
   // Conductores ordenados por puntaje de seguridad (de menor a mayor para destacar riesgos)
   const riskDrivers = [...drivers]
@@ -315,8 +322,44 @@ export function OwnerDashboard({
         </Link>
       </div>
 
+      {/* Mobile Tab Navigation */}
+      <div className="flex md:hidden tabs tabs-boxed bg-slate-900/60 border border-slate-800/80 p-1 rounded-xl gap-1">
+        <button
+          onClick={() => setActiveMobileTab("resumen")}
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "resumen"
+              ? "tab-active bg-blue-600 text-white shadow-md"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Resumen
+        </button>
+        <button
+          onClick={() => setActiveMobileTab("alertas")}
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "alertas"
+              ? "tab-active bg-blue-600 text-white shadow-md"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Alertas ({fleetAlerts.length})
+        </button>
+        <button
+          onClick={() => setActiveMobileTab("unidades")}
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "unidades"
+              ? "tab-active bg-blue-600 text-white shadow-md"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Unidades
+        </button>
+      </div>
+
       {/* Performance Score indicators - Mobile View (< 768px) */}
-      <div className="md:hidden glass-card p-6 space-y-4">
+      <div
+        className={`md:hidden glass-card p-6 space-y-4 ${activeMobileTab === "resumen" ? "block" : "hidden"}`}
+      >
         <div>
           <span className="text-base-content/50 text-xs font-bold uppercase tracking-wider block mb-1">
             Resumen de Rendimiento
@@ -358,7 +401,9 @@ export function OwnerDashboard({
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div
+        className={`${activeMobileTab === "resumen" ? "grid" : "hidden md:grid"} grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6`}
+      >
         <DashboardStatCard
           icon={
             <div className="p-3 bg-blue-500/10 rounded-xl text-blue-600 shrink-0">
@@ -399,14 +444,81 @@ export function OwnerDashboard({
             </div>
           }
           label="Recorrido Flota"
-          value={`${totalKm.toLocaleString()} km`}
+          value={`${Math.round(finalTotalKm).toLocaleString()} km`}
         />
       </div>
+
+      {/* Métricas de Operación y Ralentí */}
+      {fleetStats && (
+        <div
+          className={`${activeMobileTab === "resumen" ? "grid" : "hidden md:grid"} grid-cols-1 md:grid-cols-3 gap-6 bg-slate-900/40 border border-slate-800/80 p-6 rounded-2xl backdrop-blur-md`}
+        >
+          <div className="card bg-slate-950/50 border border-slate-800/60 p-5 flex flex-row items-center gap-4">
+            <div className="p-3.5 bg-blue-500/10 text-blue-500 rounded-xl">
+              <Clock className="size-6" />
+            </div>
+            <div>
+              <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">
+                Horas de Motor
+              </span>
+              <span className="text-xl font-black text-slate-100 block mt-0.5">
+                {Math.round(fleetStats.totalEngineHours).toLocaleString()} hrs
+              </span>
+            </div>
+          </div>
+
+          <div className="card bg-slate-950/50 border border-slate-800/60 p-5 flex flex-row items-center gap-4">
+            <div className="p-3.5 bg-amber-500/10 text-amber-500 rounded-xl">
+              <Power className="size-6" />
+            </div>
+            <div>
+              <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">
+                Tiempo en Ralentí
+              </span>
+              <span className="text-xl font-black text-slate-100 block mt-0.5">
+                {fleetStats.idlingHours.toFixed(1)} hrs
+              </span>
+            </div>
+          </div>
+
+          <div className="card bg-slate-950/50 border border-slate-800/60 p-5 flex flex-row items-center gap-4">
+            <div
+              className={`p-3.5 rounded-xl ${
+                fleetStats.idlingHours / (fleetStats.totalEngineHours || 1) >
+                0.2
+                  ? "bg-rose-500/10 text-rose-500"
+                  : fleetStats.idlingHours /
+                        (fleetStats.totalEngineHours || 1) >
+                      0.1
+                    ? "bg-amber-500/10 text-amber-500"
+                    : "bg-emerald-500/10 text-emerald-500"
+              }`}
+            >
+              <Gauge className="size-6" />
+            </div>
+            <div>
+              <span className="text-slate-400 text-xs font-bold uppercase tracking-wider block">
+                Tasa de Ralentí
+              </span>
+              <span className="text-xl font-black text-slate-100 block mt-0.5">
+                {(
+                  (fleetStats.idlingHours /
+                    (fleetStats.totalEngineHours || 1)) *
+                  100
+                ).toFixed(1)}
+                %
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Driver Risk Alerts & Fleet Health */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Alerts Feed & Risk Drivers */}
-        <div className="lg:col-span-1 space-y-6 flex flex-col">
+        <div
+          className={`${activeMobileTab === "alertas" ? "flex" : "hidden md:flex"} lg:col-span-1 space-y-6 flex-col`}
+        >
           {/* Critical Alerts Feed */}
           <div className="glass-card p-6 space-y-4">
             <div>
@@ -515,7 +627,9 @@ export function OwnerDashboard({
         </div>
 
         {/* Vehicles Operational List (Fleet Health) */}
-        <div className="glass-card p-6 space-y-4 lg:col-span-2">
+        <div
+          className={`${activeMobileTab === "unidades" ? "block" : "hidden md:block"} glass-card p-6 space-y-4 lg:col-span-2`}
+        >
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-lg font-bold flex items-center gap-2">

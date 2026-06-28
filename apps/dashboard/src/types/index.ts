@@ -39,6 +39,12 @@ export interface DashboardVehicle {
   }[];
 }
 
+export interface RollupTelemetryStats {
+  totalKm: number;
+  totalEngineHours: number;
+  idlingHours: number;
+}
+
 export interface DashboardDriver {
   id: string;
   name: string;
@@ -62,6 +68,7 @@ export interface DashboardDriver {
       orgId?: string;
     } | null;
   }[];
+  rollupStats?: RollupTelemetryStats | null;
 }
 
 export interface DashboardOrganization {
@@ -145,6 +152,7 @@ export interface DriverStats {
     };
   }[];
   scoreSnapshots?: DriverScoreSnapshot[];
+  rollupStats?: RollupTelemetryStats | null;
 }
 
 export interface VehicleGlobalStats {
@@ -985,6 +993,7 @@ export interface OwnerDashboardProps {
   vehicles: DashboardVehicle[];
   drivers: DashboardDriver[];
   targetOrgId?: string;
+  fleetStats?: RollupTelemetryStats | null;
 }
 
 export interface UsersTableDesktopProps {

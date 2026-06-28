@@ -47,6 +47,16 @@ describe('DriversService', () => {
       trip: {
         findMany: jest.fn(),
       },
+      dailyTelemetryRollup: {
+        aggregate: jest.fn().mockResolvedValue({
+          _sum: {
+            totalKm: null,
+            totalEngineHours: null,
+            idlingHours: null,
+          },
+        }),
+        findMany: jest.fn().mockResolvedValue([]),
+      },
     };
 
     usersMock = {
@@ -163,6 +173,11 @@ describe('DriversService', () => {
         firstName: 'Juan',
         name: 'Juan',
         globalStats: {},
+        rollupStats: {
+          totalKm: 0,
+          totalEngineHours: 0,
+          idlingHours: 0,
+        },
       };
       cacheMock.get.mockReturnValue(null);
       prismaMock.driver.findUnique.mockResolvedValue(mockDriver);

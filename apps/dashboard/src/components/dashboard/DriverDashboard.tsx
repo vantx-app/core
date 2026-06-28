@@ -13,6 +13,8 @@ import {
   ChevronDown,
   ChevronUp,
   Truck,
+  Power,
+  Gauge,
 } from "lucide-react";
 import {
   DriverDashboardProps,
@@ -34,6 +36,9 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
   // Estado para controlar qué semana se encuentra expandida en la vista móvil
   // Se inicializa en 0 para expandir el snapshot más reciente por defecto
   const [expandedWeek, setExpandedWeek] = useState<number | null>(0);
+  const [activeMobileTab, setActiveMobileTab] = useState<
+    "score" | "vehiculo" | "historial"
+  >("score");
 
   if (!stats) {
     return (
@@ -59,6 +64,13 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
   const globalStats = stats.globalStats;
   const activeAssignment = stats.assignments?.[0];
   const snapshots = stats.scoreSnapshots || [];
+  const rollupStats = stats.rollupStats;
+  const finalDistance = rollupStats
+    ? rollupStats.totalKm
+    : (globalStats?.totalKm ?? 0);
+  const finalHours = rollupStats
+    ? rollupStats.totalEngineHours
+    : (globalStats?.totalHours ?? 0);
 
   const hasStats =
     globalStats &&
@@ -156,8 +168,44 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
         gradientClass="from-emerald-600 via-teal-600 to-cyan-700"
       />
 
+      {/* Mobile Tab Navigation */}
+      <div className="flex md:hidden tabs tabs-boxed bg-slate-900/60 border border-slate-800/80 p-1 rounded-xl gap-1">
+        <button
+          onClick={() => setActiveMobileTab("score")}
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "score"
+              ? "tab-active bg-emerald-600 text-white shadow-md"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Mi Score
+        </button>
+        <button
+          onClick={() => setActiveMobileTab("vehiculo")}
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "vehiculo"
+              ? "tab-active bg-emerald-600 text-white shadow-md"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Mi Vehículo
+        </button>
+        <button
+          onClick={() => setActiveMobileTab("historial")}
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "historial"
+              ? "tab-active bg-emerald-600 text-white shadow-md"
+              : "text-slate-400 hover:text-slate-200"
+          }`}
+        >
+          Historial
+        </button>
+      </div>
+
       {/* Resumen Principal de Rendimiento */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div
+        className={`${activeMobileTab === "score" ? "grid" : "hidden lg:grid"} grid-cols-1 lg:grid-cols-3 gap-6`}
+      >
         {/* Tarjeta de Puntaje General */}
         <div
           className={`card bg-base-100/50 backdrop-blur-md border ${cardBorderColor} shadow-md p-6 lg:col-span-1 flex flex-col items-center justify-center text-center relative overflow-hidden transition-all duration-300 hover:scale-[1.01]`}
@@ -191,7 +239,9 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
         </div>
 
         {/* Tarjetas de Estadísticas Acumuladas */}
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div
+          className={`lg:col-span-2 grid ${rollupStats ? "grid-cols-1 sm:grid-cols-2 gap-6" : "grid-cols-1 sm:grid-cols-2 gap-6"}`}
+        >
           {/* Kilómetros Recorridos */}
           <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-row items-center gap-4 transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-600">
@@ -202,40 +252,103 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
                 Distancia Recorrida
               </span>
               <span className="text-2xl md:text-3xl font-black text-base-content block mt-1">
-                {(globalStats?.totalKm ?? 0).toLocaleString(undefined, {
+                {finalDistance.toLocaleString(undefined, {
                   minimumFractionDigits: 1,
                   maximumFractionDigits: 1,
                 })}{" "}
                 km
               </span>
               <span className="text-[10px] text-base-content/40 block mt-1">
-                Kilómetros acumulados en la plataforma
+                {rollupStats
+                  ? "Basado en registros de telemetría"
+                  : "Kilómetros acumulados en la plataforma"}
               </span>
             </div>
           </div>
 
-          {/* Horas de Conducción */}
+          {/* Horas de Conducción / Motor */}
           <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-row items-center gap-4 transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
             <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-600">
               <Clock className="size-8" />
             </div>
             <div className="min-w-0 flex-1">
               <span className="text-base-content/50 text-xs font-bold uppercase tracking-wider block">
-                Tiempo de Conducción
+                {rollupStats ? "Horas de Motor" : "Tiempo de Conducción"}
               </span>
               <span className="text-2xl md:text-3xl font-black text-base-content block mt-1">
-                {formatHours(globalStats?.totalHours)}
+                {formatHours(finalHours)}
               </span>
               <span className="text-[10px] text-base-content/40 block mt-1">
-                Horas totales registradas al volante
+                {rollupStats
+                  ? "Tiempo total de motor encendido"
+                  : "Horas totales registradas al volante"}
               </span>
             </div>
           </div>
+
+          {/* Tiempo en Ralentí */}
+          {rollupStats && (
+            <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-row items-center gap-4 transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
+              <div className="p-4 bg-emerald-500/10 rounded-2xl text-emerald-600">
+                <Power className="size-8" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-base-content/50 text-xs font-bold uppercase tracking-wider block">
+                  Tiempo en Ralentí
+                </span>
+                <span className="text-2xl md:text-3xl font-black text-base-content block mt-1">
+                  {rollupStats.idlingHours.toFixed(1)} hrs
+                </span>
+                <span className="text-[10px] text-base-content/40 block mt-1">
+                  Tiempo total con motor inactivo
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Tasa de Ralentí */}
+          {rollupStats && (
+            <div className="card bg-base-100/50 backdrop-blur-md border border-base-200 shadow-md p-6 flex flex-row items-center gap-4 transition-all duration-300 hover:border-emerald-500/20 hover:scale-[1.01]">
+              <div
+                className={`p-4 rounded-2xl ${
+                  rollupStats.idlingHours /
+                    (rollupStats.totalEngineHours || 1) >
+                  0.2
+                    ? "bg-rose-500/10 text-rose-600"
+                    : rollupStats.idlingHours /
+                          (rollupStats.totalEngineHours || 1) >
+                        0.1
+                      ? "bg-amber-500/10 text-amber-600"
+                      : "bg-emerald-500/10 text-emerald-600"
+                }`}
+              >
+                <Gauge className="size-8" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="text-base-content/50 text-xs font-bold uppercase tracking-wider block">
+                  Tasa de Ralentí
+                </span>
+                <span className="text-2xl md:text-3xl font-black text-base-content block mt-1">
+                  {(
+                    (rollupStats.idlingHours /
+                      (rollupStats.totalEngineHours || 1)) *
+                    100
+                  ).toFixed(1)}
+                  %
+                </span>
+                <span className="text-[10px] text-base-content/40 block mt-1">
+                  Proporción de ralentí sobre motor
+                </span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Detalle de Categorías */}
-      <div className="space-y-4">
+      <div
+        className={`space-y-4 ${activeMobileTab === "score" ? "block" : "hidden md:block"}`}
+      >
         <h2 className="text-sm font-bold text-base-content/60 uppercase tracking-wider px-1">
           Detalle por Categoría
         </h2>
@@ -306,7 +419,9 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
       {/* Sección de Vehículo y Historial */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Tarjeta de Vehículo Asignado */}
-        <div className="card bg-base-100/60 backdrop-blur-sm border border-base-200 p-6 space-y-4 lg:col-span-1 transition-all duration-300 hover:border-emerald-500/20">
+        <div
+          className={`card bg-base-100/60 backdrop-blur-sm border border-base-200 p-6 space-y-4 lg:col-span-1 transition-all duration-300 hover:border-emerald-500/20 ${activeMobileTab === "vehiculo" ? "block" : "hidden lg:block"}`}
+        >
           <div className="flex justify-between items-center">
             <h2 className="text-base font-bold flex items-center gap-2">
               <Truck className="text-emerald-500 size-5" />
@@ -387,7 +502,9 @@ export function DriverDashboard({ stats }: DriverDashboardProps) {
         </div>
 
         {/* Historial de Calificaciones (Semanales) */}
-        <div className="card bg-base-100/60 backdrop-blur-sm border border-base-200 p-6 space-y-4 lg:col-span-2">
+        <div
+          className={`card bg-base-100/60 backdrop-blur-sm border border-base-200 p-6 space-y-4 lg:col-span-2 ${activeMobileTab === "historial" ? "block" : "hidden lg:block"}`}
+        >
           <h2 className="text-base font-bold flex items-center gap-2">
             <Calendar className="text-emerald-500 size-5" />
             Historial de Calificaciones (Semanales)

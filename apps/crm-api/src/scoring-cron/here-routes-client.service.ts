@@ -98,7 +98,8 @@ export class HereRoutesClientService {
         for (let i = 0; i < coordinates.length; i++) {
           const pt = coordinates[i];
 
-          const lowSatellites = pt.satellites !== undefined && pt.satellites < 5;
+          const lowSatellites =
+            pt.satellites !== undefined && pt.satellites < 5;
           const ignitionOff = pt.ignition === false;
 
           if (lowSatellites || ignitionOff) {

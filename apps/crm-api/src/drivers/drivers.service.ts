@@ -159,6 +159,20 @@ export class DriversService {
     }
 
     const formatted = this.formatDriver(driver);
+    const rollupAgg = await this.prismaService.dailyTelemetryRollup.aggregate({
+      where: { driverId: driver.id },
+      _sum: {
+        totalKm: true,
+        totalEngineHours: true,
+        idlingHours: true,
+      },
+    });
+    (formatted as any).rollupStats = {
+      totalKm: rollupAgg._sum.totalKm ?? 0,
+      totalEngineHours: rollupAgg._sum.totalEngineHours ?? 0,
+      idlingHours: rollupAgg._sum.idlingHours ?? 0,
+    };
+
     if (shouldMask) {
       if (formatted.globalStats) {
         formatted.globalStats.globalSafetyScore = null;
@@ -266,7 +280,26 @@ export class DriversService {
           'No se encontró perfil de conductor asociado a este usuario.',
         );
       }
-      driver = this.formatDriver(dbDriver);
+
+      const rollupAgg = await this.prismaService.dailyTelemetryRollup.aggregate(
+        {
+          where: { driverId: dbDriver.id },
+          _sum: {
+            totalKm: true,
+            totalEngineHours: true,
+            idlingHours: true,
+          },
+        },
+      );
+
+      const formatted = this.formatDriver(dbDriver);
+      (formatted as any).rollupStats = {
+        totalKm: rollupAgg._sum.totalKm ?? 0,
+        totalEngineHours: rollupAgg._sum.totalEngineHours ?? 0,
+        idlingHours: rollupAgg._sum.idlingHours ?? 0,
+      };
+
+      driver = formatted;
       this.cacheService.set(cacheKey, driver, 15 * 60 * 1000);
     }
 

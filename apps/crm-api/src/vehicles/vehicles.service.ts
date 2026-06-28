@@ -948,4 +948,29 @@ export class VehiclesService {
 
     return zip.toBuffer();
   }
+
+  /**
+   * Obtiene las estadísticas acumuladas de la flota para una organización
+   * basadas en los rollups diarios de telemetría.
+   */
+  async getFleetStats(orgId: string) {
+    const stats = await this.prisma.dailyTelemetryRollup.aggregate({
+      where: {
+        vehicle: {
+          orgId,
+        },
+      },
+      _sum: {
+        totalKm: true,
+        totalEngineHours: true,
+        idlingHours: true,
+      },
+    });
+
+    return {
+      totalKm: stats._sum.totalKm ?? 0,
+      totalEngineHours: stats._sum.totalEngineHours ?? 0,
+      idlingHours: stats._sum.idlingHours ?? 0,
+    };
+  }
 }

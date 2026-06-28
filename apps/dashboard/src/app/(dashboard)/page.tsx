@@ -18,6 +18,7 @@ export default async function DashboardPage({
     if (targetOrgId) {
       let vehicles = [];
       let drivers = [];
+      let fleetStats = null;
 
       try {
         vehicles = await fetchServer(
@@ -33,12 +34,21 @@ export default async function DashboardPage({
         console.error("Error fetching drivers:", e);
       }
 
+      try {
+        fleetStats = await fetchServer(
+          `/vehicles/fleet-stats?targetOrgId=${targetOrgId}`,
+        );
+      } catch (e) {
+        console.error("Error fetching fleet stats:", e);
+      }
+
       return (
         <div className="p-6 max-w-7xl mx-auto space-y-6">
           <OwnerDashboard
             vehicles={vehicles}
             drivers={drivers}
             targetOrgId={targetOrgId}
+            fleetStats={fleetStats}
           />
         </div>
       );
@@ -80,6 +90,7 @@ export default async function DashboardPage({
   if (role === ROLES.OWNER || role === ROLES.ADMIN) {
     let vehicles = [];
     let drivers = [];
+    let fleetStats = null;
 
     try {
       vehicles = await fetchServer("/vehicles?liveState=true");
@@ -93,9 +104,19 @@ export default async function DashboardPage({
       console.error("Error fetching drivers:", e);
     }
 
+    try {
+      fleetStats = await fetchServer("/vehicles/fleet-stats");
+    } catch (e) {
+      console.error("Error fetching fleet stats:", e);
+    }
+
     return (
       <div className="p-6 max-w-7xl mx-auto">
-        <OwnerDashboard vehicles={vehicles} drivers={drivers} />
+        <OwnerDashboard
+          vehicles={vehicles}
+          drivers={drivers}
+          fleetStats={fleetStats}
+        />
       </div>
     );
   }

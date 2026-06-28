@@ -103,7 +103,10 @@ async function processDataBatchInternal(records: any[], imei: string) {
     }
   }
 
-  if (!activeTripsCache.has(vehicle.id) && !lastClosedTripCache.has(vehicle.id)) {
+  if (
+    !activeTripsCache.has(vehicle.id) &&
+    !lastClosedTripCache.has(vehicle.id)
+  ) {
     const lastClosed = await prisma.trip.findFirst({
       where: {
         vehicleId: vehicle.id,
@@ -181,10 +184,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       where: {
         vehicleId: vehicle.id,
         startTime: { lte: firstHistTimestamp },
-        OR: [
-          { endTime: null },
-          { endTime: { gte: firstHistTimestamp } },
-        ],
+        OR: [{ endTime: null }, { endTime: { gte: firstHistTimestamp } }],
       },
       orderBy: { startTime: "desc" },
       select: { id: true, startTime: true },

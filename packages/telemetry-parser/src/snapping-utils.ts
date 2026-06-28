@@ -151,11 +151,17 @@ export function snapPointToLinks(
         const segmentHeading = calculateHeading(latA, lngA, latB, lngB);
         const diffNormal = getAngleDiff(angle, segmentHeading);
         const diffReverse = getAngleDiff(angle, (segmentHeading + 180) % 360);
-        const minDiff = Math.min(diffNormal, diffReverse);
 
+        let reversePenalty = 0;
+        if (diffNormal > 90) {
+          reversePenalty = 0.04; // Penalización de 40m si va en dirección opuesta al sentido del segmento
+        }
+
+        const minDiff = Math.min(diffNormal, diffReverse);
         if (minDiff > 45) {
           anglePenalty = 0.05; // 50m penalty
         }
+        anglePenalty += reversePenalty;
       }
 
       if (speedToUse > 55) {

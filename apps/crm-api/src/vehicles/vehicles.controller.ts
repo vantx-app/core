@@ -82,6 +82,22 @@ export class VehiclesController {
     return result;
   }
 
+  @Roles(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN)
+  @Get('fleet-stats')
+  async getFleetStats(
+    @Req() req: Request & { user: AccessTokenPayload },
+    @Query('targetOrgId') targetOrgId?: string,
+  ) {
+    const user = req.user;
+    const orgId = user.role === ROLES.SUPER_ADMIN ? targetOrgId : user.orgId;
+    if (!orgId) {
+      throw new BadRequestException(
+        'Se requiere el ID de la organización (orgId) para obtener estadísticas de flota.',
+      );
+    }
+    return this.vehiclesService.getFleetStats(orgId);
+  }
+
   @Get(':id')
   async findOne(
     @Param('id', ParseUUIDPipe) id: string,

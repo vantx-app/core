@@ -314,16 +314,22 @@ export function buildHybridPolyline(
     const lowSatellites = pt.satellites !== undefined && pt.satellites < 5;
     const ignitionOff = pt.ignition === false;
 
-    const res = (!lowSatellites && !ignitionOff)
-      ? snapPointToLinks(
-          pt.lat,
-          pt.lng,
-          pt.speed,
-          pt.angle,
-          parsedLinks,
-          snappingThresholdKm,
-        )
-      : { snapped: false, latitude: pt.lat, longitude: pt.lng, matchedLink: null };
+    const res =
+      !lowSatellites && !ignitionOff
+        ? snapPointToLinks(
+            pt.lat,
+            pt.lng,
+            pt.speed,
+            pt.angle,
+            parsedLinks,
+            snappingThresholdKm,
+          )
+        : {
+            snapped: false,
+            latitude: pt.lat,
+            longitude: pt.lng,
+            matchedLink: null,
+          };
 
     if (res.snapped && res.matchedLink) {
       const linkPoints = res.matchedLink.points; // [lng, lat][]
