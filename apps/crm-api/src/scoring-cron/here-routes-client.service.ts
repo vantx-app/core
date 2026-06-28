@@ -304,7 +304,7 @@ export class HereRoutesClientService {
           pt.speed,
           pt.angle,
           parsedLinks,
-          Infinity, // No distance threshold for Cache MISS path
+          0.035, // 35 meters threshold for consistency
         );
 
         if (res.snapped) {
