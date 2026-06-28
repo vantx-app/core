@@ -294,7 +294,14 @@ function findClosestPointOnLine(
  * cuando el vehículo va fuera de ruta.
  */
 export function buildHybridPolyline(
-  coordinates: { lat: number; lng: number; speed?: number; angle?: number }[],
+  coordinates: {
+    lat: number;
+    lng: number;
+    speed?: number;
+    angle?: number;
+    satellites?: number;
+    ignition?: boolean;
+  }[],
   parsedLinks: any[],
   snappingThresholdKm = 0.035,
 ): [number, number][] {
@@ -303,14 +310,20 @@ export function buildHybridPolyline(
 
   for (let i = 0; i < coordinates.length; i++) {
     const pt = coordinates[i];
-    const res = snapPointToLinks(
-      pt.lat,
-      pt.lng,
-      pt.speed,
-      pt.angle,
-      parsedLinks,
-      snappingThresholdKm,
-    );
+
+    const lowSatellites = pt.satellites !== undefined && pt.satellites < 5;
+    const ignitionOff = pt.ignition === false;
+
+    const res = (!lowSatellites && !ignitionOff)
+      ? snapPointToLinks(
+          pt.lat,
+          pt.lng,
+          pt.speed,
+          pt.angle,
+          parsedLinks,
+          snappingThresholdKm,
+        )
+      : { snapped: false, latitude: pt.lat, longitude: pt.lng, matchedLink: null };
 
     if (res.snapped && res.matchedLink) {
       const linkPoints = res.matchedLink.points; // [lng, lat][]

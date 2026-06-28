@@ -35,7 +35,14 @@ export class HereRoutesClientService {
    * Calcula una ruta con límites de velocidad para una secuencia de coordenadas GPS usando la API de Atributos de Mapa.
    */
   async calculateRouteWithSpeedLimits(
-    coordinates: { lat: number; lng: number; speed?: number; angle?: number }[],
+    coordinates: {
+      lat: number;
+      lng: number;
+      speed?: number;
+      angle?: number;
+      satellites?: number;
+      ignition?: boolean;
+    }[],
     travelMode: 'Car' | 'Truck',
   ): Promise<CalculatedRouteResult | null> {
     if (this.isSuspended) {
@@ -90,6 +97,15 @@ export class HereRoutesClientService {
 
         for (let i = 0; i < coordinates.length; i++) {
           const pt = coordinates[i];
+
+          const lowSatellites = pt.satellites !== undefined && pt.satellites < 5;
+          const ignitionOff = pt.ignition === false;
+
+          if (lowSatellites || ignitionOff) {
+            snappedGeometry.push([pt.lng, pt.lat]);
+            continue;
+          }
+
           const res = snapPointToLinks(
             pt.lat,
             pt.lng,
@@ -298,6 +314,15 @@ export class HereRoutesClientService {
 
       for (let i = 0; i < coordinates.length; i++) {
         const pt = coordinates[i];
+
+        const lowSatellites = pt.satellites !== undefined && pt.satellites < 5;
+        const ignitionOff = pt.ignition === false;
+
+        if (lowSatellites || ignitionOff) {
+          snappedGeometry.push([pt.lng, pt.lat]);
+          continue;
+        }
+
         const res = snapPointToLinks(
           pt.lat,
           pt.lng,

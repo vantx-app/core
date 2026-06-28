@@ -129,6 +129,8 @@ export class OverspeedCalculationService {
       lng: log.longitude,
       speed: log.speed,
       angle: log.angle,
+      satellites: log.satellites ?? undefined,
+      ignition: log.ignition,
     }));
 
     const routeResult =
