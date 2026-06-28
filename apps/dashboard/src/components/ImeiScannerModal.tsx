@@ -45,8 +45,8 @@ export default function ImeiScannerModal({
         {
           fps: 20,
           videoConstraints: {
-            width: { min: 640, ideal: 1920, max: 3840 },
-            height: { min: 480, ideal: 1080, max: 2160 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
           },
         },
         (decodedText) => {
