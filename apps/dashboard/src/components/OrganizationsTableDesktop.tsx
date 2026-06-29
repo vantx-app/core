@@ -75,44 +75,7 @@ export function OrganizationsTableDesktop({
         );
       },
     },
-    {
-      key: "status",
-      header: "Estado",
-      className: "font-semibold text-xs",
-      render: (org) => {
-        const isActive = org.subscriptionStatus === "ACTIVE";
-        const isPending = org.subscriptionStatus === "PENDING_ACTIVATION";
-        let badgeClass =
-          "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-300 dark:border-slate-700";
-        let statusText = "Inactivo";
 
-        if (isActive) {
-          badgeClass =
-            "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20";
-          statusText = "Activo";
-        } else if (isPending) {
-          badgeClass =
-            "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20";
-          statusText = "Pendiente";
-        }
-
-        return (
-          <div className="flex flex-col gap-0.5">
-            <span className={`badge badge-sm font-bold border ${badgeClass}`}>
-              {statusText}
-            </span>
-            {isActive && org.subscriptionExpiresAt && (
-              <span className="text-[10px] text-base-content/40 font-medium whitespace-nowrap">
-                Expira:{" "}
-                {new Date(org.subscriptionExpiresAt).toLocaleDateString(
-                  "es-ES",
-                )}
-              </span>
-            )}
-          </div>
-        );
-      },
-    },
     {
       key: "vehicles",
       header: "Vehículos",
@@ -149,29 +112,7 @@ export function OrganizationsTableDesktop({
       className: "text-right",
       render: (org) => (
         <div className="flex items-center justify-end gap-1.5">
-          {org.paymentReceiptUrl && (
-            <a
-              href={org.paymentReceiptUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-xs btn-info text-white hover:brightness-110 font-bold flex items-center justify-center gap-1 shadow-sm"
-              title="Ver Comprobante de Pago"
-            >
-              <FileText className="size-3" />
-              Recibo
-            </a>
-          )}
-          {org.subscriptionStatus !== "ACTIVE" && (
-            <button
-              type="button"
-              onClick={() => onActivate(org)}
-              className="btn btn-xs btn-success text-white hover:brightness-110 font-bold flex items-center justify-center gap-1 shadow-sm"
-              title="Activar Suscripción Directamente"
-            >
-              <Zap className="size-3" />
-              Activar
-            </button>
-          )}
+
           <Link
             href={`/admin?targetOrgId=${org.id}`}
             className="btn btn-xs btn-outline btn-primary font-bold flex items-center justify-center gap-1"

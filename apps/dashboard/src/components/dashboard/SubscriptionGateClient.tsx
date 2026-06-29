@@ -6,6 +6,9 @@ import { useAuth } from "@/context/AuthContext";
 import { ROLES } from "@/utils/enums";
 
 export function SubscriptionGateClient() {
+  // Las verificaciones de suscripción están desactivadas temporalmente en la Fase 1.
+  // Siempre permitimos el acceso sin realizar redirecciones.
+  /*
   const router = useRouter();
   const { profile, loadingProfile } = useAuth();
 
@@ -30,6 +33,7 @@ export function SubscriptionGateClient() {
       }
     }
   }, [profile, loadingProfile, router]);
+  */
 
   return null;
 }

@@ -529,7 +529,7 @@ function OwnerRegisterStepper() {
                         </span>
                         <input
                           type="tel"
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pr-4 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
+                          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                           placeholder="Teléfono"
                           {...register("phone")}
                         />

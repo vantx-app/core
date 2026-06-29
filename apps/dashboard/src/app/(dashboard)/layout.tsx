@@ -8,7 +8,6 @@ import { getUserRole } from "@/utils/server";
 import { Suspense } from "react";
 import { ImpersonationBanner } from "@/components/dashboard/ImpersonationBanner";
 import { Logo } from "@/components/Logo";
-import { SubscriptionGateClient } from "@/components/dashboard/SubscriptionGateClient";
 import { MainContainer } from "@/components/dashboard/MainContainer";
 
 export default async function DashboardLayout({
@@ -34,7 +33,6 @@ export default async function DashboardLayout({
 
   return (
     <AuthProvider role={role} initialProfile={profile}>
-      <SubscriptionGateClient />
       <Suspense
         fallback={
           <div className="flex h-screen items-center justify-center bg-base-100">

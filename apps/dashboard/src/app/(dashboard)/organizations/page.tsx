@@ -823,11 +823,6 @@ export default function OrganizationsPage() {
                 <Building2 className="text-primary size-6" />
               </div>
               <div className="flex gap-2 items-center">
-                <span
-                  className={`badge badge-sm font-bold border ${badgeClass}`}
-                >
-                  {statusText}
-                </span>
                 <span className="badge badge-neutral font-semibold text-xs py-2 px-2.5">
                   {org._count.vehicles}{" "}
                   {org._count.vehicles === 1 ? "Vehículo" : "Vehículos"}
@@ -887,26 +882,6 @@ export default function OrganizationsPage() {
           </div>
 
           <div className="mt-6 pt-4 border-t border-base-200 space-y-2">
-            {org.paymentReceiptUrl && (
-              <a
-                href={org.paymentReceiptUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn btn-sm btn-info text-white w-full font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <FileText className="size-4" />
-                Ver Comprobante
-              </a>
-            )}
-            {!isActive && (
-              <button
-                onClick={() => handleDirectActivate(org)}
-                className="btn btn-sm btn-success text-white w-full font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <Zap className="size-4" />
-                Activar Directamente
-              </button>
-            )}
             <Link
               href={`/admin?targetOrgId=${org.id}`}
               className="btn btn-sm btn-outline btn-primary w-full font-bold hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5"
@@ -1012,17 +987,6 @@ export default function OrganizationsPage() {
         >
           <Link2 className="size-4" />
           Invitaciones
-        </button>
-        <button
-          onClick={() => setActiveTab("settings")}
-          className={`flex-1 flex items-center justify-center gap-2 rounded-xl font-bold text-xs py-3 px-3 transition-all duration-300 ${
-            activeTab === "settings"
-              ? "bg-primary text-white shadow-lg shadow-primary/20 scale-[1.02]"
-              : "text-base-content/60 hover:text-base-content hover:bg-base-200/50"
-          }`}
-        >
-          <Settings className="size-4" />
-          Precios
         </button>
       </div>
 
@@ -1176,158 +1140,7 @@ export default function OrganizationsPage() {
         </>
       )}
 
-      {activeTab === "settings" && (
-        <div className="bg-base-100/60 backdrop-blur-md rounded-2xl border border-base-200 overflow-hidden shadow-md p-8 max-w-2xl mx-auto space-y-6">
-          <div className="flex items-center gap-3 pb-4 border-b border-base-200">
-            <div className="p-3 bg-primary/10 rounded-xl">
-              <DollarSign className="text-primary size-6" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-base-content">
-                Configuración de Precios de Suscripción
-              </h2>
-              <p className="text-xs text-base-content/60">
-                Define los precios estándar en USD. Se aplicarán dinámicamente a
-                todas las organizaciones al momento de pagar.
-              </p>
-            </div>
-          </div>
 
-          {isLoadingSettings && (
-            <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <Loader2 className="size-10 animate-spin text-primary" />
-              <p className="text-base-content/60 text-sm">
-                Cargando tarifas...
-              </p>
-            </div>
-          )}
-
-          {!isLoadingSettings && (
-            <form onSubmit={handleSaveSettings} className="space-y-6">
-              {settingsSuccess && (
-                <div className="alert alert-success shadow-sm text-xs p-3">
-                  <Check className="size-4 text-white shrink-0" />
-                  <span className="text-white font-semibold">
-                    {settingsSuccess}
-                  </span>
-                </div>
-              )}
-
-              {settingsError && (
-                <div className="alert alert-error shadow-sm text-xs p-3">
-                  <ShieldAlert className="size-4 text-white shrink-0" />
-                  <span className="text-white font-semibold">
-                    {settingsError}
-                  </span>
-                </div>
-              )}
-
-              {/* Tier 1: Flat SaaS */}
-              <div className="form-control gap-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <label className="label-text font-bold text-sm text-base-content">
-                      SaaS Base Mensual (Tier 1)
-                    </label>
-                    <p className="text-xs text-base-content/50">
-                      Cobro mensual fijo si la organización NO tiene vehículos
-                      con servicios de pago activos.
-                    </p>
-                  </div>
-                </div>
-                <div className="relative max-w-xs">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={flatSaaSPrice}
-                    onChange={(e) =>
-                      setFlatSaaSPrice(parseFloat(e.target.value) || 0)
-                    }
-                    className="input input-bordered w-full pl-8 font-semibold focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-
-              {/* Tier 2: Geolocation */}
-              <div className="form-control gap-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <label className="label-text font-bold text-sm text-base-content">
-                      Geolocalización por Vehículo (Tier 2)
-                    </label>
-                    <p className="text-xs text-base-content/50">
-                      Precio mensual adicional por cada vehículo configurado con
-                      rastreo básico.
-                    </p>
-                  </div>
-                </div>
-                <div className="relative max-w-xs">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={geolocationPrice}
-                    onChange={(e) =>
-                      setGeolocationPrice(parseFloat(e.target.value) || 0)
-                    }
-                    className="input input-bordered w-full pl-8 font-semibold focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-
-              {/* Tier 3: Diagnostics */}
-              <div className="form-control gap-2">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <label className="label-text font-bold text-sm text-base-content">
-                      Diagnóstico y Telemetría por Vehículo (Tier 3)
-                    </label>
-                    <p className="text-xs text-base-content/50">
-                      Precio mensual adicional por cada vehículo configurado con
-                      telemetría avanzada y diagnósticos OBD-II.
-                    </p>
-                  </div>
-                </div>
-                <div className="relative max-w-xs">
-                  <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-base-content/50 font-bold">
-                    $
-                  </span>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={diagnosticsPrice}
-                    onChange={(e) =>
-                      setDiagnosticsPrice(parseFloat(e.target.value) || 0)
-                    }
-                    className="input input-bordered w-full pl-8 font-semibold focus:ring-2 focus:ring-primary/20"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end pt-4 border-t border-base-200">
-                <button
-                  type="submit"
-                  disabled={isLoadingSettings}
-                  className="btn btn-primary bg-gradient-to-r from-blue-600 to-indigo-600 border-none text-white shadow-lg font-bold px-8 hover:brightness-110 active:scale-95 transition-all duration-200"
-                >
-                  Guardar Precios
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      )}
 
       {/* Creation/Edit Org Modal */}
       <Modal
@@ -1358,40 +1171,7 @@ export default function OrganizationsPage() {
             disabled={isSubmitting}
           />
 
-          {editingOrg && (
-            <>
-              <div className="form-control">
-                <label className="label py-1">
-                  <span className="label-text font-bold text-xs text-base-content/85">
-                    Estado de Suscripción
-                  </span>
-                </label>
-                <select
-                  value={subStatus}
-                  onChange={(e) => setSubStatus(e.target.value)}
-                  className="select select-bordered w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
-                  disabled={isSubmitting}
-                >
-                  <option value="ACTIVE">Activo</option>
-                  <option value="INACTIVE">Inactivo</option>
-                  <option value="PENDING_ACTIVATION">
-                    Pendiente de Activación
-                  </option>
-                </select>
-              </div>
 
-              {subStatus === "ACTIVE" && (
-                <Input
-                  type="date"
-                  required
-                  value={expiresAt}
-                  onChange={(e) => setExpiresAt(e.target.value)}
-                  label="Fecha de Expiración"
-                  disabled={isSubmitting}
-                />
-              )}
-            </>
-          )}
 
           {!editingOrg && (
             <>
