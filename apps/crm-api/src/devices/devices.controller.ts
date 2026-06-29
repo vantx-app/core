@@ -30,6 +30,7 @@ export class DevicesController {
   }
 
   @Get()
+  @Roles(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN)
   async findAllDevices(@Query('status') status?: DeviceStatus) {
     return this.devicesService.findAllDevices(status);
   }
