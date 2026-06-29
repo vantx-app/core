@@ -347,6 +347,7 @@ export class DriversService {
           email,
           password,
           name: `${firstName} ${lastName}`,
+          phone,
         },
         tx,
       );

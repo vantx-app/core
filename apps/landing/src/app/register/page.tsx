@@ -235,7 +235,13 @@ function RegisterStepper() {
                   className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 px-3.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
                   placeholder="ejemplo@vantx.app"
                   disabled={isLoading}
-                  {...register("email", { required: "El correo es requerido" })}
+                  {...register("email", {
+                    required: "El correo es requerido",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "El formato de correo no es válido",
+                    },
+                  })}
                 />
                 {errors.email && (
                   <span className="text-red-500 text-xs mt-1">
@@ -316,9 +322,18 @@ function RegisterStepper() {
                     placeholder="Ej. +507 6000-0000"
                     disabled={isLoading}
                     {...register("phone", {
-                      required: currentStep === "details",
+                      required: currentStep === "details" ? "El teléfono es requerido" : false,
+                      pattern: {
+                        value: /^(\+?507)?[-\s]?(6\d{3}[-\s]?\d{4}|[235789]\d{2}[-\s]?\d{4})$/,
+                        message: "El formato de teléfono no es válido para Panamá",
+                      },
                     })}
                   />
+                  {errors.phone && (
+                    <span className="text-red-500 text-xs mt-1">
+                      {errors.phone.message}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-1">

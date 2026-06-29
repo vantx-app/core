@@ -144,6 +144,7 @@ export class InvitationsService {
           password: dto.password,
           name: dto.isDriver ? `${dto.firstName} ${dto.lastName}` : dto.name,
           role: Role.OWNER,
+          phone: dto.phone,
           organization: {
             connect: { id: org.id },
           },

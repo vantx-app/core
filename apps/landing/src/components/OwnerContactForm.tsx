@@ -189,7 +189,13 @@ export function OwnerContactForm() {
                   : "border-slate-200 focus:border-slate-400"
               } rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all`}
               placeholder="+507 6000-0000"
-              {...register("phone", { required: "El teléfono es obligatorio" })}
+              {...register("phone", {
+                required: "El teléfono es obligatorio",
+                pattern: {
+                  value: /^(\+?507)?[-\s]?(6\d{3}[-\s]?\d{4}|[235789]\d{2}[-\s]?\d{4})$/,
+                  message: "El formato de teléfono no es válido para Panamá",
+                },
+              })}
             />
           </div>
           {errors.phone && (

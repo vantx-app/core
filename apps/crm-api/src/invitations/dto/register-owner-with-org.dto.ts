@@ -6,6 +6,7 @@ import {
   IsBoolean,
   IsOptional,
   MinLength,
+  IsPhoneNumber,
 } from 'class-validator';
 
 export class RegisterOwnerWithOrgDto {
@@ -14,8 +15,8 @@ export class RegisterOwnerWithOrgDto {
   @ApiPropertyOptional()
   token?: string;
 
-  @IsEmail()
-  @IsNotEmpty()
+  @IsEmail({}, { message: 'El correo electrónico debe ser válido' })
+  @IsNotEmpty({ message: 'El correo electrónico es obligatorio' })
   @ApiProperty()
   email: string;
 
@@ -50,13 +51,14 @@ export class RegisterOwnerWithOrgDto {
   @ApiPropertyOptional()
   nationalId?: string;
 
-  @IsString()
-  @IsOptional()
-  @ApiPropertyOptional()
-  phone?: string;
+  @IsString({ message: 'El número de teléfono debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El número de teléfono es obligatorio' })
+  @IsPhoneNumber('PA', { message: 'El número de teléfono no es válido' })
+  @ApiProperty()
+  phone: string;
 
-  @IsString()
-  @IsNotEmpty()
+  @IsString({ message: 'El nombre de la organización debe ser una cadena de texto' })
+  @IsNotEmpty({ message: 'El nombre de la organización es obligatorio' })
   @ApiProperty()
   orgName: string;
 }

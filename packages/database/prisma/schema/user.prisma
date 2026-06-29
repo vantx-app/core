@@ -4,6 +4,7 @@ model User {
   password     String
   name         String?
   role         Role          @default(DRIVER)
+  phone        String?
   orgId        String?       @db.Uuid
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @default(now()) @updatedAt

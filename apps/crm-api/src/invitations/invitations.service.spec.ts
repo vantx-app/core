@@ -178,6 +178,7 @@ describe('InvitationsService', () => {
       password: 'password123',
       isDriver: false,
       name: 'Owner User',
+      phone: '6123-4567',
       orgName: 'New Fleet',
     };
 
@@ -215,6 +216,7 @@ describe('InvitationsService', () => {
           password: 'password123',
           name: 'Owner User',
           role: Role.OWNER,
+          phone: '6123-4567',
           organization: {
             connect: { id: 'org-uuid' },
           },
@@ -337,6 +339,7 @@ describe('InvitationsService', () => {
           password: 'password123',
           name: 'Juan Pérez',
           role: Role.OWNER,
+          phone: '1234567',
           organization: {
             connect: { id: 'org-uuid' },
           },

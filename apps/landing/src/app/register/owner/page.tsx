@@ -108,6 +108,7 @@ function OwnerRegisterStepper() {
     let fieldsToValidate: Array<keyof OwnerRegisterFormValues> = [
       "email",
       "password",
+      "phone",
     ];
 
     if (isDriver) {
@@ -410,6 +411,34 @@ function OwnerRegisterStepper() {
                   )}
                 </div>
 
+                <div className="flex flex-col gap-1">
+                  <label className="text-xs font-bold text-slate-700">
+                    Teléfono
+                  </label>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
+                      <Phone size={14} />
+                    </span>
+                    <input
+                      type="tel"
+                      className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pl-10 pr-4 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
+                      placeholder="Ej. +507 6000-0000"
+                      {...register("phone", {
+                        required: "El teléfono es obligatorio",
+                        pattern: {
+                          value: /^(\+?507)?[-\s]?(6\d{3}[-\s]?\d{4}|[235789]\d{2}[-\s]?\d{4})$/,
+                          message: "El formato de teléfono no es válido para Panamá",
+                        },
+                      })}
+                    />
+                  </div>
+                  {errors.phone && (
+                    <span className="text-red-500 text-xs mt-1">
+                      {errors.phone.message}
+                    </span>
+                  )}
+                </div>
+
                 {/* Checkbox de Doble Rol */}
                 <div className="border border-slate-200 bg-slate-50 rounded-2xl p-4 mt-2">
                   <label className="cursor-pointer flex justify-between items-center">
@@ -519,22 +548,6 @@ function OwnerRegisterStepper() {
                       )}
                     />
 
-                    <div className="flex flex-col gap-1">
-                      <label className="text-xs font-bold text-slate-700">
-                        Teléfono
-                      </label>
-                      <div className="relative">
-                        <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
-                          <Phone size={14} />
-                        </span>
-                        <input
-                          type="tel"
-                          className="w-full bg-slate-50 border border-slate-200 focus:border-slate-400 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none transition-all"
-                          placeholder="Teléfono"
-                          {...register("phone")}
-                        />
-                      </div>
-                    </div>
                   </div>
                 )}
 
@@ -566,6 +579,11 @@ function OwnerRegisterStepper() {
                       placeholder="Ej. Logística Continental S.A."
                       {...register("orgName", {
                         required: "El nombre de la organización es requerido",
+                        validate: {
+                          notEmpty: (val) =>
+                            val.trim() !== "" ||
+                            "El nombre de la organización no puede estar vacío",
+                        },
                       })}
                     />
                   </div>

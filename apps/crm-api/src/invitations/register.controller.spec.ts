@@ -33,6 +33,7 @@ describe('RegisterController', () => {
       password: 'password123',
       isDriver: false,
       name: 'Owner User',
+      phone: '6123-4567',
       orgName: 'New Fleet',
     };
 
