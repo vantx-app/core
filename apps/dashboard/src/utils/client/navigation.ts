@@ -54,18 +54,18 @@ export const NAV_LINKS: NavLink[] = [
   {
     href: "/vehicle",
     label: "Vehículos",
-    key: "nav.dashboard", // fallback
+    key: "nav.vehicles",
     icon: Car,
     allowedRoles: [ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
-    hidden: true,
+    hiddenOnMobile: true,
   },
   {
     href: "/drivers",
     label: "Conductores",
-    key: "nav.dashboard", // fallback
+    key: "nav.drivers",
     icon: Users,
     allowedRoles: [ROLES.OWNER, ROLES.ADMIN, ROLES.SUPER_ADMIN],
-    hidden: true,
+    hiddenOnMobile: true,
   },
   {
     href: "/users",

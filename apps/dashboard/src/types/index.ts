@@ -1299,6 +1299,7 @@ export interface NavLink {
   overrideClassNames?: string;
   hideInMobileBottomNavForRoles?: ROLES[];
   isExternal?: boolean;
+  hiddenOnMobile?: boolean;
 }
 
 export interface Device {

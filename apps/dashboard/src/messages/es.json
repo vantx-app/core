@@ -15,7 +15,9 @@
     "billing": "Facturación",
     "account": "Cuenta",
     "admin": "Administración",
-    "reports": "Reportes"
+    "reports": "Reportes",
+    "vehicles": "Vehículos",
+    "drivers": "Conductores"
   },
   "billing": {
     "title": "Suscripción y Facturación",

@@ -249,86 +249,79 @@ export class WeeklyScoringService {
             },
           });
 
-          const currentStats = await tx.driverGlobalStats.findUnique({
+          // Obtener todos los snapshots del conductor para calcular los puntajes ponderados exactos
+          const snapshots = await tx.driverScoreSnapshot.findMany({
             where: { driverId: d.id },
           });
 
-          if (!currentStats) {
-            await tx.driverGlobalStats.create({
-              data: {
-                driverId: d.id,
-                totalKm: safeTotalKm,
-                totalHours: safeTotalHours,
-                totalSnapshots: 1,
-                globalSafetyScore: finalSafety,
-                globalEcoScore: finalEco,
-                globalAssetScore: finalAsset,
-                globalOverallScore: finalOverall,
-              },
-            });
-          } else {
-            const oldKm = existingSnapshot ? existingSnapshot.totalKm : 0;
-            const oldHours = existingSnapshot ? existingSnapshot.totalHours : 0;
-            const oldSafety = existingSnapshot
-              ? existingSnapshot.safetyScore
-              : 0;
-            const oldEco = existingSnapshot ? existingSnapshot.ecoScore : 0;
-            const oldAsset = existingSnapshot ? existingSnapshot.assetScore : 0;
-            const oldOverall = existingSnapshot
-              ? existingSnapshot.overallScore
-              : 0;
+          let totalSnapshotKm = 0;
+          let weightedSafetySum = 0;
+          let weightedEcoSum = 0;
+          let weightedAssetSum = 0;
+          let weightedOverallSum = 0;
 
-            const snapshotDelta = existingSnapshot ? 0 : 1;
-
-            const newTotalKm = currentStats.totalKm - oldKm + safeTotalKm;
-            const newTotalHours =
-              currentStats.totalHours - oldHours + safeTotalHours;
-
-            const calcWeighted = (
-              global: number,
-              oldVal: number,
-              newVal: number,
-            ) => {
-              if (newTotalKm <= 0) return 100.0;
-              return parseFloat(
-                (
-                  (global * currentStats.totalKm -
-                    oldVal * oldKm +
-                    newVal * safeTotalKm) /
-                  newTotalKm
-                ).toFixed(2),
-              );
-            };
-
-            await tx.driverGlobalStats.update({
-              where: { driverId: d.id },
-              data: {
-                totalKm: parseFloat(newTotalKm.toFixed(2)),
-                totalHours: parseFloat(newTotalHours.toFixed(2)),
-                totalSnapshots: currentStats.totalSnapshots + snapshotDelta,
-                globalSafetyScore: calcWeighted(
-                  currentStats.globalSafetyScore,
-                  oldSafety,
-                  finalSafety,
-                ),
-                globalEcoScore: calcWeighted(
-                  currentStats.globalEcoScore,
-                  oldEco,
-                  finalEco,
-                ),
-                globalAssetScore: calcWeighted(
-                  currentStats.globalAssetScore,
-                  oldAsset,
-                  finalAsset,
-                ),
-                globalOverallScore: calcWeighted(
-                  currentStats.globalOverallScore,
-                  oldOverall,
-                  finalOverall,
-                ),
-              },
-            });
+          for (const snap of snapshots) {
+            totalSnapshotKm += snap.totalKm;
+            weightedSafetySum += snap.safetyScore * snap.totalKm;
+            weightedEcoSum += snap.ecoScore * snap.totalKm;
+            weightedAssetSum += snap.assetScore * snap.totalKm;
+            weightedOverallSum += snap.overallScore * snap.totalKm;
           }
+
+          const globalSafetyScore =
+            totalSnapshotKm > 0
+              ? parseFloat((weightedSafetySum / totalSnapshotKm).toFixed(2))
+              : 100;
+          const globalEcoScore =
+            totalSnapshotKm > 0
+              ? parseFloat((weightedEcoSum / totalSnapshotKm).toFixed(2))
+              : 100;
+          const globalAssetScore =
+            totalSnapshotKm > 0
+              ? parseFloat((weightedAssetSum / totalSnapshotKm).toFixed(2))
+              : 100;
+          const globalOverallScore =
+            totalSnapshotKm > 0
+              ? parseFloat((weightedOverallSum / totalSnapshotKm).toFixed(2))
+              : 100;
+          const totalSnapshots = snapshots.length;
+
+          // Obtener totalKm y totalHours de todos los rollups diarios para este conductor
+          const rollupAgg = await tx.dailyTelemetryRollup.aggregate({
+            where: { driverId: d.id },
+            _sum: {
+              totalKm: true,
+              totalEngineHours: true,
+            },
+          });
+
+          const totalKm = parseFloat((rollupAgg._sum.totalKm ?? 0).toFixed(2));
+          const totalHours = parseFloat(
+            (rollupAgg._sum.totalEngineHours ?? 0).toFixed(2),
+          );
+
+          await tx.driverGlobalStats.upsert({
+            where: { driverId: d.id },
+            update: {
+              totalKm,
+              totalHours,
+              totalSnapshots,
+              globalSafetyScore,
+              globalEcoScore,
+              globalAssetScore,
+              globalOverallScore,
+            },
+            create: {
+              driverId: d.id,
+              totalKm,
+              totalHours,
+              totalSnapshots,
+              globalSafetyScore,
+              globalEcoScore,
+              globalAssetScore,
+              globalOverallScore,
+            },
+          });
         });
       }
     }
@@ -495,85 +488,82 @@ export class WeeklyScoringService {
               },
             });
 
-            const currentStats = await tx.vehicleGlobalStats.findUnique({
+            // Obtener todos los snapshots del vehículo para calcular los puntajes ponderados exactos
+            const snapshots = await tx.vehicleScoreSnapshot.findMany({
               where: { vehicleId: v.id },
             });
 
-            if (!currentStats) {
-              await tx.vehicleGlobalStats.create({
-                data: {
-                  vehicleId: v.id,
-                  totalKm: safeTotalKm,
-                  totalEngineHours: safeTotalHours,
-                  globalMaintenanceScore: metrics.assetScore,
-                  globalFuelEfficiency: metrics.ecoScore,
-                  globalSafetyScore: metrics.safetyScore,
-                  globalOverallScore: metrics.overallScore,
-                },
-              });
-            } else {
-              const oldBreakdown = existingSnapshot?.breakdown as any;
-              const oldHours = oldBreakdown?.scores?.totalHours || 0;
-              const oldKm = existingSnapshot ? existingSnapshot.totalKm : 0;
-              const oldMaintenance = existingSnapshot
-                ? existingSnapshot.maintenanceScore
-                : 0;
-              const oldFuel = existingSnapshot
-                ? existingSnapshot.fuelEfficiency
-                : 0;
-              const oldSafety = existingSnapshot
-                ? existingSnapshot.safetyScore
-                : 0;
-              const oldOverall = oldBreakdown?.scores?.overallScore || 0;
+            let totalSnapshotKm = 0;
+            let weightedMaintenanceSum = 0;
+            let weightedFuelSum = 0;
+            let weightedSafetySum = 0;
+            let weightedOverallSum = 0;
 
-              const newTotalKm = currentStats.totalKm - oldKm + safeTotalKm;
-              const newTotalHours =
-                currentStats.totalEngineHours - oldHours + safeTotalHours;
-
-              const calcWeighted = (
-                globalScore: number,
-                oldVal: number,
-                newVal: number,
-              ) => {
-                if (newTotalKm <= 0) return 100.0;
-                return parseFloat(
-                  (
-                    (globalScore * currentStats.totalKm -
-                      oldVal * oldKm +
-                      newVal * safeTotalKm) /
-                    newTotalKm
-                  ).toFixed(2),
-                );
-              };
-
-              await tx.vehicleGlobalStats.update({
-                where: { vehicleId: v.id },
-                data: {
-                  totalKm: parseFloat(newTotalKm.toFixed(2)),
-                  totalEngineHours: parseFloat(newTotalHours.toFixed(2)),
-                  globalMaintenanceScore: calcWeighted(
-                    currentStats.globalMaintenanceScore,
-                    oldMaintenance,
-                    metrics.assetScore,
-                  ),
-                  globalFuelEfficiency: calcWeighted(
-                    currentStats.globalFuelEfficiency,
-                    oldFuel,
-                    metrics.ecoScore,
-                  ),
-                  globalSafetyScore: calcWeighted(
-                    currentStats.globalSafetyScore ?? 100,
-                    oldSafety,
-                    metrics.safetyScore,
-                  ),
-                  globalOverallScore: calcWeighted(
-                    currentStats.globalOverallScore ?? 100,
-                    oldOverall,
-                    metrics.overallScore,
-                  ),
-                },
-              });
+            for (const snap of snapshots) {
+              const snapBreakdown = snap.breakdown as any;
+              const snapOverall = snapBreakdown?.scores?.overallScore ?? 100;
+              totalSnapshotKm += snap.totalKm;
+              weightedMaintenanceSum += snap.maintenanceScore * snap.totalKm;
+              weightedFuelSum += snap.fuelEfficiency * snap.totalKm;
+              weightedSafetySum += snap.safetyScore * snap.totalKm;
+              weightedOverallSum += snapOverall * snap.totalKm;
             }
+
+            const globalMaintenanceScore =
+              totalSnapshotKm > 0
+                ? parseFloat(
+                    (weightedMaintenanceSum / totalSnapshotKm).toFixed(2),
+                  )
+                : 100;
+            const globalFuelEfficiency =
+              totalSnapshotKm > 0
+                ? parseFloat((weightedFuelSum / totalSnapshotKm).toFixed(2))
+                : 100;
+            const globalSafetyScore =
+              totalSnapshotKm > 0
+                ? parseFloat((weightedSafetySum / totalSnapshotKm).toFixed(2))
+                : 100;
+            const globalOverallScore =
+              totalSnapshotKm > 0
+                ? parseFloat((weightedOverallSum / totalSnapshotKm).toFixed(2))
+                : 100;
+
+            // Obtener totalKm y totalEngineHours de todos los rollups diarios para este vehículo
+            const rollupAgg = await tx.dailyTelemetryRollup.aggregate({
+              where: { vehicleId: v.id },
+              _sum: {
+                totalKm: true,
+                totalEngineHours: true,
+              },
+            });
+
+            const totalKm = parseFloat(
+              (rollupAgg._sum.totalKm ?? 0).toFixed(2),
+            );
+            const totalEngineHours = parseFloat(
+              (rollupAgg._sum.totalEngineHours ?? 0).toFixed(2),
+            );
+
+            await tx.vehicleGlobalStats.upsert({
+              where: { vehicleId: v.id },
+              update: {
+                totalKm,
+                totalEngineHours,
+                globalMaintenanceScore,
+                globalFuelEfficiency,
+                globalSafetyScore,
+                globalOverallScore,
+              },
+              create: {
+                vehicleId: v.id,
+                totalKm,
+                totalEngineHours,
+                globalMaintenanceScore,
+                globalFuelEfficiency,
+                globalSafetyScore,
+                globalOverallScore,
+              },
+            });
           });
         }
       }

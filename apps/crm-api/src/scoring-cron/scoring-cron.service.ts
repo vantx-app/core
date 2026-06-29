@@ -144,6 +144,84 @@ export class ScoringCronService {
       }
     }
 
+    // Actualizar métricas globales acumuladas (distancia y horas de motor) diariamente
+    this.logger.log(
+      'Actualizando estadísticas globales de conductores y vehículos...',
+    );
+
+    try {
+      // Conductores
+      const driverAggs = await this.prisma.dailyTelemetryRollup.groupBy({
+        by: ['driverId'],
+        _sum: {
+          totalKm: true,
+          totalEngineHours: true,
+        },
+      });
+
+      for (const agg of driverAggs) {
+        if (!agg.driverId) continue;
+        const totalKm = parseFloat((agg._sum.totalKm ?? 0).toFixed(2));
+        const totalHours = parseFloat(
+          (agg._sum.totalEngineHours ?? 0).toFixed(2),
+        );
+
+        await this.prisma.driverGlobalStats.upsert({
+          where: { driverId: agg.driverId },
+          update: { totalKm, totalHours },
+          create: {
+            driverId: agg.driverId,
+            totalKm,
+            totalHours,
+            totalSnapshots: 0,
+            globalSafetyScore: 100,
+            globalEcoScore: 100,
+            globalAssetScore: 100,
+            globalOverallScore: 100,
+          },
+        });
+      }
+
+      // Vehículos
+      const vehicleAggs = await this.prisma.dailyTelemetryRollup.groupBy({
+        by: ['vehicleId'],
+        _sum: {
+          totalKm: true,
+          totalEngineHours: true,
+        },
+      });
+
+      for (const agg of vehicleAggs) {
+        const totalKm = parseFloat((agg._sum.totalKm ?? 0).toFixed(2));
+        const totalEngineHours = parseFloat(
+          (agg._sum.totalEngineHours ?? 0).toFixed(2),
+        );
+
+        await this.prisma.vehicleGlobalStats.upsert({
+          where: { vehicleId: agg.vehicleId },
+          update: { totalKm, totalEngineHours },
+          create: {
+            vehicleId: agg.vehicleId,
+            totalKm,
+            totalEngineHours,
+            globalMaintenanceScore: 100,
+            globalFuelEfficiency: 100,
+            globalSafetyScore: 100,
+            globalOverallScore: 100,
+          },
+        });
+      }
+
+      this.logger.log(
+        '✅ Estadísticas globales de conductores y vehículos actualizadas con éxito.',
+      );
+    } catch (err) {
+      this.logger.error(
+        'Error al actualizar estadísticas globales de conductores y vehículos:',
+        err,
+      );
+    }
+
     this.logger.log(
       '✅ Post-procesamiento de límites de velocidad HERE finalizado.',
     );

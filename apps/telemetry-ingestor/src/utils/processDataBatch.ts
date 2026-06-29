@@ -92,19 +92,26 @@ function transitionTripState({
   const recTimeMs = (rec.timestamp as Date).getTime();
 
   // 1. Detección de solapamiento: buscar si el timestamp actual cae dentro de algún viaje existente en la base de datos
-  const overlappingDbTrip = dbOverlappingTrips.find(t => 
-    t.startTime.getTime() <= recTimeMs &&
-    (t.endTime === null || t.endTime.getTime() >= recTimeMs)
+  const overlappingDbTrip = dbOverlappingTrips.find(
+    (t) =>
+      t.startTime.getTime() <= recTimeMs &&
+      (t.endTime === null || t.endTime.getTime() >= recTimeMs),
   );
 
   // Si hay un viaje activo en memoria, y encontramos un viaje solapado en la BD con ID diferente
-  if (state.activeTrip && overlappingDbTrip && overlappingDbTrip.id !== state.activeTrip.id) {
+  if (
+    state.activeTrip &&
+    overlappingDbTrip &&
+    overlappingDbTrip.id !== state.activeTrip.id
+  ) {
     // FUSIONAR: Registrar el viaje de la BD para ser fusionado con nuestro viaje activo actual
     tripsToMerge.set(overlappingDbTrip.id, state.activeTrip.id);
     tripsToDelete.add(overlappingDbTrip.id);
     tripsToUpdate.delete(overlappingDbTrip.id);
-    
-    logger.log(`🔄 Fusionando viaje duplicado ${overlappingDbTrip.id} en viaje activo ${state.activeTrip.id} para ${vehicleAlias}`);
+
+    logger.log(
+      `🔄 Fusionando viaje duplicado ${overlappingDbTrip.id} en viaje activo ${state.activeTrip.id} para ${vehicleAlias}`,
+    );
   }
 
   // 2. Si no tenemos un viaje activo, pero el registro tiene tripActive = true
@@ -115,7 +122,9 @@ function transitionTripState({
         id: overlappingDbTrip.id,
         startTime: overlappingDbTrip.startTime,
       };
-      logger.log(`🚗 Reutilizando viaje existente de la BD: ${overlappingDbTrip.id} para ${vehicleAlias}`);
+      logger.log(
+        `🚗 Reutilizando viaje existente de la BD: ${overlappingDbTrip.id} para ${vehicleAlias}`,
+      );
     } else {
       // Si no cae en ningún viaje, revisamos el debounce de reapertura
       const lastClosed = state.lastClosedTrip;
@@ -146,9 +155,10 @@ function transitionTripState({
         }
 
         state.lastClosedTrip = undefined;
-        logger.log(isHistorical 
-          ? `🚗 Viaje Reabierto (Diferido): ${vehicleAlias}` 
-          : `🚗 Viaje Reabierto: ${vehicleAlias}`
+        logger.log(
+          isHistorical
+            ? `🚗 Viaje Reabierto (Diferido): ${vehicleAlias}`
+            : `🚗 Viaje Reabierto: ${vehicleAlias}`,
         );
       } else {
         const newTripId = uuidv7();
@@ -158,13 +168,14 @@ function transitionTripState({
           id: newTripId,
           startTime: rec.timestamp,
         });
-        logger.log(isHistorical 
-          ? `🚗 Viaje Iniciado (Diferido): ${vehicleAlias}` 
-          : `🚗 Viaje Iniciado: ${vehicleAlias}`
+        logger.log(
+          isHistorical
+            ? `🚗 Viaje Iniciado (Diferido): ${vehicleAlias}`
+            : `🚗 Viaje Iniciado: ${vehicleAlias}`,
         );
       }
     }
-  } 
+  }
   // 3. Si tenemos un viaje activo, pero el registro tiene tripActive = false
   else if (state.activeTrip && !tripActive) {
     const durationMs = recTimeMs - state.activeTrip.startTime.getTime();
@@ -173,16 +184,18 @@ function transitionTripState({
     if (durationMs < MIN_TRIP_DURATION_MS) {
       if (newTripsCreatedInBatch.has(tripId)) {
         tripsToCreate.delete(tripId);
-        logger.log(isHistorical 
-          ? `👻 Viaje fantasma (Diferido) descartado en memoria: ${vehicleAlias} (${durationMs}ms)`
-          : `👻 Viaje fantasma descartado en memoria: ${vehicleAlias} (${durationMs}ms)`
+        logger.log(
+          isHistorical
+            ? `👻 Viaje fantasma (Diferido) descartado en memoria: ${vehicleAlias} (${durationMs}ms)`
+            : `👻 Viaje fantasma descartado en memoria: ${vehicleAlias} (${durationMs}ms)`,
         );
       } else {
         tripsToDelete.add(tripId);
         tripsToUpdate.delete(tripId);
-        logger.log(isHistorical 
-          ? `👻 Viaje fantasma (Diferido) en DB programado para eliminación: ${vehicleAlias} (${durationMs}ms)`
-          : `👻 Viaje fantasma en DB programado para eliminación: ${vehicleAlias} (${durationMs}ms)`
+        logger.log(
+          isHistorical
+            ? `👻 Viaje fantasma (Diferido) en DB programado para eliminación: ${vehicleAlias} (${durationMs}ms)`
+            : `👻 Viaje fantasma en DB programado para eliminación: ${vehicleAlias} (${durationMs}ms)`,
         );
       }
 
@@ -200,9 +213,10 @@ function transitionTripState({
       } else {
         tripsToUpdate.set(tripId, { id: tripId, endTime: rec.timestamp });
       }
-      logger.log(isHistorical 
-        ? `🛑 Viaje Finalizado (Diferido): ${vehicleAlias}` 
-        : `🛑 Viaje Finalizado: ${vehicleAlias}`
+      logger.log(
+        isHistorical
+          ? `🛑 Viaje Finalizado (Diferido): ${vehicleAlias}`
+          : `🛑 Viaje Finalizado: ${vehicleAlias}`,
       );
     }
 
@@ -343,19 +357,16 @@ async function processDataBatchInternal(records: any[], imei: string) {
     where: {
       vehicleId: vehicle.id,
       startTime: { lte: batchEnd },
-      OR: [
-        { endTime: null },
-        { endTime: { gte: batchStart } }
-      ]
+      OR: [{ endTime: null }, { endTime: { gte: batchStart } }],
     },
-    orderBy: { startTime: "asc" }
+    orderBy: { startTime: "asc" },
   });
 
   const latestLiveTime = liveTripState.activeTrip
     ? liveTripState.activeTrip.startTime.getTime()
-    : (liveTripState.lastClosedTrip
-        ? liveTripState.lastClosedTrip.closeTime
-        : 0);
+    : liveTripState.lastClosedTrip
+      ? liveTripState.lastClosedTrip.closeTime
+      : 0;
 
   const firstHistoricalRecord = sortedRecords.find((rec) => {
     return (rec.timestamp as Date).getTime() < latestLiveTime;
@@ -364,9 +375,11 @@ async function processDataBatchInternal(records: any[], imei: string) {
   if (firstHistoricalRecord) {
     const firstHistTimestamp = firstHistoricalRecord.timestamp as Date;
 
-    const activeHistTrip = dbOverlappingTrips.find(t => 
-      t.startTime.getTime() <= firstHistTimestamp.getTime() &&
-      (t.endTime === null || t.endTime.getTime() >= firstHistTimestamp.getTime())
+    const activeHistTrip = dbOverlappingTrips.find(
+      (t) =>
+        t.startTime.getTime() <= firstHistTimestamp.getTime() &&
+        (t.endTime === null ||
+          t.endTime.getTime() >= firstHistTimestamp.getTime()),
     );
 
     if (activeHistTrip) {
@@ -377,7 +390,11 @@ async function processDataBatchInternal(records: any[], imei: string) {
     } else {
       const lastClosedHistTrip = [...dbOverlappingTrips]
         .reverse()
-        .find(t => t.endTime !== null && t.endTime.getTime() < firstHistTimestamp.getTime());
+        .find(
+          (t) =>
+            t.endTime !== null &&
+            t.endTime.getTime() < firstHistTimestamp.getTime(),
+        );
 
       if (lastClosedHistTrip && lastClosedHistTrip.endTime) {
         historicalTripState.lastClosedTrip = {

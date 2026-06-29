@@ -19,6 +19,7 @@ export function MobileBottomNav() {
     const rolesToShow = link.menuAllowedRoles || link.allowedRoles;
     if (!rolesToShow.includes(role)) return false;
     if ("hidden" in link && link.hidden) return false;
+    if ("hiddenOnMobile" in link && link.hiddenOnMobile) return false;
     if (
       link.hideInMobileBottomNavForRoles &&
       link.hideInMobileBottomNavForRoles.includes(role)

@@ -306,28 +306,31 @@ export function OwnerDashboard({
       <div className="flex md:hidden tabs tabs-boxed bg-base-200/60 border border-base-300/80 p-1 rounded-xl gap-1">
         <button
           onClick={() => setActiveMobileTab("resumen")}
-          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${activeMobileTab === "resumen"
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "resumen"
               ? "tab-active bg-blue-600 text-white shadow-md"
               : "text-base-content/60 hover:text-base-content"
-            }`}
+          }`}
         >
           Resumen
         </button>
         <button
           onClick={() => setActiveMobileTab("unidades")}
-          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${activeMobileTab === "unidades"
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "unidades"
               ? "tab-active bg-blue-600 text-white shadow-md"
               : "text-base-content/60 hover:text-base-content"
-            }`}
+          }`}
         >
           Unidades
         </button>
         <button
           onClick={() => setActiveMobileTab("alertas")}
-          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${activeMobileTab === "alertas"
+          className={`tab tab-sm font-bold flex-1 py-2.5 h-auto rounded-lg transition-all ${
+            activeMobileTab === "alertas"
               ? "tab-active bg-blue-600 text-white shadow-md"
               : "text-base-content/60 hover:text-base-content"
-            }`}
+          }`}
         >
           Alertas ({fleetAlerts.length})
         </button>
@@ -451,15 +454,16 @@ export function OwnerDashboard({
           <DashboardStatCard
             icon={
               <div
-                className={`p-3 rounded-xl shrink-0 ${fleetStats.idlingHours / (fleetStats.totalEngineHours || 1) >
-                    0.2
+                className={`p-3 rounded-xl shrink-0 ${
+                  fleetStats.idlingHours / (fleetStats.totalEngineHours || 1) >
+                  0.2
                     ? "bg-rose-500/10 text-rose-600"
                     : fleetStats.idlingHours /
-                      (fleetStats.totalEngineHours || 1) >
-                      0.1
+                          (fleetStats.totalEngineHours || 1) >
+                        0.1
                       ? "bg-amber-500/10 text-amber-600"
                       : "bg-emerald-500/10 text-emerald-600"
-                  }`}
+                }`}
               >
                 <Gauge className="size-6" />
               </div>
@@ -491,10 +495,11 @@ export function OwnerDashboard({
               {fleetAlerts.map((alert) => (
                 <div
                   key={alert.id}
-                  className={`p-3.5 rounded-xl border flex gap-3 text-xs animate-in fade-in duration-300 ${alert.severity === "error"
+                  className={`p-3.5 rounded-xl border flex gap-3 text-xs animate-in fade-in duration-300 ${
+                    alert.severity === "error"
                       ? "bg-rose-500/5 border-rose-500/20 text-rose-800 dark:text-rose-200"
                       : "bg-amber-500/5 border-amber-500/20 text-amber-800 dark:text-amber-200"
-                    }`}
+                  }`}
                 >
                   {alert.type === "unplugged" && (
                     <Power className="size-4.5 shrink-0 text-rose-500 mt-0.5" />
@@ -684,12 +689,13 @@ export function OwnerDashboard({
                             Estado Administrativo
                           </span>
                           <span
-                            className={`badge badge-sm font-bold ${v.status === "ACTIVE"
+                            className={`badge badge-sm font-bold ${
+                              v.status === "ACTIVE"
                                 ? "bg-emerald-500/10 text-emerald-700 border border-emerald-500/20"
                                 : v.status === "IN_MAINTENANCE"
                                   ? "badge-warning text-white"
                                   : "badge-neutral text-white"
-                              }`}
+                            }`}
                           >
                             {v.status === "ACTIVE"
                               ? "Activo"

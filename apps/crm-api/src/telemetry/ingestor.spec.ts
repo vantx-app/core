@@ -1247,7 +1247,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe detectar viajes solapados/duplicados en la base de datos y fusionarlos', async () => {
       const mockVehicleId = 'vehicle-uuid-overlap-merge-test';
       const mockImei = 'imei-overlap-merge-test';
-      
+
       mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
@@ -1263,7 +1263,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       // Simulamos que ya existe un viaje duplicado en la base de datos (Trip B de 12:06 a 1:20)
       const existingTripStart = new Date(1716570000000 + 60000); // 12:06 (1 minuto después)
       const existingTripEnd = new Date(1716570000000 + 4500000); // 1:20
-      
+
       mockPrisma.trip.findMany.mockResolvedValueOnce([
         {
           id: 'existing-trip-b-id',
