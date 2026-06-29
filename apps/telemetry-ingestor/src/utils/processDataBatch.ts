@@ -8,11 +8,14 @@ import {
 } from "@vantx/telemetry-parser";
 import { snapTelemetryRecords } from "./snapTelemetry";
 import { saveTelemetryBatchData } from "./dbTelemetryWriter";
-import { parseTelemetryRecord } from "./telemetryParser";
-import { transitionTripState, TripState } from "./tripStateMachine";
+import { parseTelemetryRecord, PreviousState } from "./telemetryParser";
+import { v7 as uuidv7 } from "uuid";
 
 const prisma = new PrismaClient();
 const logger = new Logger("Ingestor");
+
+const MIN_TRIP_DURATION_MS = 60_000; // 1 minuto mínimo para que un viaje sea válido
+const POST_CLOSE_DEBOUNCE_MS = 90_000; // 90 s de silencio tras el cierre
 
 // Caché enriquecido: almacena id + startTime para evitar lecturas extra a la DB
 const activeTripsCache = new Map<string, { id: string; startTime: Date }>();
@@ -25,6 +28,11 @@ const lastClosedTripCache = new Map<
 
 // Active promise chain queue per IMEI to serialize concurrent ingestion requests locally
 const ingestionQueue = new Map<string, Promise<void>>();
+
+export interface IngestionState {
+  activeTrip?: { id: string; startTime: Date };
+  lastClosedTrip?: { id: string; startTime: Date; closeTime: number };
+}
 
 export async function processDataBatch(
   records: any[],
@@ -53,6 +61,164 @@ export async function processDataBatch(
   return currentPromise;
 }
 
+// Función pura de transición de estado de viaje con detector de solapamientos/fusiones
+function transitionTripState({
+  rec,
+  tripActive,
+  vehicleAlias,
+  state,
+  newTripsCreatedInBatch,
+  tripsToCreate,
+  tripsToUpdate,
+  tripsToDelete,
+  tripsToMerge,
+  telemetryLogs,
+  isHistorical,
+  dbOverlappingTrips,
+}: {
+  rec: any;
+  tripActive: boolean;
+  vehicleAlias: string;
+  state: IngestionState;
+  newTripsCreatedInBatch: Set<string>;
+  tripsToCreate: Map<string, { id: string; startTime: Date; endTime?: Date }>;
+  tripsToUpdate: Map<string, { id: string; endTime: Date | null }>;
+  tripsToDelete: Set<string>;
+  tripsToMerge: Map<string, string>;
+  telemetryLogs: any[];
+  isHistorical: boolean;
+  dbOverlappingTrips: any[];
+}): string | null {
+  const recTimeMs = (rec.timestamp as Date).getTime();
+
+  // 1. Detección de solapamiento: buscar si el timestamp actual cae dentro de algún viaje existente en la base de datos
+  const overlappingDbTrip = dbOverlappingTrips.find(t => 
+    t.startTime.getTime() <= recTimeMs &&
+    (t.endTime === null || t.endTime.getTime() >= recTimeMs)
+  );
+
+  // Si hay un viaje activo en memoria, y encontramos un viaje solapado en la BD con ID diferente
+  if (state.activeTrip && overlappingDbTrip && overlappingDbTrip.id !== state.activeTrip.id) {
+    // FUSIONAR: Registrar el viaje de la BD para ser fusionado con nuestro viaje activo actual
+    tripsToMerge.set(overlappingDbTrip.id, state.activeTrip.id);
+    tripsToDelete.add(overlappingDbTrip.id);
+    tripsToUpdate.delete(overlappingDbTrip.id);
+    
+    logger.log(`🔄 Fusionando viaje duplicado ${overlappingDbTrip.id} en viaje activo ${state.activeTrip.id} para ${vehicleAlias}`);
+  }
+
+  // 2. Si no tenemos un viaje activo, pero el registro tiene tripActive = true
+  if (!state.activeTrip && tripActive) {
+    // Si caímos dentro de un viaje de la BD, lo reutilizamos como nuestro viaje activo
+    if (overlappingDbTrip) {
+      state.activeTrip = {
+        id: overlappingDbTrip.id,
+        startTime: overlappingDbTrip.startTime,
+      };
+      logger.log(`🚗 Reutilizando viaje existente de la BD: ${overlappingDbTrip.id} para ${vehicleAlias}`);
+    } else {
+      // Si no cae en ningún viaje, revisamos el debounce de reapertura
+      const lastClosed = state.lastClosedTrip;
+      if (
+        lastClosed &&
+        recTimeMs >= lastClosed.closeTime &&
+        recTimeMs - lastClosed.closeTime < POST_CLOSE_DEBOUNCE_MS
+      ) {
+        const reopenedTripId = lastClosed.id;
+        state.activeTrip = {
+          id: reopenedTripId,
+          startTime: lastClosed.startTime,
+        };
+
+        tripsToDelete.delete(reopenedTripId);
+        tripsToMerge.delete(reopenedTripId);
+
+        if (newTripsCreatedInBatch.has(reopenedTripId)) {
+          tripsToCreate.set(reopenedTripId, {
+            id: reopenedTripId,
+            startTime: lastClosed.startTime,
+          });
+        } else {
+          tripsToUpdate.set(reopenedTripId, {
+            id: reopenedTripId,
+            endTime: null,
+          });
+        }
+
+        state.lastClosedTrip = undefined;
+        logger.log(isHistorical 
+          ? `🚗 Viaje Reabierto (Diferido): ${vehicleAlias}` 
+          : `🚗 Viaje Reabierto: ${vehicleAlias}`
+        );
+      } else {
+        const newTripId = uuidv7();
+        state.activeTrip = { id: newTripId, startTime: rec.timestamp };
+        newTripsCreatedInBatch.add(newTripId);
+        tripsToCreate.set(newTripId, {
+          id: newTripId,
+          startTime: rec.timestamp,
+        });
+        logger.log(isHistorical 
+          ? `🚗 Viaje Iniciado (Diferido): ${vehicleAlias}` 
+          : `🚗 Viaje Iniciado: ${vehicleAlias}`
+        );
+      }
+    }
+  } 
+  // 3. Si tenemos un viaje activo, pero el registro tiene tripActive = false
+  else if (state.activeTrip && !tripActive) {
+    const durationMs = recTimeMs - state.activeTrip.startTime.getTime();
+    const tripId = state.activeTrip.id;
+
+    if (durationMs < MIN_TRIP_DURATION_MS) {
+      if (newTripsCreatedInBatch.has(tripId)) {
+        tripsToCreate.delete(tripId);
+        logger.log(isHistorical 
+          ? `👻 Viaje fantasma (Diferido) descartado en memoria: ${vehicleAlias} (${durationMs}ms)`
+          : `👻 Viaje fantasma descartado en memoria: ${vehicleAlias} (${durationMs}ms)`
+        );
+      } else {
+        tripsToDelete.add(tripId);
+        tripsToUpdate.delete(tripId);
+        logger.log(isHistorical 
+          ? `👻 Viaje fantasma (Diferido) en DB programado para eliminación: ${vehicleAlias} (${durationMs}ms)`
+          : `👻 Viaje fantasma en DB programado para eliminación: ${vehicleAlias} (${durationMs}ms)`
+        );
+      }
+
+      for (const log of telemetryLogs) {
+        if (log.tripId === tripId) {
+          log.tripId = null;
+        }
+      }
+    } else {
+      if (newTripsCreatedInBatch.has(tripId)) {
+        const tripData = tripsToCreate.get(tripId);
+        if (tripData) {
+          tripData.endTime = rec.timestamp;
+        }
+      } else {
+        tripsToUpdate.set(tripId, { id: tripId, endTime: rec.timestamp });
+      }
+      logger.log(isHistorical 
+        ? `🛑 Viaje Finalizado (Diferido): ${vehicleAlias}` 
+        : `🛑 Viaje Finalizado: ${vehicleAlias}`
+      );
+    }
+
+    state.lastClosedTrip = {
+      id: tripId,
+      startTime: state.activeTrip.startTime,
+      closeTime: recTimeMs,
+    };
+    state.activeTrip = undefined;
+  }
+
+  return state.activeTrip && recTimeMs >= state.activeTrip.startTime.getTime()
+    ? state.activeTrip.id
+    : null;
+}
+
 async function processDataBatchInternal(records: any[], imei: string) {
   const vehicle = await prisma.vehicle.findFirst({
     where: { device: { imei } },
@@ -69,6 +235,13 @@ async function processDataBatchInternal(records: any[], imei: string) {
           model: true,
         },
       },
+      liveState: {
+        select: {
+          lastIgnition: true,
+          unplugged: true,
+          currentStatus: true,
+        },
+      },
     },
   });
 
@@ -77,15 +250,12 @@ async function processDataBatchInternal(records: any[], imei: string) {
     return;
   }
 
-  // 1. Resolve mapping configuration using deviceModel from database
   const profileName = getTelemetryProfile(vehicle.device?.model);
   const mapping =
     DEVICE_PROFILES[profileName] || DEVICE_PROFILES.TELTONIKA_STANDARD;
 
-  // 2. Perform Local Road Snapping using optimized chunked queries
   const snappedRecords = await snapTelemetryRecords(records, prisma, mapping);
 
-  // 3. Inicializar o recuperar estado de viaje desde la base de datos (si la caché local está fría)
   if (!activeTripsCache.has(vehicle.id)) {
     const activeTrip = await prisma.trip.findFirst({
       where: { vehicleId: vehicle.id, endTime: null },
@@ -98,7 +268,6 @@ async function processDataBatchInternal(records: any[], imei: string) {
         id: activeTrip.id,
         startTime: activeTrip.startTime,
       });
-      // Si hay un viaje activo, no debe haber un "último viaje cerrado" para reabrir
       lastClosedTripCache.delete(vehicle.id);
     }
   }
@@ -128,8 +297,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
   const localActiveTrip = activeTripsCache.get(vehicle.id);
   const localLastClosedTrip = lastClosedTripCache.get(vehicle.id);
 
-  // Wrappers de estado mutables para pasar por referencia
-  const liveTripState: TripState = {
+  const liveTripState: IngestionState = {
     activeTrip: localActiveTrip
       ? { id: localActiveTrip.id, startTime: localActiveTrip.startTime }
       : undefined,
@@ -142,7 +310,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       : undefined,
   };
 
-  const historicalTripState: TripState = {
+  const historicalTripState: IngestionState = {
     activeTrip: undefined,
     lastClosedTrip: undefined,
   };
@@ -154,6 +322,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
   >();
   const tripsToUpdate = new Map<string, { id: string; endTime: Date | null }>();
   const tripsToDelete = new Set<string>();
+  const tripsToMerge = new Map<string, string>();
   let newVinDetected: string | null = null;
   let newFuelTypeDetected:
     | "GASOLINE"
@@ -162,10 +331,25 @@ async function processDataBatchInternal(records: any[], imei: string) {
     | "HYBRID"
     | null = null;
 
-  // Ordenar copias de registros por marca de tiempo de forma ascendente
   const sortedRecords = [...snappedRecords].sort(
     (a, b) => (a.timestamp as Date).getTime() - (b.timestamp as Date).getTime(),
   );
+
+  const batchStart = sortedRecords[0].timestamp as Date;
+  const batchEnd = sortedRecords[sortedRecords.length - 1].timestamp as Date;
+
+  // Pre-cargar todos los viajes solapados para evitar consultas dentro del bucle
+  const dbOverlappingTrips = await prisma.trip.findMany({
+    where: {
+      vehicleId: vehicle.id,
+      startTime: { lte: batchEnd },
+      OR: [
+        { endTime: null },
+        { endTime: { gte: batchStart } }
+      ]
+    },
+    orderBy: { startTime: "asc" }
+  });
 
   const latestLiveTime = liveTripState.activeTrip
     ? liveTripState.activeTrip.startTime.getTime()
@@ -173,7 +357,6 @@ async function processDataBatchInternal(records: any[], imei: string) {
         ? liveTripState.lastClosedTrip.closeTime
         : 0);
 
-  // Buscar si hay registros históricos en este lote para bootstrap de historicalTripState
   const firstHistoricalRecord = sortedRecords.find((rec) => {
     return (rec.timestamp as Date).getTime() < latestLiveTime;
   });
@@ -181,16 +364,10 @@ async function processDataBatchInternal(records: any[], imei: string) {
   if (firstHistoricalRecord) {
     const firstHistTimestamp = firstHistoricalRecord.timestamp as Date;
 
-    // Buscar si hay un viaje activo en el momento de este registro histórico
-    const activeHistTrip = await prisma.trip.findFirst({
-      where: {
-        vehicleId: vehicle.id,
-        startTime: { lte: firstHistTimestamp },
-        OR: [{ endTime: null }, { endTime: { gte: firstHistTimestamp } }],
-      },
-      orderBy: { startTime: "desc" },
-      select: { id: true, startTime: true },
-    });
+    const activeHistTrip = dbOverlappingTrips.find(t => 
+      t.startTime.getTime() <= firstHistTimestamp.getTime() &&
+      (t.endTime === null || t.endTime.getTime() >= firstHistTimestamp.getTime())
+    );
 
     if (activeHistTrip) {
       historicalTripState.activeTrip = {
@@ -198,15 +375,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
         startTime: activeHistTrip.startTime,
       };
     } else {
-      // Buscar el último viaje cerrado antes de este registro histórico
-      const lastClosedHistTrip = await prisma.trip.findFirst({
-        where: {
-          vehicleId: vehicle.id,
-          endTime: { lt: firstHistTimestamp },
-        },
-        orderBy: { endTime: "desc" },
-        select: { id: true, startTime: true, endTime: true },
-      });
+      const lastClosedHistTrip = [...dbOverlappingTrips]
+        .reverse()
+        .find(t => t.endTime !== null && t.endTime.getTime() < firstHistTimestamp.getTime());
 
       if (lastClosedHistTrip && lastClosedHistTrip.endTime) {
         historicalTripState.lastClosedTrip = {
@@ -217,13 +388,26 @@ async function processDataBatchInternal(records: any[], imei: string) {
       }
     }
   }
+
+  let previousState: PreviousState = {
+    ignition: vehicle.liveState?.lastIgnition ?? false,
+    unplugged: vehicle.liveState?.unplugged ?? false,
+    rpm: 0,
+    excessiveIdling: vehicle.liveState?.currentStatus === "EXCESSIVE_IDLING",
+  };
+
   const telemetryLogs: any = [];
 
-  // MÁQUINA DE ESTADOS PURA (Mapeo dinámico y hardware trip status)
   for (const rec of sortedRecords) {
-    const parsed = parseTelemetryRecord(rec, mapping);
+    const parsed = parseTelemetryRecord(rec, mapping, previousState);
 
-    // Detect if device reports a new VIN and the vehicle does not currently have one set
+    previousState = {
+      ignition: parsed.trueIgnition,
+      unplugged: parsed.isUnplugged,
+      rpm: parsed.rawRpm,
+      excessiveIdling: parsed.isHardwareExcessiveIdling,
+    };
+
     if (
       !vehicle.vin &&
       parsed.vin &&
@@ -234,21 +418,16 @@ async function processDataBatchInternal(records: any[], imei: string) {
       newVinDetected = parsed.vin.trim();
     }
 
-    // Detectar si el dispositivo reporta un nuevo tipo de combustible y el vehículo no lo tiene configurado aún
     if (!vehicle.fuelType && parsed.detectedFuelType && !newFuelTypeDetected) {
       newFuelTypeDetected = parsed.detectedFuelType;
     }
 
-    // Lógica de Viajes (Trips)
-    // Guard: Si el viaje actual en memoria inició después del timestamp de este registro,
-    // significa que este registro pertenece al pasado (diferido) y no al viaje activo actual.
     const isRecordBeforeCurrentTrip =
       (rec.timestamp as Date).getTime() < latestLiveTime;
 
     let recordTripId: string | null = null;
 
     if (isRecordBeforeCurrentTrip) {
-      // PROCESAMIENTO HISTÓRICO (DIFERIDO) PASIVO
       recordTripId = transitionTripState({
         rec,
         tripActive: parsed.tripActive,
@@ -258,11 +437,12 @@ async function processDataBatchInternal(records: any[], imei: string) {
         tripsToCreate,
         tripsToUpdate,
         tripsToDelete,
+        tripsToMerge,
         telemetryLogs,
         isHistorical: true,
+        dbOverlappingTrips,
       });
     } else {
-      // PROCESAMIENTO LIVE / ESTÁNDAR
       recordTripId = transitionTripState({
         rec,
         tripActive: parsed.tripActive,
@@ -272,8 +452,10 @@ async function processDataBatchInternal(records: any[], imei: string) {
         tripsToCreate,
         tripsToUpdate,
         tripsToDelete,
+        tripsToMerge,
         telemetryLogs,
         isHistorical: false,
+        dbOverlappingTrips,
       });
     }
 
@@ -319,7 +501,6 @@ async function processDataBatchInternal(records: any[], imei: string) {
 
   const lastRecord = telemetryLogs[telemetryLogs.length - 1];
 
-  // 3. Persist the parsed logs and status states in a Postgres transaction
   await saveTelemetryBatchData({
     prisma,
     vehicle,
@@ -327,21 +508,19 @@ async function processDataBatchInternal(records: any[], imei: string) {
     tripsToCreate,
     tripsToUpdate,
     tripsToDelete,
+    tripsToMerge,
     newVinDetected,
     newFuelTypeDetected,
   });
 
-  // Actualizar cachés globales solo tras escritura exitosa en DB
   if (liveTripState.activeTrip) {
     activeTripsCache.set(vehicle.id, {
       id: liveTripState.activeTrip.id,
       startTime: liveTripState.activeTrip.startTime,
     });
-    // Si el viaje está activo, el último viaje cerrado no es relevante para la reapertura
     lastClosedTripCache.delete(vehicle.id);
   } else {
     activeTripsCache.delete(vehicle.id);
-    // Si no hay viaje activo en este lote, pero se cerró uno, actualizamos el caché del último cerrado
     if (liveTripState.lastClosedTrip) {
       lastClosedTripCache.set(vehicle.id, {
         id: liveTripState.lastClosedTrip.id,
@@ -349,10 +528,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
         closeTime: liveTripState.lastClosedTrip.closeTime,
       });
     }
-    // Nota: Si no hay viaje cerrado en este lote (ej. lote estacionario), no borramos lastClosedTripCache
   }
 
-  // El WebSocket ahora escupirá EXCESSIVE_IDLING sin titubear
   notifyApi(vehicle, lastRecord).catch((err) =>
     logger.error(`[Webhook] Error: ${err.message}`),
   );

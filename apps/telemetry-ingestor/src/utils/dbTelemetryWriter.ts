@@ -12,6 +12,7 @@ export interface TelemetryBatchWriteParams {
   tripsToCreate: Map<string, { id: string; startTime: Date; endTime?: Date }>;
   tripsToUpdate: Map<string, { id: string; endTime: Date | null }>;
   tripsToDelete: Set<string>;
+  tripsToMerge?: Map<string, string>;
   newVinDetected: string | null;
   newFuelTypeDetected: "GASOLINE" | "DIESEL" | "ELECTRIC" | "HYBRID" | null;
 }
@@ -23,6 +24,7 @@ export async function saveTelemetryBatchData({
   tripsToCreate,
   tripsToUpdate,
   tripsToDelete,
+  tripsToMerge,
   newVinDetected,
   newFuelTypeDetected,
 }: TelemetryBatchWriteParams) {
@@ -57,8 +59,23 @@ export async function saveTelemetryBatchData({
     );
   }
 
+  // 2.5 Update telemetry logs of merged trips to point to the primary trip
+  if (tripsToMerge) {
+    for (const [dupTripId, primaryTripId] of tripsToMerge) {
+      transactionPromises.push(
+        prisma.telemetryLog.updateMany({
+          where: { tripId: dupTripId },
+          data: { tripId: primaryTripId },
+        }),
+      );
+    }
+  }
+
   // 3. Clear tripId on telemetry logs in the DB for deleted ghost trips (to avoid FK constraints)
   for (const tripId of tripsToDelete) {
+    if (tripsToMerge && tripsToMerge.has(tripId)) {
+      continue;
+    }
     transactionPromises.push(
       prisma.telemetryLog.updateMany({
         where: { tripId },

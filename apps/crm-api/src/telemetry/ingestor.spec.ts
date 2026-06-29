@@ -10,10 +10,12 @@ jest.mock('@prisma/client', () => {
   const mockUpsert = jest.fn();
   const mock$transaction = jest.fn().mockImplementation(async (arr) => arr);
 
+  const mockFindMany = jest.fn().mockResolvedValue([]);
   const mockInstance = {
     vehicle: { findFirst: mockFindUnique, update: mockUpdateVehicle },
     trip: {
       findFirst: mockFindFirst,
+      findMany: mockFindMany,
       create: mockCreate,
       update: mockUpdate,
       delete: mockDelete,
@@ -178,6 +180,13 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
           device: {
             select: {
               model: true,
+            },
+          },
+          liveState: {
+            select: {
+              lastIgnition: true,
+              unplugged: true,
+              currentStatus: true,
             },
           },
         },
@@ -1233,6 +1242,120 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         }),
       );
       expect(mockPrisma.trip.create).not.toHaveBeenCalled();
+    });
+
+    it('debe detectar viajes solapados/duplicados en la base de datos y fusionarlos', async () => {
+      const mockVehicleId = 'vehicle-uuid-overlap-merge-test';
+      const mockImei = 'imei-overlap-merge-test';
+      
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Overlap Merge',
+        device: { model: 'TELTONIKA_STANDARD' },
+        liveState: {
+          lastIgnition: false,
+          currentStatus: 'STOPPED',
+          unplugged: false,
+        },
+      });
+
+      // Simulamos que ya existe un viaje duplicado en la base de datos (Trip B de 12:06 a 1:20)
+      const existingTripStart = new Date(1716570000000 + 60000); // 12:06 (1 minuto después)
+      const existingTripEnd = new Date(1716570000000 + 4500000); // 1:20
+      
+      mockPrisma.trip.findMany.mockResolvedValueOnce([
+        {
+          id: 'existing-trip-b-id',
+          vehicleId: mockVehicleId,
+          startTime: existingTripStart,
+          endTime: existingTripEnd,
+        },
+      ]);
+
+      // Enviamos un lote de registros que abarca desde 12:05 hasta 3:15
+      const records = [
+        {
+          timestamp: new Date(1716570000000), // 12:05
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Motor encendido
+            250: 1, // Viaje activo
+          },
+        },
+        {
+          timestamp: new Date(1716570000000 + 60000), // 12:06
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1,
+            250: 1,
+          },
+        },
+        {
+          timestamp: new Date(1716570000000 + 4500000), // 1:20
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1,
+            250: 1,
+          },
+        },
+        {
+          timestamp: new Date(1716570000000 + 11400000), // 3:15
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 0, // Motor apagado
+            250: 0, // Viaje inactivo
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      // 1. Debe haber creado un nuevo viaje en la BD (Trip A)
+      expect(mockPrisma.trip.create).toHaveBeenCalled();
+
+      // 2. Debe haber reasignado las telemetrías del viaje duplicado (Trip B) al viaje activo nuevo (Trip A)
+      expect(mockPrisma.telemetryLog.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { tripId: 'existing-trip-b-id' },
+          data: { tripId: expect.any(String) },
+        }),
+      );
+
+      // 3. Debe haber eliminado físicamente el viaje duplicado (Trip B)
+      expect(mockPrisma.trip.deleteMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'existing-trip-b-id' },
+        }),
+      );
     });
   });
 });

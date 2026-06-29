@@ -1,5 +1,12 @@
 import { parseEcoAxesValue, mapObdFuelType } from "@vantx/telemetry-parser";
 
+export interface PreviousState {
+  ignition?: boolean;
+  rpm?: number;
+  excessiveIdling?: boolean;
+  unplugged?: boolean;
+}
+
 export interface ParsedTelemetry {
   rawRpm: number;
   rawVoltage: number;
@@ -36,13 +43,33 @@ export interface ParsedTelemetry {
  * Decodifica y procesa los campos de telemetría de un registro crudo según el perfil del dispositivo.
  * Todos los comentarios y logs deben mantenerse en español.
  */
-export function parseTelemetryRecord(rec: any, mapping: any): ParsedTelemetry {
+export function parseTelemetryRecord(
+  rec: any,
+  mapping: any,
+  previous?: PreviousState,
+): ParsedTelemetry {
   // Resolución de valores dinámicos a partir de la configuración de mapeo
-  const rawRpm = mapping.rpm !== undefined ? (rec.ioData[mapping.rpm] ?? 0) : 0;
+  let rawRpm = 0;
+  if (mapping.rpm !== undefined) {
+    if (rec.ioData[mapping.rpm] !== undefined) {
+      rawRpm = rec.ioData[mapping.rpm] ?? 0;
+    } else if (previous?.rpm !== undefined) {
+      rawRpm = previous.rpm;
+    }
+  }
+
   const rawVoltage =
     mapping.voltage !== undefined ? (rec.ioData[mapping.voltage] ?? 0) : 0;
-  const rawIgnitionPin =
-    mapping.ignition !== undefined ? rec.ioData[mapping.ignition] === 1 : false;
+
+  let rawIgnitionPin = false;
+  if (mapping.ignition !== undefined) {
+    if (rec.ioData[mapping.ignition] !== undefined) {
+      rawIgnitionPin = rec.ioData[mapping.ignition] === 1;
+    } else if (previous?.ignition !== undefined) {
+      rawIgnitionPin = previous.ignition;
+    }
+  }
+
   const movement =
     mapping.movement !== undefined ? rec.ioData[mapping.movement] === 1 : false;
   const obdSpeed =
@@ -51,11 +78,16 @@ export function parseTelemetryRecord(rec: any, mapping: any): ParsedTelemetry {
       : null;
   const speedToUse = obdSpeed ?? rec.gpsSpeed;
 
-  const isHardwareExcessiveIdling =
-    mapping.excessiveIdling !== undefined
-      ? rec.eventId === mapping.excessiveIdling ||
-        rec.ioData[mapping.excessiveIdling] === 1
-      : false;
+  let isHardwareExcessiveIdling = false;
+  if (mapping.excessiveIdling !== undefined) {
+    if (rec.ioData[mapping.excessiveIdling] !== undefined) {
+      isHardwareExcessiveIdling =
+        rec.eventId === mapping.excessiveIdling ||
+        rec.ioData[mapping.excessiveIdling] === 1;
+    } else if (previous?.excessiveIdling !== undefined) {
+      isHardwareExcessiveIdling = previous.excessiveIdling;
+    }
+  }
 
   const engineLoad =
     mapping.engineLoad !== undefined
@@ -87,10 +119,14 @@ export function parseTelemetryRecord(rec: any, mapping: any): ParsedTelemetry {
       : null;
   const powerSupply = rawVoltage / 1000;
 
-  const isUnplugged =
-    mapping.unplugged !== undefined
-      ? rec.ioData[mapping.unplugged] === 1
-      : false;
+  let isUnplugged = false;
+  if (mapping.unplugged !== undefined) {
+    if (rec.ioData[mapping.unplugged] !== undefined) {
+      isUnplugged = rec.ioData[mapping.unplugged] === 1;
+    } else if (previous?.unplugged !== undefined) {
+      isUnplugged = previous.unplugged;
+    }
+  }
 
   // Detectar tipo de combustible
   const rawFuelType =
