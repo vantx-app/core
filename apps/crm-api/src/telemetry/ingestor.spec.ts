@@ -1643,5 +1643,73 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         })
       );
     });
+
+    it('debe nullificar tripId en los logs de la misma transacción si el viaje es marcado como fantasma en el lote', async () => {
+      const mockVehicleId = 'vehicle-uuid-ghost-same-batch';
+      const mockImei = 'imei-ghost-same-batch';
+
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Ghost Same Batch',
+        device: { model: 'TELTONIKA_STANDARD' },
+      });
+
+      // Lote con 2 registros:
+      // 1. Inicia un viaje (ignition on, tripActive = true)
+      // 2. Apaga el motor 30 segundos después (ignition off, tripActive = false)
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 20,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Ignición on
+            250: 1, // Viaje activo
+          },
+        },
+        {
+          timestamp: new Date(1716570000000 + 30000), // 30 segundos después
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 0, // Ignición off
+            250: 0, // Viaje inactivo
+          },
+        },
+      ];
+
+      // Simulamos que al buscar los viajes solapados, no hay ningún viaje previo en la DB
+      mockPrisma.trip.findMany.mockResolvedValueOnce([]); // 1st call: dbOverlappingTrips
+      mockPrisma.trip.findMany.mockResolvedValueOnce([]); // 2nd call: defensive validation
+
+      await processDataBatch(records, mockImei);
+
+      // Como el viaje duró < 1 min, no debe crearse en la base de datos
+      expect(mockPrisma.trip.create).not.toHaveBeenCalled();
+
+      // Verificamos que los logs de telemetría de esta inserción tienen tripId = null
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              tripId: null,
+            }),
+          ]),
+        })
+      );
+    });
   });
 });

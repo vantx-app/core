@@ -95,7 +95,8 @@ function transitionTripState({
   const overlappingDbTrip = dbOverlappingTrips.find(
     (t) =>
       t.startTime.getTime() <= recTimeMs &&
-      (t.endTime === null || t.endTime.getTime() >= recTimeMs),
+      (t.endTime === null || t.endTime.getTime() >= recTimeMs) &&
+      !tripsToDelete.has(t.id),
   );
 
   // Si hay un viaje activo en memoria, y encontramos un viaje solapado en la BD con ID diferente
@@ -548,6 +549,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
     tripsToCreate,
     tripsToUpdate,
     tripsToDelete,
+    tripsToMerge,
     liveTripState,
   });
 
@@ -592,6 +594,7 @@ interface ValidateTripsParams {
   tripsToCreate: Map<string, any>;
   tripsToUpdate: Map<string, any>;
   tripsToDelete: Set<string>;
+  tripsToMerge: Map<string, string>;
   liveTripState: IngestionState;
 }
 
@@ -606,8 +609,23 @@ async function ensureReferencedTripsExist({
   tripsToCreate,
   tripsToUpdate,
   tripsToDelete,
+  tripsToMerge,
   liveTripState,
 }: ValidateTripsParams) {
+  // 1. Limpiar o reasignar en memoria los registros que apunten a viajes eliminados físicamente o fusionados en este lote
+  for (const log of telemetryLogs) {
+    if (log.tripId && tripsToDelete.has(log.tripId)) {
+      const primaryTripId = tripsToMerge.get(log.tripId);
+      if (primaryTripId) {
+        // Si el viaje duplicado se fusionó, reasignar al viaje principal
+        log.tripId = primaryTripId;
+      } else {
+        // Si el viaje fantasma simplemente se eliminó, limpiar la relación
+        log.tripId = null;
+      }
+    }
+  }
+
   const referencedTripIds: string[] = Array.from(
     new Set(
       telemetryLogs
