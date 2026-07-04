@@ -540,6 +540,17 @@ async function processDataBatchInternal(records: any[], imei: string) {
 
   const lastRecord = telemetryLogs[telemetryLogs.length - 1];
 
+  // 7. Defensive validation: Clean up logs pointing to concurrently deleted trips to prevent P2003
+  await ensureReferencedTripsExist({
+    prisma,
+    vehicleId: vehicle.id,
+    telemetryLogs,
+    tripsToCreate,
+    tripsToUpdate,
+    tripsToDelete,
+    liveTripState,
+  });
+
   await saveTelemetryBatchData({
     prisma,
     vehicle,
@@ -572,4 +583,72 @@ async function processDataBatchInternal(records: any[], imei: string) {
   notifyApi(vehicle, lastRecord).catch((err) =>
     logger.error(`[Webhook] Error: ${err.message}`),
   );
+}
+
+interface ValidateTripsParams {
+  prisma: PrismaClient;
+  vehicleId: string;
+  telemetryLogs: any[];
+  tripsToCreate: Map<string, any>;
+  tripsToUpdate: Map<string, any>;
+  tripsToDelete: Set<string>;
+  liveTripState: IngestionState;
+}
+
+/**
+ * Valida de manera defensiva que todos los tripId referenciados en los registros (que no estén siendo creados en este lote)
+ * realmente existan en la base de datos para evitar errores de restricción de clave foránea (P2003).
+ */
+async function ensureReferencedTripsExist({
+  prisma,
+  vehicleId,
+  telemetryLogs,
+  tripsToCreate,
+  tripsToUpdate,
+  tripsToDelete,
+  liveTripState,
+}: ValidateTripsParams) {
+  const referencedTripIds: string[] = Array.from(
+    new Set(
+      telemetryLogs
+        .map((log: any) => log.tripId)
+        .filter((id): id is string => !!id && !tripsToCreate.has(id))
+    )
+  );
+
+  if (referencedTripIds.length === 0) return;
+
+  const existingTrips = await prisma.trip.findMany({
+    where: { id: { in: referencedTripIds } },
+    select: { id: true },
+  });
+  const existingTripIds = new Set(existingTrips.map((t) => t.id));
+
+  // Limpiar tripId en los logs que apunten a viajes inexistentes en la base de datos
+  for (const log of telemetryLogs) {
+    if (
+      log.tripId &&
+      !tripsToCreate.has(log.tripId) &&
+      !existingTripIds.has(log.tripId)
+    ) {
+      log.tripId = null;
+    }
+  }
+
+  // Limpiar los mapas de actualización/eliminación y las variables del estado actual/caché
+  for (const tripId of referencedTripIds) {
+    if (!existingTripIds.has(tripId)) {
+      tripsToUpdate.delete(tripId);
+      tripsToDelete.delete(tripId);
+
+      if (liveTripState.activeTrip?.id === tripId) {
+        liveTripState.activeTrip = undefined;
+        activeTripsCache.delete(vehicleId);
+      }
+      if (liveTripState.lastClosedTrip?.id === tripId) {
+        liveTripState.lastClosedTrip = undefined;
+        lastClosedTripCache.delete(vehicleId);
+      }
+    }
+  }
 }

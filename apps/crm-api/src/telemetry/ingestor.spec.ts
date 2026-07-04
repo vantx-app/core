@@ -1242,6 +1242,10 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         alias: 'Truck Cache Preservation',
         device: { model: 'TELTONIKA_STANDARD' },
       });
+      mockPrisma.trip.findMany.mockResolvedValueOnce([]);
+      mockPrisma.trip.findMany.mockResolvedValueOnce([
+        { id: 'active-trip-to-close', startTime: new Date(1716570000000), endTime: null }
+      ]);
 
       await processDataBatch(recordsReopen, mockImei);
 
@@ -1584,6 +1588,60 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       expect(mockPrisma.trip.create).toHaveBeenCalled();
       expect(mockPrisma.trip.updateMany).not.toHaveBeenCalled();
       expect(mockPrisma.trip.update).not.toHaveBeenCalled();
+    });
+
+    it('debe evitar errores P2003 de clave foránea limpiando tripId si el viaje fue eliminado de la base de datos', async () => {
+      const mockVehicleId = 'vehicle-uuid-p2003-prevention';
+      const mockImei = 'imei-p2003-prevention';
+      
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'P2003 Prevention Truck',
+        device: { model: 'TELTONIKA_STANDARD' },
+      });
+
+      // Simulamos que al inicio del lote la DB retorna que hay un viaje activo
+      mockPrisma.trip.findFirst.mockResolvedValueOnce({
+        id: 'stale-trip-uuid',
+        startTime: new Date(1716570000000 - 300000), // Hace 5 min
+      });
+
+      // Lote de registros que continúan el viaje activo
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1,
+            250: 1,
+          },
+        },
+      ];
+
+      // Simulamos que al buscar los viajes solapados/existentes en la base de datos,
+      // no se encuentra ninguno (significa que stale-trip-uuid fue eliminado de la DB)
+      mockPrisma.trip.findMany.mockResolvedValueOnce([]);
+
+      await processDataBatch(records, mockImei);
+
+      // Verificamos que se limpió el tripId a null en telemetryLog.createMany para evitar P2003
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              tripId: null,
+            }),
+          ]),
+        })
+      );
     });
   });
 });
