@@ -1,5 +1,6 @@
 import { PrismaClient, MapLink } from "@vantx/database";
 import { snapPointToLinks, Logger, AvlMapping } from "@vantx/telemetry-parser";
+import { getAvlValue } from "./telemetryParser";
 
 const logger = new Logger("SnapTelemetry");
 
@@ -64,21 +65,16 @@ export async function snapTelemetryRecords(
 
         for (const rec of chunk) {
           // Evitar snapping si la ignición del vehículo está apagada (vehículo apagado)
-          const rawRpm =
-            mapping.rpm !== undefined ? (rec.ioData[mapping.rpm] ?? 0) : 0;
-          const rawVoltage =
-            mapping.voltage !== undefined
-              ? (rec.ioData[mapping.voltage] ?? 0)
-              : 0;
-          const rawIgnitionPin =
-            mapping.ignition !== undefined
-              ? rec.ioData[mapping.ignition] === 1
-              : false;
-          const isHardwareExcessiveIdling =
-            mapping.excessiveIdling !== undefined
-              ? rec.eventId === mapping.excessiveIdling ||
-                rec.ioData[mapping.excessiveIdling] === 1
-              : false;
+          const rawRpm = getAvlValue(rec.ioData, mapping.rpm) ?? 0;
+          const rawVoltage = getAvlValue(rec.ioData, mapping.voltage) ?? 0;
+          const rawIgnitionPin = getAvlValue(rec.ioData, mapping.ignition) === 1;
+          
+          let isHardwareExcessiveIdling = false;
+          const mappedExcessiveIdling = getAvlValue(rec.ioData, mapping.excessiveIdling);
+          if (mappedExcessiveIdling !== null) {
+            const id = typeof mapping.excessiveIdling === "number" ? mapping.excessiveIdling : mapping.excessiveIdling?.id;
+            isHardwareExcessiveIdling = rec.eventId === id || mappedExcessiveIdling === 1;
+          }
 
           const trueIgnition =
             rawIgnitionPin ||

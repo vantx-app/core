@@ -8,6 +8,7 @@ model VehicleLiveState {
   unplugged     Boolean               @default(false)
   currentStatus VehicleMovementStatus @default(STOPPED)
   lastOdometer  Float?
+  lastFuelLevel Float?
   lastUpdate    DateTime              @default(now())
   vehicle       Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 }

@@ -5,6 +5,9 @@ export interface PreviousState {
   rpm?: number;
   excessiveIdling?: boolean;
   unplugged?: boolean;
+  odometer?: number | null;
+  fuelLevel?: number | null;
+  angle?: number;
 }
 
 export interface ParsedTelemetry {
@@ -37,6 +40,28 @@ export interface ParsedTelemetry {
   extraIoData: any;
   tripActive: boolean;
   detectedFuelType: "GASOLINE" | "DIESEL" | "ELECTRIC" | "HYBRID" | null;
+
+  // Nuevos campos normalizados
+  fuelLevel: number | null;
+  fuelConsumption: number | null;
+  fuelRate: number | null;
+}
+
+// Función auxiliar para obtener el valor de un AVL ID aplicando su multiplicador si existe
+export function getAvlValue(
+  ioData: Record<number | string, number>,
+  config: number | { id: number; multiplier?: number } | undefined,
+): number | null {
+  if (config === undefined || config === null) return null;
+  
+  if (typeof config === "number") {
+    return ioData[config] ?? null;
+  }
+  
+  const rawValue = ioData[config.id];
+  if (rawValue === undefined || rawValue === null) return null;
+  
+  return config.multiplier !== undefined ? rawValue * config.multiplier : rawValue;
 }
 
 /**
@@ -48,109 +73,89 @@ export function parseTelemetryRecord(
   mapping: any,
   previous?: PreviousState,
 ): ParsedTelemetry {
-  // Resolución de valores dinámicos a partir de la configuración de mapeo
+  // Resolución de valores dinámicos
   let rawRpm = 0;
-  if (mapping.rpm !== undefined) {
-    if (rec.ioData[mapping.rpm] !== undefined) {
-      rawRpm = rec.ioData[mapping.rpm] ?? 0;
-    } else if (previous?.rpm !== undefined) {
-      rawRpm = previous.rpm;
-    }
+  const mappedRpm = getAvlValue(rec.ioData, mapping.rpm);
+  if (mappedRpm !== null) {
+    rawRpm = mappedRpm;
+  } else if (previous?.rpm !== undefined) {
+    rawRpm = previous.rpm;
   }
 
-  const rawVoltage =
-    mapping.voltage !== undefined ? (rec.ioData[mapping.voltage] ?? 0) : 0;
+  const rawVoltage = getAvlValue(rec.ioData, mapping.voltage) ?? 0;
 
   let rawIgnitionPin = false;
-  if (mapping.ignition !== undefined) {
-    if (rec.ioData[mapping.ignition] !== undefined) {
-      rawIgnitionPin = rec.ioData[mapping.ignition] === 1;
-    } else if (previous?.ignition !== undefined) {
-      rawIgnitionPin = previous.ignition;
-    }
+  const mappedIgnition = getAvlValue(rec.ioData, mapping.ignition);
+  if (mappedIgnition !== null) {
+    rawIgnitionPin = mappedIgnition === 1;
+  } else if (previous?.ignition !== undefined) {
+    rawIgnitionPin = previous.ignition;
   }
 
-  const movement =
-    mapping.movement !== undefined ? rec.ioData[mapping.movement] === 1 : false;
-  const obdSpeed =
-    mapping.obdSpeed !== undefined
-      ? (rec.ioData[mapping.obdSpeed] ?? null)
-      : null;
+  const movement = getAvlValue(rec.ioData, mapping.movement) === 1;
+  const obdSpeed = getAvlValue(rec.ioData, mapping.obdSpeed);
   const speedToUse = obdSpeed ?? rec.gpsSpeed;
 
   let isHardwareExcessiveIdling = false;
-  if (mapping.excessiveIdling !== undefined) {
-    if (rec.ioData[mapping.excessiveIdling] !== undefined) {
-      isHardwareExcessiveIdling =
-        rec.eventId === mapping.excessiveIdling ||
-        rec.ioData[mapping.excessiveIdling] === 1;
-    } else if (previous?.excessiveIdling !== undefined) {
-      isHardwareExcessiveIdling = previous.excessiveIdling;
+  const mappedExcessiveIdling = getAvlValue(rec.ioData, mapping.excessiveIdling);
+  if (mappedExcessiveIdling !== null) {
+    const id = typeof mapping.excessiveIdling === "number" ? mapping.excessiveIdling : mapping.excessiveIdling?.id;
+    isHardwareExcessiveIdling = rec.eventId === id || mappedExcessiveIdling === 1;
+  } else if (previous?.excessiveIdling !== undefined) {
+    isHardwareExcessiveIdling = previous.excessiveIdling;
+  }
+
+  const engineLoad = getAvlValue(rec.ioData, mapping.engineLoad);
+  const coolantTemp = getAvlValue(rec.ioData, mapping.coolantTemp);
+
+  // Cálculo de odómetro (el valor highResOdometer ya está en km, odometer estándar se divide entre 1000.0)
+  let odometer: number | null = null;
+  const highResOdom = getAvlValue(rec.ioData, mapping.highResOdometer);
+  const stdOdom = getAvlValue(rec.ioData, mapping.odometer);
+  if (highResOdom !== null) {
+    odometer = highResOdom;
+  } else if (stdOdom !== null) {
+    odometer = stdOdom / 1000.0;
+  } else if (previous?.odometer !== undefined && previous.odometer !== null) {
+    odometer = previous.odometer;
+  }
+
+  // Parsear VIN con fallbacks
+  let vin: string | null = null;
+  const mappedVin = getAvlValue(rec.ioData, mapping.vin);
+  if (mappedVin !== null) {
+    vin = String(mappedVin);
+  } else {
+    const fallbackVin = rec.ioData[256] ?? rec.ioData[325] ?? rec.ioData[528] ?? null;
+    if (fallbackVin !== null) {
+      vin = String(fallbackVin);
     }
   }
 
-  const engineLoad =
-    mapping.engineLoad !== undefined
-      ? (rec.ioData[mapping.engineLoad] ?? null)
-      : null;
-
-  let coolantTemp =
-    mapping.coolantTemp !== undefined
-      ? (rec.ioData[mapping.coolantTemp] ?? null)
-      : null;
-
-  // Escalar la temperatura del refrigerante del motor LVCAN (AVL ID 115) de 1/10 °C a grados Celsius
-  if (mapping.coolantTemp === 115 && coolantTemp !== null) {
-    coolantTemp = coolantTemp / 10.0;
-  }
-
-  const odometer =
-    mapping.odometer !== undefined && rec.ioData[mapping.odometer] != null
-      ? rec.ioData[mapping.odometer] / 1000.0
-      : null;
-
-  const vin =
-    mapping.vin !== undefined ? (rec.ioData[mapping.vin] ?? null) : null;
-  const dtcCount =
-    mapping.dtcCount !== undefined ? (rec.ioData[mapping.dtcCount] ?? 0) : 0;
-  const faultCodes =
-    mapping.faultCodes !== undefined
-      ? (rec.ioData[mapping.faultCodes] ?? null)
-      : null;
+  const dtcCount = getAvlValue(rec.ioData, mapping.dtcCount) ?? 0;
+  const faultCodes = getAvlValue(rec.ioData, mapping.faultCodes);
   const powerSupply = rawVoltage / 1000;
 
   let isUnplugged = false;
   if (mapping.unplugged !== undefined) {
-    if (rec.ioData[mapping.unplugged] !== undefined) {
-      isUnplugged = rec.ioData[mapping.unplugged] === 1;
+    const mappedUnplugged = getAvlValue(rec.ioData, mapping.unplugged);
+    if (mappedUnplugged !== null) {
+      isUnplugged = mappedUnplugged === 1;
     } else if (previous?.unplugged !== undefined) {
       isUnplugged = previous.unplugged;
     }
   }
 
   // Detectar tipo de combustible
-  const rawFuelType =
-    mapping.fuelType !== undefined ? rec.ioData[mapping.fuelType] : null;
+  const rawFuelType = getAvlValue(rec.ioData, mapping.fuelType);
   const detectedFuelType = mapObdFuelType(rawFuelType);
 
   // Conducción Ecológica (Eco Driving)
-  const ecoDrivingType =
-    mapping.ecoDrivingType !== undefined
-      ? rec.ioData[mapping.ecoDrivingType]
-      : undefined;
-  const rawSeverity =
-    mapping.ecoDrivingValueMax !== undefined
-      ? rec.ioData[mapping.ecoDrivingValueMax]
-      : undefined;
+  const ecoDrivingType = getAvlValue(rec.ioData, mapping.ecoDrivingType) ?? undefined;
+  const rawSeverity = getAvlValue(rec.ioData, mapping.ecoDrivingValueMax) ?? undefined;
   const ecoDrivingSeverity = parseEcoAxesValue(rawSeverity) ?? 10;
-  const ecoDrivingDuration =
-    mapping.ecoDrivingDuration !== undefined
-      ? (rec.ioData[mapping.ecoDrivingDuration] ?? null)
-      : null;
-  const rawAverage =
-    mapping.ecoDrivingAverage !== undefined
-      ? rec.ioData[mapping.ecoDrivingAverage]
-      : undefined;
+  const ecoDrivingDuration = getAvlValue(rec.ioData, mapping.ecoDrivingDuration);
+  const rawAverage = getAvlValue(rec.ioData, mapping.ecoDrivingAverage) ?? undefined;
   const ecoDrivingAverage = parseEcoAxesValue(rawAverage);
 
   let harshAcceleration = 0;
@@ -198,20 +203,48 @@ export function parseTelemetryRecord(
     }
   }
 
+  // Nuevos campos dinámicos
+  let fuelLevel = getAvlValue(rec.ioData, mapping.fuelLevel);
+  if (fuelLevel !== null) {
+    if (previous?.fuelLevel !== undefined && previous.fuelLevel !== null) {
+      const diff = Math.abs(fuelLevel - previous.fuelLevel);
+      const isMoving = status === "MOVING";
+      // Si el vehículo no se está moviendo y hay un cambio brusco > 10% (refuerzo o robo),
+      // omitimos el filtro para registrar el valor real de inmediato.
+      if (!isMoving && diff > 10) {
+        // Se acepta el valor real directamente
+      } else {
+        // Aplicamos suavizado exponencial basado en el estado de movimiento
+        const alpha = isMoving ? 0.05 : 0.2;
+        fuelLevel = alpha * fuelLevel + (1 - alpha) * previous.fuelLevel;
+      }
+    }
+  } else if (previous?.fuelLevel !== undefined && previous.fuelLevel !== null) {
+    fuelLevel = previous.fuelLevel;
+  }
+
+  const fuelConsumption = getAvlValue(rec.ioData, mapping.fuelConsumption);
+  const fuelRate = getAvlValue(rec.ioData, mapping.fuelRate);
+
   // Deduplicación dinámica de I/O extra (se eliminan las claves ya mapeadas)
   const extraIoData = { ...rec.ioData };
-  Object.values(mapping).forEach((avlId: any) => {
-    if (avlId !== undefined && avlId !== null) {
-      delete extraIoData[avlId as string | number];
+  Object.values(mapping).forEach((config: any) => {
+    if (config !== undefined && config !== null) {
+      const id = typeof config === "number" ? config : config.id;
+      if (id !== undefined) {
+        delete extraIoData[id];
+      }
     }
   });
 
-  // Detección de viaje por hardware (AVL ID 250) o fallback de ignición
-  const tripActive =
-    mapping.tripStatus !== undefined &&
-    rec.ioData[mapping.tripStatus] !== undefined
-      ? rec.ioData[mapping.tripStatus] === 1
-      : trueIgnition;
+  // Asegurar que las IDs de VIN no queden en extraIoData
+  delete extraIoData[256];
+  delete extraIoData[325];
+  delete extraIoData[528];
+
+  // Detección de viaje
+  const mappedTripStatus = getAvlValue(rec.ioData, mapping.tripStatus);
+  const tripActive = mappedTripStatus !== null ? mappedTripStatus === 1 : trueIgnition;
 
   return {
     rawRpm,
@@ -243,5 +276,8 @@ export function parseTelemetryRecord(
     extraIoData,
     tripActive,
     detectedFuelType,
+    fuelLevel,
+    fuelConsumption,
+    fuelRate,
   };
 }

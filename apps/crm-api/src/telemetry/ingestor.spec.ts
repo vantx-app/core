@@ -177,6 +177,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
           fuelType: true,
           isOdometerAbsolute: true,
           odometerSource: true,
+          capabilities: true,
           device: {
             select: {
               model: true,
@@ -187,6 +188,9 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
               lastIgnition: true,
               unplugged: true,
               currentStatus: true,
+              lastOdometer: true,
+              lastFuelLevel: true,
+              lastAngle: true,
             },
           },
         },
@@ -329,6 +333,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         alias: 'Truck VIN Test',
         device: { model: 'TELTONIKA_STANDARD' },
         vin: null, // No VIN assigned
+        capabilities: ['gps'],
       });
       mockPrisma.vehicle.update.mockResolvedValue({});
 
@@ -368,6 +373,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         alias: 'Truck VIN Test 2',
         device: { model: 'TELTONIKA_STANDARD' },
         vin: 'EXISTINGVIN12345', // Existing VIN
+        capabilities: ['gps'],
       });
 
       const records = [
@@ -403,6 +409,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         alias: 'Truck Fuel Test',
         device: { model: 'TELTONIKA_STANDARD' },
         fuelType: null, // No fuelType assigned
+        capabilities: ['gps'],
       });
       mockPrisma.vehicle.update.mockResolvedValue({});
 
@@ -442,6 +449,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         alias: 'Truck Fuel Test 2',
         device: { model: 'TELTONIKA_STANDARD' },
         fuelType: 'GASOLINE', // Existing fuelType
+        capabilities: ['gps'],
       });
 
       const records = [
@@ -735,6 +743,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         alias: 'LVCAN Truck',
         device: { model: 'TELTONIKA_FMC150' },
         vin: null,
+        capabilities: ['gps', 'rpm', 'odometer', 'coolantTemp'],
       });
       mockPrisma.vehicle.update.mockResolvedValue({});
 
@@ -755,7 +764,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
             81: 45, // LVCAN Speed (AVL ID 81)
             87: 125000, // LVCAN Total Mileage (125000 meters = 125 km)
             115: 850, // LVCAN Engine Temperature (850 = 85.0°C)
-            82: 'LVCANVINTEST12345', // LVCAN VIN
+            325: 'LVCANVINTEST12345', // LVCAN VIN
           },
         },
       ];
@@ -1355,6 +1364,131 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         expect.objectContaining({
           where: { id: 'existing-trip-b-id' },
         }),
+      );
+    });
+
+    it('debe mantener los valores LKV de odómetro y combustible, aplicar suavizado y LKV del ángulo al estar detenido', async () => {
+      const mockVehicleId = 'vehicle-uuid-lkv-test';
+      const mockImei = 'imei-lkv-test';
+      
+      // Simular estado previo en base de datos: odómetro=100.0, nivelCombustible=80.0, ángulo=45
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'LKV Truck',
+        device: { model: 'TELTONIKA_STANDARD' },
+        capabilities: ['gps', 'odometer', 'fuelLevel'],
+        liveState: {
+          lastIgnition: true,
+          unplugged: false,
+          currentStatus: 'MOVING',
+          lastOdometer: 100.0,
+          lastFuelLevel: 80.0,
+          lastAngle: 45,
+        },
+      });
+      mockPrisma.vehicleLiveState.upsert.mockResolvedValue({});
+
+      // Lote con 2 registros:
+      // Registro 1: Vehículo se detiene. Reporta ángulo 0 y sin odómetro/combustible. Debe usar LKV.
+      // Registro 2: Vehículo detenido. Reporta cambio leve de combustible (78%) -> debe aplicar EMA (alpha=0.2).
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 0, // se detiene, ángulo va a 0
+          satellites: 12,
+          gpsSpeed: 0, // velocidad 0
+          priority: 1,
+          eventId: 1,
+          ioData: {
+            239: 0, // ignición inactiva -> STOPPED
+          },
+        },
+        {
+          timestamp: new Date(1716570000000 + 10000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 0,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 1,
+          ioData: {
+            239: 0, // ignición inactiva
+            48: 78, // Nivel de combustible baja a 78% (cambio leve de 2%, se suaviza)
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      // Verificamos que el upsert de liveState guardó los valores correctos
+      // Ángulo de registro 2: era 0 y estado STOPPED, así que mantiene 45 (LKV de DB/Registro 1)
+      // Odómetro: LKV 100.0 se arrastra
+      // Nivel de combustible:
+      // Registro 1: LKV 80.0
+      // Registro 2: combustible 78% -> cambio de 2% (<=10%) -> suavizado alpha=0.2 -> 0.2*78 + 0.8*80 = 79.6%
+      expect(mockPrisma.vehicleLiveState.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            lastAngle: 45,
+            lastOdometer: 100.0,
+            lastFuelLevel: 79.6,
+          }),
+        })
+      );
+    });
+
+    it('debe omitir el suavizado de combustible si ocurre un cambio > 10% estando detenido (robo o recarga)', async () => {
+      const mockVehicleId = 'vehicle-uuid-lkv-theft-test';
+      const mockImei = 'imei-lkv-theft-test';
+      
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Theft Truck',
+        device: { model: 'TELTONIKA_STANDARD' },
+        capabilities: ['gps', 'fuelLevel'],
+        liveState: {
+          lastIgnition: false,
+          unplugged: false,
+          currentStatus: 'STOPPED',
+          lastFuelLevel: 80.0,
+        },
+      });
+      mockPrisma.vehicleLiveState.upsert.mockResolvedValue({});
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 1,
+          ioData: {
+            239: 0,
+            48: 50, // Baja bruscamente a 50% (cambio del 30% > 10% estando detenido -> ROBO)
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      // Debe registrar el 50% directamente sin suavizar
+      expect(mockPrisma.vehicleLiveState.upsert).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          update: expect.objectContaining({
+            lastFuelLevel: 50,
+          }),
+        })
       );
     });
   });

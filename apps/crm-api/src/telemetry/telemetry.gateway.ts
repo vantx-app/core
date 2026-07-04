@@ -185,11 +185,15 @@ export class TelemetryGateway implements OnGatewayConnection {
             lastLng: payload.longitude,
             lastAngle: payload.angle,
             currentStatus: payload.status,
+            lastOdometer: payload.odometer,
+            lastFuelLevel: payload.fuelLevel,
             // For maximum compatibility with any potential consumer
             latitude: payload.latitude,
             longitude: payload.longitude,
             angle: payload.angle,
             status: payload.status,
+            odometer: payload.odometer,
+            fuelLevel: payload.fuelLevel,
           });
         });
       }

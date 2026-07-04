@@ -16,6 +16,7 @@ export async function notifyApi(vehicle: any, latestRecord: any) {
     status: latestRecord.status,
     angle: latestRecord.angle,
     odometer: latestRecord.odometer,
+    fuelLevel: latestRecord.fuelLevel,
   };
 
   await fetch(API_WEBHOOK_URL, {

@@ -98,6 +98,7 @@ export interface FleetVehicle {
   lastSocketUpdate?: number;
   ignition?: boolean;
   odometer?: number;
+  fuelLevel?: number | null;
   liveState?: {
     lastLat?: number;
     lastLng?: number;
@@ -107,6 +108,7 @@ export interface FleetVehicle {
     lastUpdate?: string;
     lastIgnition?: boolean;
     lastOdometer?: number;
+    lastFuelLevel?: number | null;
     unplugged?: boolean;
     [key: string]: unknown;
   } | null;
@@ -252,12 +254,14 @@ export interface VehicleDetail {
     unplugged: boolean;
     currentStatus: string;
     lastOdometer: number | null;
+    lastFuelLevel?: number | null;
     lastUpdate: string;
   } | null;
   VehicleGlobalStats?: VehicleGlobalStats | null;
   vehicleScoreSnapshots: VehicleScoreSnapshot[];
   DailyTelemetryRollup: DailyTelemetryRollup[];
   assignments: ActiveAssignment[];
+  capabilities?: string[] | null;
 }
 
 export interface RuleDeductionDetail {

@@ -39,6 +39,7 @@ export function FleetProvider({
           updatedAt: v.liveState.lastUpdate ?? "N/A",
           ignition: v.liveState.lastIgnition ?? false,
           odometer: v.liveState.lastOdometer ?? 0,
+          fuelLevel: v.liveState.lastFuelLevel ?? null,
         };
         return acc;
       },
@@ -94,6 +95,7 @@ export function FleetProvider({
                 updatedAt: prev.updatedAt,
                 ignition: prev.ignition,
                 odometer: prev.odometer,
+                fuelLevel: prev.fuelLevel,
                 isFromSocket: true,
                 lastSocketUpdate: prev.lastSocketUpdate,
               };
@@ -109,6 +111,7 @@ export function FleetProvider({
                 updatedAt: v.liveState.lastUpdate ?? "N/A",
                 ignition: v.liveState.lastIgnition ?? false,
                 odometer: v.liveState.lastOdometer ?? 0,
+                fuelLevel: v.liveState.lastFuelLevel ?? null,
                 isFromSocket: false,
               };
             }

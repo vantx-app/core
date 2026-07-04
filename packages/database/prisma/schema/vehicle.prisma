@@ -18,6 +18,7 @@ model Vehicle {
   listingPrice          Float?
   listingDescription    String?
   hasOptionToBuy        Boolean                @default(false)
+  capabilities          Json?
 
   createdAt             DateTime               @default(now())
   device                Device?

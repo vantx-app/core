@@ -30,6 +30,11 @@ model TelemetryLog {
   dtcCount          Int                   @default(0) @db.SmallInt
   faultCodes        String?
   vin               String?               @db.VarChar(50)
+  
+  fuelLevel         Float?
+  fuelConsumption   Float?
+  fuelRate          Float?
+  
   extra             Json?
   tripId            String?               @db.Uuid
   trip              Trip?                 @relation(fields: [tripId], references: [id])

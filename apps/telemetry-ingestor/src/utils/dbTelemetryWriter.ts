@@ -7,6 +7,7 @@ export interface TelemetryBatchWriteParams {
     alias: string | null;
     isOdometerAbsolute: boolean;
     odometerSource: string;
+    capabilities: any;
   };
   telemetryLogs: any[];
   tripsToCreate: Map<string, { id: string; startTime: Date; endTime?: Date }>;
@@ -111,6 +112,7 @@ export async function saveTelemetryBatchData({
         unplugged: lastRecord.unplugged,
         currentStatus: lastRecord.status,
         lastOdometer: lastRecord.odometer,
+        lastFuelLevel: lastRecord.fuelLevel,
         lastUpdate: lastRecord.timestamp,
       },
       create: {
@@ -123,6 +125,7 @@ export async function saveTelemetryBatchData({
         unplugged: lastRecord.unplugged,
         currentStatus: lastRecord.status,
         lastOdometer: lastRecord.odometer,
+        lastFuelLevel: lastRecord.fuelLevel,
         lastUpdate: lastRecord.timestamp,
       },
     }),
@@ -134,6 +137,33 @@ export async function saveTelemetryBatchData({
   }
   if (newFuelTypeDetected) {
     vehicleUpdateData.fuelType = newFuelTypeDetected;
+  }
+
+  // Auto-detectar capacidades dinámicas soportadas a partir de las columnas normalizadas
+  const detectedKeys = new Set<string>(["gps"]); // GPS siempre está soportado
+  telemetryLogs.forEach((log) => {
+    if (log.rpm !== null) detectedKeys.add("rpm");
+    if (log.odometer !== null) detectedKeys.add("odometer");
+    if (log.coolantTemp !== null) detectedKeys.add("coolantTemp");
+    if (log.fuelLevel !== null) detectedKeys.add("fuelLevel");
+    if (log.fuelConsumption !== null) detectedKeys.add("fuelConsumption");
+    if (log.fuelRate !== null) detectedKeys.add("fuelRate");
+  });
+
+  // Comparar y mezclar con las capacidades existentes del vehículo
+  const currentCapabilities = new Set<string>(
+    Array.isArray(vehicle.capabilities) ? vehicle.capabilities : []
+  );
+  let capabilitiesChanged = false;
+  detectedKeys.forEach((key) => {
+    if (!currentCapabilities.has(key)) {
+      currentCapabilities.add(key);
+      capabilitiesChanged = true;
+    }
+  });
+
+  if (capabilitiesChanged) {
+    vehicleUpdateData.capabilities = Array.from(currentCapabilities);
   }
 
   // Auto-detectar si el dispositivo está enviando el odómetro real del tablero (> 1000 km)

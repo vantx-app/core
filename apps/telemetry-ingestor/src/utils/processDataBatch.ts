@@ -244,6 +244,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       fuelType: true,
       isOdometerAbsolute: true,
       odometerSource: true,
+      capabilities: true,
       device: {
         select: {
           model: true,
@@ -254,6 +255,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
           lastIgnition: true,
           unplugged: true,
           currentStatus: true,
+          lastOdometer: true,
+          lastFuelLevel: true,
+          lastAngle: true,
         },
       },
     },
@@ -411,6 +415,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
     unplugged: vehicle.liveState?.unplugged ?? false,
     rpm: 0,
     excessiveIdling: vehicle.liveState?.currentStatus === "EXCESSIVE_IDLING",
+    odometer: vehicle.liveState?.lastOdometer ?? null,
+    fuelLevel: vehicle.liveState?.lastFuelLevel ?? null,
+    angle: vehicle.liveState?.lastAngle ?? 0,
   };
 
   const telemetryLogs: any = [];
@@ -418,11 +425,22 @@ async function processDataBatchInternal(records: any[], imei: string) {
   for (const rec of sortedRecords) {
     const parsed = parseTelemetryRecord(rec, mapping, previousState);
 
+    let recordAngle = rec.angle ?? 0;
+    // LKV para ángulo: si el ángulo reportado es 0 (o nulo) y el estado es STOPPED,
+    // y tenemos un ángulo previo que es distinto de 0, mantenemos el ángulo previo.
+    const isStopped = parsed.status === "STOPPED";
+    if ((recordAngle === 0 || recordAngle === null || recordAngle === undefined) && isStopped && previousState.angle) {
+      recordAngle = previousState.angle;
+    }
+
     previousState = {
       ignition: parsed.trueIgnition,
       unplugged: parsed.isUnplugged,
       rpm: parsed.rawRpm,
       excessiveIdling: parsed.isHardwareExcessiveIdling,
+      odometer: parsed.odometer,
+      fuelLevel: parsed.fuelLevel,
+      angle: recordAngle,
     };
 
     if (
@@ -482,7 +500,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       timestamp: rec.timestamp,
       latitude: rec.latitude,
       longitude: rec.longitude,
-      angle: rec.angle,
+      angle: recordAngle,
       speed: parsed.speedToUse,
       gpsSpeed: rec.gpsSpeed,
       ignition: parsed.trueIgnition,
@@ -495,6 +513,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
       odometer: parsed.odometer,
       dtcCount: parsed.dtcCount,
       faultCodes: parsed.faultCodes,
+      fuelLevel: parsed.fuelLevel,
+      fuelConsumption: parsed.fuelConsumption,
+      fuelRate: parsed.fuelRate,
       altitude: rec.altitude,
       satellites: rec.satellites,
       powerSupply: parsed.powerSupply,

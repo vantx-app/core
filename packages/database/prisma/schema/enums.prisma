@@ -61,6 +61,7 @@ enum DeviceModel {
   FMC003
   FMC150
   FMC650
+  FMC650_FMS
 }
 
 enum DeviceStatus {
