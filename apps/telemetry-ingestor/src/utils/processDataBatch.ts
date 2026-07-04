@@ -218,13 +218,14 @@ function transitionTripState({
           ? `🛑 Viaje Finalizado (Diferido): ${vehicleAlias}`
           : `🛑 Viaje Finalizado: ${vehicleAlias}`,
       );
+
+      state.lastClosedTrip = {
+        id: tripId,
+        startTime: state.activeTrip.startTime,
+        closeTime: recTimeMs,
+      };
     }
 
-    state.lastClosedTrip = {
-      id: tripId,
-      startTime: state.activeTrip.startTime,
-      closeTime: recTimeMs,
-    };
     state.activeTrip = undefined;
   }
 

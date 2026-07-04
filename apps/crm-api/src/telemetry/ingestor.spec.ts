@@ -4,6 +4,7 @@ jest.mock('@prisma/client', () => {
   const mockFindFirst = jest.fn();
   const mockCreate = jest.fn();
   const mockUpdate = jest.fn();
+  const mockUpdateMany = jest.fn();
   const mockDelete = jest.fn();
   const mockDeleteMany = jest.fn();
   const mockCreateMany = jest.fn();
@@ -18,6 +19,7 @@ jest.mock('@prisma/client', () => {
       findMany: mockFindMany,
       create: mockCreate,
       update: mockUpdate,
+      updateMany: mockUpdateMany,
       delete: mockDelete,
       deleteMany: mockDeleteMany,
     },
@@ -274,7 +276,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       expect(mockPrisma.trip.findFirst).toHaveBeenCalled();
 
       // Debe cerrar el viaje
-      expect(mockPrisma.trip.update).toHaveBeenCalledWith({
+      expect(mockPrisma.trip.updateMany).toHaveBeenCalledWith({
         where: { id: 'active-trip-uuid' },
         data: { endTime: records[0].timestamp },
       });
@@ -1073,7 +1075,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       expect(mockPrisma.trip.deleteMany).not.toHaveBeenCalledWith({
         where: { id: 'future-active-trip-uuid' },
       });
-      expect(mockPrisma.trip.update).not.toHaveBeenCalledWith({
+      expect(mockPrisma.trip.updateMany).not.toHaveBeenCalledWith({
         where: { id: 'future-active-trip-uuid' },
         data: expect.anything(),
       });
@@ -1128,7 +1130,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       // No debe haber intentado actualizar (reabrir) el viaje cerrado
-      expect(mockPrisma.trip.update).not.toHaveBeenCalled();
+      expect(mockPrisma.trip.updateMany).not.toHaveBeenCalled();
 
       // Debe haber creado un nuevo viaje diferente para el registro del pasado
       expect(mockPrisma.trip.create).toHaveBeenCalled();
@@ -1176,8 +1178,8 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
 
       await processDataBatch(recordsTripClose, mockImei);
 
-      // El último viaje cerrado debe haberse registrado en mockPrisma.trip.update
-      expect(mockPrisma.trip.update).toHaveBeenCalled();
+      // El último viaje cerrado debe haberse registrado en mockPrisma.trip.updateMany
+      expect(mockPrisma.trip.updateMany).toHaveBeenCalled();
 
       // 2. Procesamos un lote de heartbeat (estacionario)
       // Este lote no tiene viaje activo ni cierra ninguno
@@ -1211,7 +1213,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
 
       // Verificamos que no se intentó crear ni actualizar ningún viaje
       expect(mockPrisma.trip.create).not.toHaveBeenCalled();
-      expect(mockPrisma.trip.update).not.toHaveBeenCalled();
+      expect(mockPrisma.trip.updateMany).not.toHaveBeenCalled();
 
       // 3. Procesamos un nuevo lote con movimiento dentro de los 90s (reapertura)
       // Debe reabrir el viaje anterior porque el caché no se borró
@@ -1244,7 +1246,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(recordsReopen, mockImei);
 
       // Debe haber reabierto el viaje original en vez de crear uno nuevo
-      expect(mockPrisma.trip.update).toHaveBeenCalledWith(
+      expect(mockPrisma.trip.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: 'active-trip-to-close' },
           data: { endTime: null },
@@ -1490,6 +1492,98 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
           }),
         })
       );
+    });
+
+    it('debe evitar almacenar viajes fantasmas eliminados en lastClosedTripCache y evitar reabrirlos', async () => {
+      const mockVehicleId = 'vehicle-uuid-ghost-cache-prevention';
+      const mockImei = 'imei-ghost-cache-prevention';
+      
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Ghost Trip Cache Prevention',
+        device: { model: 'TELTONIKA_STANDARD' },
+      });
+
+      // 1. Primer lote: procesamos un viaje de corta duración (fantasma)
+      const recordsGhost = [
+        {
+          timestamp: new Date(1716570000000), // Inicia viaje
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1,
+            250: 1,
+          },
+        },
+        {
+          timestamp: new Date(1716570000000 + 30000), // Termina viaje 30s después (fantasma: < 60s)
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 0,
+            250: 0,
+          },
+        },
+      ];
+
+      // Simulamos que no hay viajes en la DB
+      mockPrisma.trip.findFirst.mockResolvedValue(null);
+
+      await processDataBatch(recordsGhost, mockImei);
+
+      // El viaje fantasma debió descartarse en memoria (no crearse en DB)
+      expect(mockPrisma.trip.create).not.toHaveBeenCalled();
+      expect(mockPrisma.trip.deleteMany).not.toHaveBeenCalled(); // porque fue descartado antes de guardarse en BD
+
+      // 2. Limpiamos mocks y procesamos un lote con movimiento dentro de los 90s
+      // Como el viaje fantasma fue eliminado, NO debe guardarse en lastClosedTripCache,
+      // por lo que no debe reabrirse. Debe crearse un viaje NUEVO en su lugar.
+      jest.clearAllMocks();
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Ghost Trip Cache Prevention',
+        device: { model: 'TELTONIKA_STANDARD' },
+      });
+      mockPrisma.trip.findFirst.mockResolvedValue(null);
+
+      const recordsNewTrip = [
+        {
+          timestamp: new Date(1716570000000 + 40000), // 40s después (dentro de la ventana de debounce si se hubiera cacheado)
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 35,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1,
+            250: 1,
+          },
+        },
+      ];
+
+      await processDataBatch(recordsNewTrip, mockImei);
+
+      // Verificamos que se crea un nuevo viaje y no se actualiza ninguno existente
+      expect(mockPrisma.trip.create).toHaveBeenCalled();
+      expect(mockPrisma.trip.updateMany).not.toHaveBeenCalled();
+      expect(mockPrisma.trip.update).not.toHaveBeenCalled();
     });
   });
 });

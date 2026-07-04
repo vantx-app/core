@@ -51,7 +51,7 @@ export async function saveTelemetryBatchData({
   // 2. Update existing trips (endTime)
   for (const [_, tripData] of tripsToUpdate) {
     transactionPromises.push(
-      prisma.trip.update({
+      prisma.trip.updateMany({
         where: { id: tripData.id },
         data: {
           endTime: tripData.endTime,
