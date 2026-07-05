@@ -1164,10 +1164,38 @@ export class VehiclesService {
       );
     }
 
-    // Calcular el consumo total de combustible de forma matemática para evitar la acumulación de ruido (tanto por sloshing como por ruido eléctrico)
-    const startLevel = logs[0].fuelLevel ?? 0;
-    const endLevel = logs[logs.length - 1].fuelLevel ?? 0;
+    // Encontrar el primer y último nivel de combustible no nulo
+    let startLevel = 0;
+    for (let i = 0; i < logs.length; i++) {
+      if (logs[i].fuelLevel !== null) {
+        startLevel = logs[i].fuelLevel!;
+        break;
+      }
+    }
+    let endLevel = 0;
+    for (let i = logs.length - 1; i >= 0; i--) {
+      if (logs[i].fuelLevel !== null) {
+        endLevel = logs[i].fuelLevel!;
+        break;
+      }
+    }
+
     totalConsumed = Math.max(0, startLevel - endLevel + totalRefueled - totalDrained);
+
+    if (totalConsumed <= 0) {
+      // Si la diferencia de nivel da 0 o negativo (debido a deriva del sensor o pendientes)
+      // pero hubo movimiento real, estimamos un consumo mínimo proporcional al tiempo en movimiento
+      let movingPoints = 0;
+      for (const log of logs) {
+        if ((log.speed ?? 0) > 2) {
+          movingPoints++;
+        }
+      }
+      if (movingPoints > 0) {
+        // Consumo mínimo estimado: 0.02% por registro de telemetría en movimiento
+        totalConsumed = Math.round(Math.max(0.1, movingPoints * 0.02) * 100) / 100;
+      }
+    }
 
     // Obtener el último nivel de combustible registrado
     const currentLevel = logs[logs.length - 1].fuelLevel;
