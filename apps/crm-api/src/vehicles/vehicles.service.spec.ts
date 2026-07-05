@@ -513,5 +513,111 @@ describe('VehiclesService', () => {
       
       expect(result.history).toHaveLength(4); // Todos incluidos por downsampling / eventos
     });
+
+    it('debe ignorar eventos de recarga falsos causados por sloshing (caída y recuperación rápida al mismo nivel)', async () => {
+      const mockLogs = [
+        {
+          timestamp: new Date('2026-07-04T09:40:00Z'),
+          fuelLevel: 75.6,
+          fuelConsumption: 100,
+          fuelRate: 2.0,
+          ignition: true,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+        // Sloshing: caída repentina a 59.3%
+        {
+          timestamp: new Date('2026-07-04T09:41:00Z'),
+          fuelLevel: 59.3,
+          fuelConsumption: 100,
+          fuelRate: 2.0,
+          ignition: true,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+        // Recuperación rápida a 75.3% (cerca de los 75.6% iniciales)
+        {
+          timestamp: new Date('2026-07-04T09:42:00Z'),
+          fuelLevel: 75.3,
+          fuelConsumption: 100,
+          fuelRate: 2.0,
+          ignition: true,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+      ];
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
+
+      const result = await service.getFuelAnalysis('vehicle-id', 7);
+
+      // No debe detectar ninguna recarga ni drenado falso
+      expect(result.summary.totalRefueled).toEqual(0);
+      expect(result.summary.totalDrained).toEqual(0);
+      expect(result.events).toHaveLength(0);
+    });
+
+    it('debe detectar correctamente una recarga real mientras el vehículo está en ralentí (ignición encendida, velocidad 0)', async () => {
+      const mockLogs = [
+        {
+          timestamp: new Date('2026-07-04T14:00:00Z'),
+          fuelLevel: 50.0,
+          fuelConsumption: 100,
+          fuelRate: 1.0,
+          ignition: true,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+        // Comienza a subir el combustible (ralentí en la estación)
+        {
+          timestamp: new Date('2026-07-04T14:01:00Z'),
+          fuelLevel: 65.0,
+          fuelConsumption: 100,
+          fuelRate: 1.0,
+          ignition: true,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+        {
+          timestamp: new Date('2026-07-04T14:02:00Z'),
+          fuelLevel: 80.0,
+          fuelConsumption: 100,
+          fuelRate: 1.0,
+          ignition: true,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+        // Se mantiene estable en el nuevo nivel alto
+        {
+          timestamp: new Date('2026-07-04T14:03:00Z'),
+          fuelLevel: 80.0,
+          fuelConsumption: 100,
+          fuelRate: 1.0,
+          ignition: true,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+      ];
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
+
+      const result = await service.getFuelAnalysis('vehicle-id', 7);
+
+      expect(result.summary.totalRefueled).toEqual(30.0);
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0]).toMatchObject({
+        type: 'REFUEL',
+        beforeLevel: 50.0,
+        afterLevel: 80.0,
+        delta: 30.0,
+      });
+    });
   });
 });

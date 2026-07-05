@@ -31,7 +31,7 @@ export class VehiclesService {
     private prisma: PrismaService,
     private cacheService: CacheService,
     private rulesEngineService: RulesEngineService,
-  ) {}
+  ) { }
 
   private getFrontendBaseUrl(): string {
     let baseUrl =
@@ -1058,6 +1058,7 @@ export class VehiclesService {
     };
 
     let lastStableLevel = logs[0].fuelLevel ?? 0;
+    let peakLevel = lastStableLevel;
     let eventInProgress: { type: 'REFUEL' | 'DRAIN'; startTime: Date; startLevel: number; lat: number; lng: number } | null = null;
     let wasMoving = false;
 
@@ -1080,6 +1081,7 @@ export class VehiclesService {
         }
 
         lastStableLevel = curr.fuelLevel;
+        peakLevel = curr.fuelLevel; // Restablecer nivel de pico durante movimiento
         wasMoving = true;
         continue;
       }
@@ -1088,6 +1090,7 @@ export class VehiclesService {
       // para evitar comparar con el nivel inestable o ruidoso del movimiento.
       if (wasMoving) {
         lastStableLevel = curr.fuelLevel;
+        peakLevel = curr.fuelLevel; // Restablecer nivel de pico al detenerse
         totalDiff = 0; // Recalculamos la diferencia con la nueva referencia estable
         wasMoving = false;
       }
@@ -1104,13 +1107,15 @@ export class VehiclesService {
           finalizeEvent(eventInProgress, prev.fuelLevel, prev.timestamp);
           eventInProgress = null;
           lastStableLevel = prev.fuelLevel;
+          peakLevel = prev.fuelLevel; // Restablecer nivel de pico al nivel finalizado
+          totalDiff = curr.fuelLevel - lastStableLevel; // Recalcular totalDiff con la nueva referencia
         }
       }
 
       // Si no hay evento en progreso, evaluamos iniciar uno nuevo
       if (!eventInProgress) {
-        if (totalDiff >= 3.0) {
-          // Inicio de recarga
+        if (totalDiff >= 3.0 && (curr.fuelLevel - peakLevel) >= 2.0) {
+          // Inicio de recarga (exigimos que el nivel no sea una mera recuperación de una caída por sloshing)
           eventInProgress = {
             type: 'REFUEL',
             startTime: curr.timestamp,
@@ -1118,6 +1123,7 @@ export class VehiclesService {
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
           };
+          peakLevel = curr.fuelLevel; // Resetear nivel de pico al iniciar evento
         } else if (totalDiff <= -3.0 && !curr.ignition && !prev.ignition) {
           // Inicio de drenado/robo (solo con ignición apagada)
           eventInProgress = {
@@ -1127,9 +1133,18 @@ export class VehiclesService {
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
           };
+          peakLevel = curr.fuelLevel; // Resetear nivel de pico al iniciar evento
         } else {
           // Pequeñas fluctuaciones o consumo normal, actualizamos nivel de referencia
           lastStableLevel = curr.fuelLevel;
+
+          // Registrar el nivel de pico cuando no hay evento en progreso
+          if (stepDiff < 0 && stepDiff >= -0.5) {
+            // Descenso lento (consumo normal), el pico acompaña al nivel
+            peakLevel = curr.fuelLevel;
+          } else {
+            peakLevel = Math.max(peakLevel, curr.fuelLevel);
+          }
         }
       }
     }
@@ -1154,7 +1169,7 @@ export class VehiclesService {
     // Reducir la cantidad de puntos de la gráfica (downsampling) para optimizar el rendimiento de red y cliente
     const history: any[] = [];
     const step = Math.max(1, Math.floor(logs.length / 300));
-    
+
     // Guardar timestamps de eventos detectados para asegurar su presencia en la gráfica
     const eventTimes = new Set<number>(
       events.map((e) => new Date(e.timestamp).getTime()),
