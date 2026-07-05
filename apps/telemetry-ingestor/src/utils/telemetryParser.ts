@@ -207,17 +207,10 @@ export function parseTelemetryRecord(
   let fuelLevel = getAvlValue(rec.ioData, mapping.fuelLevel);
   if (fuelLevel !== null) {
     if (previous?.fuelLevel !== undefined && previous.fuelLevel !== null) {
-      const diff = Math.abs(fuelLevel - previous.fuelLevel);
       const isMoving = status === "MOVING";
-      // Si el vehículo no se está moviendo y hay un cambio brusco > 10% (refuerzo o robo),
-      // omitimos el filtro para registrar el valor real de inmediato.
-      if (!isMoving && diff > 10) {
-        // Se acepta el valor real directamente
-      } else {
-        // Aplicamos suavizado exponencial basado en el estado de movimiento
-        const alpha = isMoving ? 0.05 : 0.2;
-        fuelLevel = alpha * fuelLevel + (1 - alpha) * previous.fuelLevel;
-      }
+      // Aplicamos suavizado exponencial basado en el estado de movimiento (cuando está detenido, alpha = 1.0 para aceptar valor real)
+      const alpha = isMoving ? (mapping.movingFuelAlpha ?? 0.05) : 1.0;
+      fuelLevel = alpha * fuelLevel + (1 - alpha) * previous.fuelLevel;
     }
   } else if (previous?.fuelLevel !== undefined && previous.fuelLevel !== null) {
     fuelLevel = previous.fuelLevel;

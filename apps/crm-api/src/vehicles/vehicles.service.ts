@@ -1022,49 +1022,142 @@ export class VehiclesService {
     let totalRefueled = 0;
     const events: any[] = [];
 
-    // Procesar y analizar transiciones de nivel de combustible
+    // Función auxiliar para registrar eventos consolidados
+    const finalizeEvent = (
+      evt: { type: 'REFUEL' | 'DRAIN'; startTime: Date; startLevel: number; lat: number; lng: number },
+      finalLevel: number,
+      endTimestamp: Date,
+    ) => {
+      const delta = finalLevel - evt.startLevel;
+      if (Math.abs(delta) >= 3.0) {
+        if (evt.type === 'REFUEL' && delta > 0) {
+          totalRefueled += delta;
+          events.push({
+            type: 'REFUEL',
+            timestamp: endTimestamp,
+            beforeLevel: evt.startLevel,
+            afterLevel: finalLevel,
+            delta: delta,
+            latitude: evt.lat,
+            longitude: evt.lng,
+          });
+        } else if (evt.type === 'DRAIN' && delta < 0) {
+          const drop = Math.abs(delta);
+          totalDrained += drop;
+          events.push({
+            type: 'DRAIN',
+            timestamp: endTimestamp,
+            beforeLevel: evt.startLevel,
+            afterLevel: finalLevel,
+            delta: -drop,
+            latitude: evt.lat,
+            longitude: evt.lng,
+          });
+        }
+      }
+    };
+
+    let lastStableLevel = logs[0].fuelLevel ?? 0;
+    let eventInProgress: { type: 'REFUEL' | 'DRAIN'; startTime: Date; startLevel: number; lat: number; lng: number } | null = null;
+    let startMovingLevel: number | null = null;
+
     for (let i = 1; i < logs.length; i++) {
       const prev = logs[i - 1];
       const curr = logs[i];
 
       if (prev.fuelLevel === null || curr.fuelLevel === null) continue;
 
-      const diff = curr.fuelLevel - prev.fuelLevel;
+      const totalDiff = curr.fuelLevel - lastStableLevel;
+      const stepDiff = curr.fuelLevel - prev.fuelLevel;
+      // Se considera en movimiento si tiene velocidad superior a 2 km/h
+      const isMoving = (curr.speed ?? 0) > 2 || (prev.speed ?? 0) > 2;
 
-      if (diff > 0) {
-        // Incremento significativo del nivel de combustible (Recarga)
-        if (diff >= 3.0) {
-          totalRefueled += diff;
-          events.push({
-            type: 'REFUEL',
-            timestamp: curr.timestamp,
-            beforeLevel: prev.fuelLevel,
-            afterLevel: curr.fuelLevel,
-            delta: diff,
-            latitude: curr.latitude,
-            longitude: curr.longitude,
-          });
+      if (isMoving) {
+        // Registrar el nivel inicial de combustible al entrar en movimiento
+        if (startMovingLevel === null) {
+          startMovingLevel = prev.fuelLevel;
         }
-      } else if (diff < 0) {
-        const drop = Math.abs(diff);
 
-        // Si la ignición estaba apagada, se clasifica como drenado manual (robo/pérdida)
-        if (!prev.ignition && !curr.ignition && drop >= 3.0) {
-          totalDrained += drop;
-          events.push({
-            type: 'DRAIN',
-            timestamp: curr.timestamp,
-            beforeLevel: prev.fuelLevel,
-            afterLevel: curr.fuelLevel,
-            delta: -drop,
-            latitude: curr.latitude,
-            longitude: curr.longitude,
-          });
-        } else {
-          // Caída gradual o con motor encendido es consumo normal
-          totalConsumed += drop;
+        // Si había un evento en progreso, lo finalizamos inmediatamente al iniciar movimiento
+        if (eventInProgress) {
+          finalizeEvent(eventInProgress, prev.fuelLevel, prev.timestamp);
+          eventInProgress = null;
+        }
+
+        lastStableLevel = curr.fuelLevel;
+        continue;
+      }
+
+      // Si el vehículo se detiene, consolidamos el consumo que ocurrió durante el movimiento
+      if (startMovingLevel !== null) {
+        const movingConsumed = startMovingLevel - prev.fuelLevel;
+        if (movingConsumed > 0) {
+          totalConsumed += movingConsumed;
+        }
+        startMovingLevel = null;
+      }
+
+      // Lógica de estado estacionario
+      if (eventInProgress) {
+        // Verificar si continúa la tendencia del evento
+        const isSameDirection =
+          (eventInProgress.type === 'REFUEL' && stepDiff >= -0.5) ||
+          (eventInProgress.type === 'DRAIN' && stepDiff <= 0.5);
+
+        if (!isSameDirection) {
+          // Si cambia la dirección, finalizamos el evento previo
+          finalizeEvent(eventInProgress, prev.fuelLevel, prev.timestamp);
+          eventInProgress = null;
+          lastStableLevel = prev.fuelLevel;
         }
       }
+
+      // Si no hay evento en progreso, evaluamos iniciar uno nuevo
+      if (!eventInProgress) {
+        if (totalDiff >= 3.0) {
+          // Inicio de recarga
+          eventInProgress = {
+            type: 'REFUEL',
+            startTime: curr.timestamp,
+            startLevel: lastStableLevel,
+            lat: curr.latitude ?? 0,
+            lng: curr.longitude ?? 0,
+          };
+        } else if (totalDiff <= -3.0 && !curr.ignition && !prev.ignition) {
+          // Inicio de drenado/robo (solo con ignición apagada)
+          eventInProgress = {
+            type: 'DRAIN',
+            startTime: curr.timestamp,
+            startLevel: lastStableLevel,
+            lat: curr.latitude ?? 0,
+            lng: curr.longitude ?? 0,
+          };
+        } else if (stepDiff < 0) {
+          // Consumo estacionario normal o pequeña fluctuación
+          totalConsumed += Math.abs(stepDiff);
+          lastStableLevel = curr.fuelLevel;
+        } else if (stepDiff > 0) {
+          // Pequeñas fluctuaciones positivas, actualizamos nivel de referencia
+          lastStableLevel = curr.fuelLevel;
+        }
+      }
+    }
+
+    // Al finalizar el bucle, consolidamos el consumo de movimiento si seguía en marcha
+    if (startMovingLevel !== null) {
+      const movingConsumed = startMovingLevel - logs[logs.length - 1].fuelLevel!;
+      if (movingConsumed > 0) {
+        totalConsumed += movingConsumed;
+      }
+    }
+
+    // Finalizar cualquier evento que haya quedado abierto al final de los logs
+    if (eventInProgress) {
+      finalizeEvent(
+        eventInProgress,
+        logs[logs.length - 1].fuelLevel ?? 0,
+        logs[logs.length - 1].timestamp,
+      );
     }
 
     // Obtener el último nivel de combustible registrado

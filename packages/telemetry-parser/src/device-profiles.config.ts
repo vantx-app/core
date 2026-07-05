@@ -48,6 +48,7 @@ export interface AvlMapping {
   fuelLevel?: number | AvlPropertyConfig;
   fuelConsumption?: number | AvlPropertyConfig;
   fuelRate?: number | AvlPropertyConfig;
+  movingFuelAlpha?: number;
 }
 
 export const DEVICE_PROFILES: Record<string, AvlMapping> = {

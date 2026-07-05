@@ -177,6 +177,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
           alias: true,
           vin: true,
           fuelType: true,
+          category: true,
           isOdometerAbsolute: true,
           odometerSource: true,
           capabilities: true,
@@ -1437,13 +1438,13 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       // Odómetro: LKV 100.0 se arrastra
       // Nivel de combustible:
       // Registro 1: LKV 80.0
-      // Registro 2: combustible 78% -> cambio de 2% (<=10%) -> suavizado alpha=0.2 -> 0.2*78 + 0.8*80 = 79.6%
+      // Registro 2: combustible 78% -> cambio de 2% estando detenido -> alpha=1.0 -> 78% directo sin suavizado
       expect(mockPrisma.vehicleLiveState.upsert).toHaveBeenLastCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             lastAngle: 45,
             lastOdometer: 100.0,
-            lastFuelLevel: 79.6,
+            lastFuelLevel: 78,
           }),
         })
       );

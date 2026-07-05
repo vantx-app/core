@@ -247,6 +247,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       isOdometerAbsolute: true,
       odometerSource: true,
       capabilities: true,
+      category: true,
       device: {
         select: {
           model: true,
@@ -271,8 +272,19 @@ async function processDataBatchInternal(records: any[], imei: string) {
   }
 
   const profileName = getTelemetryProfile(vehicle.device?.model);
-  const mapping =
+  const baseMapping =
     DEVICE_PROFILES[profileName] || DEVICE_PROFILES.TELTONIKA_STANDARD;
+
+  // Resolve dynamic moving alpha based on vehicle category
+  const defaultMovingAlpha =
+    vehicle.category === "HEAVY_DUTY" || vehicle.category === "MACHINERY"
+      ? 0.005
+      : 0.02;
+
+  const mapping = {
+    ...baseMapping,
+    movingFuelAlpha: baseMapping.movingFuelAlpha ?? defaultMovingAlpha,
+  };
 
   const snappedRecords = await snapTelemetryRecords(records, prisma, mapping);
 
