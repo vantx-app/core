@@ -1202,6 +1202,26 @@ export class VehiclesService {
       }
     }
 
+    // Suavizar el historial para la gráfica aplicando una media móvil (window size = 5)
+    // para atenuar los picos de sloshing en la visualización del usuario
+    const smoothedHistory = history.map((item, index) => {
+      let sum = 0;
+      let count = 0;
+      const windowSize = 5;
+      const half = Math.floor(windowSize / 2);
+      for (let w = -half; w <= half; w++) {
+        const neighbor = history[index + w];
+        if (neighbor && neighbor.fuelLevel !== null) {
+          sum += neighbor.fuelLevel;
+          count++;
+        }
+      }
+      return {
+        ...item,
+        fuelLevel: count > 0 ? Math.round((sum / count) * 10) / 10 : item.fuelLevel,
+      };
+    });
+
     return {
       summary: {
         totalConsumed: Math.round(totalConsumed * 100) / 100,
@@ -1210,7 +1230,7 @@ export class VehiclesService {
         currentLevel: currentLevel !== null ? Math.round(currentLevel * 100) / 100 : null,
       },
       events,
-      history,
+      history: smoothedHistory,
     };
   }
 }
