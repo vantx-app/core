@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -25,6 +25,12 @@ import {
   Thermometer,
   Flame,
   ShieldAlert,
+  Fuel,
+  Droplet,
+  TrendingUp,
+  MapPin,
+  Calendar,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DailyTelemetryRollup,
@@ -50,6 +56,7 @@ import { DtcBadge } from "@/components/ui/DtcBadge";
 import { DriverAvatar } from "@/components/ui/DriverAvatar";
 import { Table } from "@/components/ui/Table";
 import { useFleet } from "@/context/FleetContext";
+import api from "@/utils/client/api-client";
 
 export function VehicleDetailClient({
   vehicle: initialVehicle,
@@ -87,9 +94,131 @@ export function VehicleDetailClient({
     ? (vehicle.liveState?.lastOdometer ?? 0)
     : (vehicle.initialOdometer ?? 0) + (vehicle.liveState?.lastOdometer ?? 0);
 
-  const [activeTab, setActiveTab] = useState<"overview" | "scores" | "rollups">(
-    "overview",
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "scores" | "rollups" | "fuel"
+  >("overview");
+
+  const [fuelAnalysis, setFuelAnalysis] = useState<any>(null);
+  const [fuelDays, setFuelDays] = useState<number>(7);
+  const [fuelLoading, setFuelLoading] = useState<boolean>(false);
+  const [fuelError, setFuelError] = useState<string | null>(null);
+
+  // Hover interactivo para la gráfica de combustible
+  const [hoveredPoint, setHoveredPoint] = useState<any>(null);
+
+  useEffect(() => {
+    if (activeTab !== "fuel") return;
+
+    let active = true;
+    const fetchFuel = async () => {
+      setFuelLoading(true);
+      setFuelError(null);
+      try {
+        const res = await api.get(
+          `/vehicles/${initialVehicle.id}/fuel-analysis?days=${fuelDays}`,
+        );
+        if (active) {
+          setFuelAnalysis(res.data);
+        }
+      } catch (err: any) {
+        if (active) {
+          setFuelError(
+            err.response?.data?.message ||
+              "Error al cargar el análisis de combustible",
+          );
+        }
+      } finally {
+        if (active) {
+          setFuelLoading(false);
+        }
+      }
+    };
+
+    fetchFuel();
+    return () => {
+      active = false;
+    };
+  }, [activeTab, initialVehicle.id, fuelDays]);
+
+  // Preparar puntos de la gráfica SVG
+  const points = useMemo(() => {
+    if (!fuelAnalysis?.history || fuelAnalysis.history.length === 0) return [];
+    return fuelAnalysis.history.map((h: any) => ({
+      xVal: new Date(h.timestamp).getTime(),
+      yVal: h.fuelLevel ?? 0,
+      raw: h,
+    }));
+  }, [fuelAnalysis]);
+
+  const minX = useMemo(
+    () => (points.length > 0 ? Math.min(...points.map((p: any) => p.xVal)) : 0),
+    [points],
   );
+  const maxX = useMemo(
+    () => (points.length > 0 ? Math.max(...points.map((p: any) => p.xVal)) : 1),
+    [points],
+  );
+  const rangeX = useMemo(() => maxX - minX || 1, [minX, maxX]);
+
+  const svgWidth = 500;
+  const svgHeight = 200;
+  const paddingLeft = 40;
+  const paddingRight = 20;
+  const paddingTop = 20;
+  const paddingBottom = 30;
+
+  const chartWidth = svgWidth - paddingLeft - paddingRight;
+  const chartHeight = svgHeight - paddingTop - paddingBottom;
+
+  const getX = (val: number) =>
+    paddingLeft + ((val - minX) / rangeX) * chartWidth;
+  const getY = (val: number) =>
+    paddingTop + chartHeight - (val / 100) * chartHeight;
+
+  const pathD = useMemo(() => {
+    if (points.length === 0) return "";
+    return points
+      .map(
+        (p: any, i: number) =>
+          `${i === 0 ? "M" : "L"} ${getX(p.xVal)} ${getY(p.yVal)}`,
+      )
+      .join(" ");
+  }, [points]);
+
+  const areaD = useMemo(() => {
+    if (points.length === 0) return "";
+    return `${pathD} L ${getX(maxX)} ${paddingTop + chartHeight} L ${getX(
+      minX,
+    )} ${paddingTop + chartHeight} Z`;
+  }, [points, pathD, maxX]);
+
+  const gridLevels = [0, 25, 50, 75, 100];
+
+  const ticks = useMemo(() => {
+    if (points.length === 0) return [];
+    const count = 4;
+    return Array.from({ length: count }).map(
+      (_, idx) => minX + (rangeX / (count - 1)) * idx,
+    );
+  }, [minX, rangeX, points]);
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement, MouseEvent>) => {
+    if (points.length === 0) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const mouseX = ((e.clientX - rect.left) / rect.width) * svgWidth;
+
+    let closest = points[0];
+    let minDist = Infinity;
+    for (const p of points) {
+      const px = getX(p.xVal);
+      const dist = Math.abs(px - mouseX);
+      if (dist < minDist) {
+        minDist = dist;
+        closest = p;
+      }
+    }
+    setHoveredPoint(closest);
+  };
 
   const currentDriver = vehicle.assignments?.[0]?.driver;
 
@@ -619,7 +748,7 @@ export function VehicleDetailClient({
       )}
 
       {/* Tabs Menu */}
-      <div className="tabs tabs-boxed bg-base-200/50 p-1 rounded-xl w-full max-w-md shrink-0 border border-base-200/60 backdrop-blur-md">
+      <div className="tabs tabs-boxed bg-base-200/50 p-1 rounded-xl w-full max-w-lg shrink-0 border border-base-200/60 backdrop-blur-md">
         <button
           onClick={() => setActiveTab("overview")}
           className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "overview"
@@ -649,6 +778,16 @@ export function VehicleDetailClient({
         >
           <Activity className="size-3.5 mr-1.5" />
           Actividad Diaria
+        </button>
+        <button
+          onClick={() => setActiveTab("fuel")}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "fuel"
+            ? "tab-active bg-base-100 shadow-sm text-primary"
+            : "text-base-content/60"
+            }`}
+        >
+          <Fuel className="size-3.5 mr-1.5" />
+          Combustible
         </button>
       </div>
 
@@ -1168,6 +1307,391 @@ export function VehicleDetailClient({
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* TAB: FUEL ANALYSIS */}
+      {activeTab === "fuel" && (
+        <div className="space-y-6 w-full animate-in fade-in duration-300">
+          {/* Controls: Days Selector */}
+          <div className="flex justify-between items-center bg-base-200/20 p-4 rounded-2xl border border-base-200/50 backdrop-blur-md">
+            <div>
+              <h2 className="text-base font-extrabold text-base-content flex items-center gap-2">
+                <Fuel className="text-primary size-5" />
+                Análisis de Combustible
+              </h2>
+              <p className="text-xs text-base-content/40 mt-0.5">
+                Historial de consumo y eventos de recargas o drenado.
+              </p>
+            </div>
+            <div className="join bg-base-300/40 p-1 rounded-xl border border-base-200/60">
+              {[7, 14, 30].map((days) => (
+                <button
+                  key={days}
+                  onClick={() => setFuelDays(days)}
+                  className={`btn btn-xs join-item font-bold ${
+                    fuelDays === days
+                      ? "btn-primary shadow-sm"
+                      : "btn-ghost text-base-content/60"
+                  }`}
+                >
+                  {days} días
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {fuelLoading && (
+            <div className="flex flex-col items-center justify-center p-12 bg-base-200/10 rounded-2xl border border-base-200/40 min-h-[300px]">
+              <span className="loading loading-ring loading-lg text-primary"></span>
+              <p className="text-xs text-base-content/50 mt-4 animate-pulse">
+                Analizando registros de telemetría...
+              </p>
+            </div>
+          )}
+
+          {fuelError && (
+            <div className="p-6 bg-error/10 border border-error/20 text-error rounded-2xl flex items-start gap-3">
+              <AlertTriangle className="size-5 shrink-0 mt-0.5" />
+              <div>
+                <h4 className="font-bold text-sm">Error de Carga</h4>
+                <p className="text-xs mt-1 text-error/85">{fuelError}</p>
+              </div>
+            </div>
+          )}
+
+          {!fuelLoading && !fuelError && fuelAnalysis && (
+            <div className="space-y-6">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Level Card */}
+                <div className="glass-card p-5 flex flex-col justify-between rounded-2xl hover:border-primary/20 hover:scale-[1.01] transition-all duration-300">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/40 block">
+                      Nivel Actual
+                    </span>
+                    <span className="text-3xl font-black font-mono tracking-tight text-primary mt-1 block">
+                      {fuelAnalysis.summary.currentLevel != null
+                        ? `${fuelAnalysis.summary.currentLevel}%`
+                        : "N/A"}
+                    </span>
+                  </div>
+                  <div className="w-full bg-base-200/50 rounded-full h-1.5 mt-4">
+                    <div
+                      className="bg-primary h-1.5 rounded-full"
+                      style={{
+                        width: `${fuelAnalysis.summary.currentLevel ?? 0}%`,
+                      }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Consumed Card */}
+                <div className="glass-card p-5 flex flex-col justify-between rounded-2xl hover:border-success/20 hover:scale-[1.01] transition-all duration-300">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/40 block">
+                      Consumo Total
+                    </span>
+                    <span className="text-3xl font-black font-mono tracking-tight text-success mt-1 block">
+                      -{fuelAnalysis.summary.totalConsumed}%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-base-content/40 italic leading-relaxed mt-4">
+                    Puntos porcentuales gastados por el motor encendido.
+                  </p>
+                </div>
+
+                {/* Drained Card */}
+                <div className={`glass-card p-5 flex flex-col justify-between rounded-2xl hover:scale-[1.01] transition-all duration-300 ${
+                  fuelAnalysis.summary.totalDrained > 0
+                    ? "border-error/30 hover:border-error/50 bg-error/5"
+                    : "hover:border-error/20"
+                }`}>
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/40 block">
+                      Drenados / Pérdidas
+                    </span>
+                    <span className={`text-3xl font-black font-mono tracking-tight mt-1 block ${
+                      fuelAnalysis.summary.totalDrained > 0 ? "text-error" : "text-base-content/60"
+                    }`}>
+                      {fuelAnalysis.summary.totalDrained > 0 ? `-${fuelAnalysis.summary.totalDrained}%` : "0%"}
+                    </span>
+                  </div>
+                  <p className={`text-[10px] leading-relaxed mt-4 ${
+                    fuelAnalysis.summary.totalDrained > 0 ? "text-error/80 font-semibold" : "text-base-content/40 italic"
+                  }`}>
+                    {fuelAnalysis.summary.totalDrained > 0
+                      ? "¡Alerta! Caídas bruscas detectadas con motor apagado."
+                      : "No se detectaron pérdidas anormales de combustible."}
+                  </p>
+                </div>
+
+                {/* Refueled Card */}
+                <div className="glass-card p-5 flex flex-col justify-between rounded-2xl hover:border-info/20 hover:scale-[1.01] transition-all duration-300">
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/40 block">
+                      Total Recargas
+                    </span>
+                    <span className="text-3xl font-black font-mono tracking-tight text-info mt-1 block">
+                      +{fuelAnalysis.summary.totalRefueled}%
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-base-content/40 italic leading-relaxed mt-4">
+                    Combustible ingresado al tanque durante recargas.
+                  </p>
+                </div>
+              </div>
+
+              {/* Graphic Chart */}
+              <div className="glass-card p-6 rounded-2xl space-y-4">
+                <h3 className="text-sm font-bold flex items-center gap-1.5 uppercase tracking-wider text-base-content/60">
+                  <TrendingUp className="text-primary size-4" />
+                  Tendencia del Nivel de Combustible
+                </h3>
+                
+                {fuelAnalysis.history.length === 0 ? (
+                  <div className="flex items-center justify-center p-12 text-xs text-base-content/40">
+                    No hay suficientes datos de telemetría para mostrar la gráfica.
+                  </div>
+                ) : (
+                  <div className="relative w-full overflow-hidden">
+                    <svg
+                      viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                      className="w-full h-auto select-none"
+                      onMouseMove={handleMouseMove}
+                      onMouseLeave={() => setHoveredPoint(null)}
+                    >
+                      {/* Gradients */}
+                      <defs>
+                        <linearGradient id="fuelAreaGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="oklch(var(--p))" stopOpacity="0.25" />
+                          <stop offset="100%" stopColor="oklch(var(--p))" stopOpacity="0.0" />
+                        </linearGradient>
+                      </defs>
+
+                      {/* Grid Lines */}
+                      {gridLevels.map((lvl) => (
+                        <g key={lvl}>
+                          <line
+                            x1={paddingLeft}
+                            y1={getY(lvl)}
+                            x2={svgWidth - paddingRight}
+                            y2={getY(lvl)}
+                            className="stroke-base-content/5"
+                            strokeWidth="1"
+                          />
+                          <text
+                            x={paddingLeft - 8}
+                            y={getY(lvl) + 3}
+                            className="text-[9px] font-mono fill-base-content/30"
+                            textAnchor="end"
+                          >
+                            {lvl}%
+                          </text>
+                        </g>
+                      ))}
+
+                      {/* Line Area */}
+                      {points.length > 0 && (
+                        <path
+                          d={areaD}
+                          fill="url(#fuelAreaGrad)"
+                        />
+                      )}
+
+                      {/* Trend Line */}
+                      {points.length > 0 && (
+                        <path
+                          d={pathD}
+                          fill="none"
+                          className="stroke-primary"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      )}
+
+                      {/* Time Ticks */}
+                      {ticks.map((t, idx) => (
+                        <text
+                          key={idx}
+                          x={getX(t)}
+                          y={paddingTop + chartHeight + 14}
+                          className="text-[8px] font-mono fill-base-content/30"
+                          textAnchor="middle"
+                        >
+                          {new Date(t).toLocaleDateString("es-ES", {
+                            month: "short",
+                            day: "numeric",
+                          })}
+                        </text>
+                      ))}
+
+                      {/* Event overlay nodes */}
+                      {fuelAnalysis.events.map((evt: any, idx: number) => {
+                        const timeMs = new Date(evt.timestamp).getTime();
+                        const cx = getX(timeMs);
+                        const cy = getY(evt.afterLevel);
+                        const isRefuel = evt.type === "REFUEL";
+                        const colorClass = isRefuel
+                          ? "stroke-success fill-success"
+                          : "stroke-error fill-error";
+
+                        return (
+                          <g key={idx} className="group cursor-pointer">
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r="7"
+                              className={`${colorClass} fill-none stroke-[1.5] opacity-40 animate-pulse`}
+                            />
+                            <circle
+                              cx={cx}
+                              cy={cy}
+                              r="3.5"
+                              className={colorClass}
+                            />
+                          </g>
+                        );
+                      })}
+
+                      {/* Hover Tooltip guide line */}
+                      {hoveredPoint && (
+                        <g>
+                          <line
+                            x1={getX(hoveredPoint.xVal)}
+                            y1={paddingTop}
+                            x2={getX(hoveredPoint.xVal)}
+                            y2={paddingTop + chartHeight}
+                            className="stroke-base-content/15"
+                            strokeWidth="1"
+                            strokeDasharray="2 2"
+                          />
+                          <circle
+                            cx={getX(hoveredPoint.xVal)}
+                            cy={getY(hoveredPoint.yVal)}
+                            r="5"
+                            className="fill-primary stroke-base-100 stroke-2"
+                          />
+                        </g>
+                      )}
+                    </svg>
+
+                    {/* Interactive Tooltip Card overlay */}
+                    {hoveredPoint && (
+                      <div
+                        className="absolute bg-base-100/90 border border-base-200/80 p-3 rounded-2xl shadow-xl text-[10px] pointer-events-none z-50 space-y-1 font-semibold backdrop-blur-md"
+                        style={{
+                          left: `${Math.min(
+                            360,
+                            Math.max(10, getX(hoveredPoint.xVal) - 60)
+                          )}px`,
+                          top: `${Math.max(5, getY(hoveredPoint.yVal) - 75)}px`,
+                        }}
+                      >
+                        <p className="text-base-content/40 leading-none mb-1">
+                          {new Date(hoveredPoint.xVal).toLocaleDateString("es-ES", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        <p className="text-primary font-black text-sm leading-none">
+                          Tanque: {hoveredPoint.yVal.toFixed(1)}%
+                        </p>
+                        <p className="text-base-content/65 flex items-center gap-1 leading-none mt-1">
+                          <Power className={`size-3 ${
+                            hoveredPoint.raw.ignition ? "text-success animate-pulse" : "text-base-content/30"
+                          }`} />
+                          Motor: {hoveredPoint.raw.ignition ? "Marcha" : "Apagado"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Event ledger */}
+              <div className="glass-card p-6 rounded-2xl space-y-4">
+                <h3 className="text-sm font-bold flex items-center gap-1.5 uppercase tracking-wider text-base-content/60">
+                  <FileText className="text-primary size-4" />
+                  Registro de Eventos de Combustible
+                </h3>
+                
+                {fuelAnalysis.events.length === 0 ? (
+                  <div className="text-center py-8 text-xs text-base-content/40 border border-base-200/40 rounded-xl">
+                    No se registraron anomalías (drenados) ni recargas en este período.
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto w-full border border-base-200/40 rounded-2xl">
+                    <table className="table table-sm w-full text-xs">
+                      <thead className="bg-base-200/30">
+                        <tr>
+                          <th>Evento</th>
+                          <th>Fecha y Hora</th>
+                          <th>Nivel Inicial</th>
+                          <th>Nivel Final</th>
+                          <th>Variación</th>
+                          <th>Ubicación</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fuelAnalysis.events.map((evt: any, index: number) => {
+                          const isRefuel = evt.type === "REFUEL";
+                          return (
+                            <tr key={index} className="hover:bg-base-200/20">
+                              <td className="font-bold">
+                                <span className={`badge badge-sm font-bold border-none ${
+                                  isRefuel ? "bg-success/15 text-success" : "bg-error/15 text-error"
+                                }`}>
+                                  {isRefuel ? "Recarga" : "Drenado Manual"}
+                                </span>
+                              </td>
+                              <td className="text-base-content/60 font-medium">
+                                {new Date(evt.timestamp).toLocaleString("es-ES", {
+                                  day: "numeric",
+                                  month: "short",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </td>
+                              <td className="font-mono font-bold text-base-content/80">
+                                {evt.beforeLevel.toFixed(1)}%
+                              </td>
+                              <td className="font-mono font-bold text-base-content/80">
+                                {evt.afterLevel.toFixed(1)}%
+                              </td>
+                              <td className={`font-mono font-black ${
+                                isRefuel ? "text-success" : "text-error"
+                              }`}>
+                                {isRefuel ? `+${evt.delta.toFixed(1)}%` : `${evt.delta.toFixed(1)}%`}
+                              </td>
+                              <td>
+                                {evt.latitude && evt.longitude ? (
+                                  <a
+                                    href={`https://www.google.com/maps/search/?api=1&query=${evt.latitude},${evt.longitude}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="btn btn-ghost btn-xs text-primary font-bold hover:underline inline-flex items-center gap-1"
+                                  >
+                                    <MapPin className="size-3" />
+                                    Ver Mapa
+                                  </a>
+                                ) : (
+                                  <span className="text-base-content/30 italic">Sin GPS</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

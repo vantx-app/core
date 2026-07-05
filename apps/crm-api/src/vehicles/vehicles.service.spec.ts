@@ -25,6 +25,9 @@ describe('VehiclesService', () => {
       findUnique: jest.Mock;
       update: jest.Mock;
     };
+    telemetryLog: {
+      findMany: jest.Mock;
+    };
   };
   let cacheMock: {
     get: jest.Mock;
@@ -51,6 +54,9 @@ describe('VehiclesService', () => {
         findMany: jest.fn(),
         findUnique: jest.fn(),
         update: jest.fn(),
+      },
+      telemetryLog: {
+        findMany: jest.fn(),
       },
     };
 
@@ -412,6 +418,100 @@ describe('VehiclesService', () => {
         900000,
       );
       expect(result).toEqual(mockVehicles);
+    });
+  });
+
+  describe('getFuelAnalysis', () => {
+    it('debe retornar resumen vacío si no existen registros de telemetría', async () => {
+      prismaMock.telemetryLog.findMany.mockResolvedValue([]);
+
+      const result = await service.getFuelAnalysis('vehicle-id', 7);
+
+      expect(result).toEqual({
+        summary: {
+          totalConsumed: 0,
+          totalDrained: 0,
+          totalRefueled: 0,
+          currentLevel: null,
+        },
+        events: [],
+        history: [],
+      });
+    });
+
+    it('debe detectar correctamente recargas, drenajes y consumo normal', async () => {
+      const mockLogs = [
+        {
+          timestamp: new Date('2026-07-04T10:00:00Z'),
+          fuelLevel: 50.0,
+          fuelConsumption: 100,
+          fuelRate: 2.0,
+          ignition: false,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+        // Recarga de 50% a 85% (+35%)
+        {
+          timestamp: new Date('2026-07-04T10:10:00Z'),
+          fuelLevel: 85.0,
+          fuelConsumption: 100,
+          fuelRate: 2.0,
+          ignition: false,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+        // Drenado de 85% a 80% (-5%) con ignición apagada
+        {
+          timestamp: new Date('2026-07-04T10:20:00Z'),
+          fuelLevel: 80.0,
+          fuelConsumption: 100,
+          fuelRate: 0,
+          ignition: false,
+          speed: 0,
+          latitude: 10,
+          longitude: 20,
+        },
+        // Consumo normal de 80% a 74% (-6%) con ignición encendida
+        {
+          timestamp: new Date('2026-07-04T10:30:00Z'),
+          fuelLevel: 74.0,
+          fuelConsumption: 102,
+          fuelRate: 12.0,
+          ignition: true,
+          speed: 50,
+          latitude: 10.1,
+          longitude: 20.1,
+        },
+      ];
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
+
+      const result = await service.getFuelAnalysis('vehicle-id', 7);
+
+      expect(result.summary).toEqual({
+        totalConsumed: 6.0,
+        totalDrained: 5.0,
+        totalRefueled: 35.0,
+        currentLevel: 74.0,
+      });
+
+      expect(result.events).toHaveLength(2);
+      expect(result.events[0]).toMatchObject({
+        type: 'REFUEL',
+        beforeLevel: 50.0,
+        afterLevel: 85.0,
+        delta: 35.0,
+      });
+      expect(result.events[1]).toMatchObject({
+        type: 'DRAIN',
+        beforeLevel: 85.0,
+        afterLevel: 80.0,
+        delta: -5.0,
+      });
+      
+      expect(result.history).toHaveLength(4); // Todos incluidos por downsampling / eventos
     });
   });
 });

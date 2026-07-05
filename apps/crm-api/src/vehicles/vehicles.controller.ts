@@ -230,6 +230,21 @@ export class VehiclesController {
     res.end(zipBuffer);
   }
 
+  @RequiresSubscription()
+  @Get(':id/fuel-analysis')
+  async getFuelAnalysis(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request & { user: AccessTokenPayload },
+    @Query('days') days?: string,
+  ) {
+    await this.vehiclesService.verifyVehicleAccess(id, req.user);
+    const daysNum = days ? parseInt(days, 10) : 7;
+    return this.vehiclesService.getFuelAnalysis(
+      id,
+      isNaN(daysNum) ? 7 : daysNum,
+    );
+  }
+
   @Public()
   @Get('tracking-links/public/:linkId')
   async getPublicTrackingDetails(

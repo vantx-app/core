@@ -78,7 +78,7 @@ export async function snapTelemetryRecords(
 
           const trueIgnition =
             rawIgnitionPin ||
-            rawRpm > 400 ||
+            rawRpm > 150 ||
             (mapping.ignition === undefined && rawVoltage > 13200) ||
             isHardwareExcessiveIdling;
 

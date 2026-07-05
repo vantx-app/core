@@ -973,4 +973,143 @@ export class VehiclesService {
       idlingHours: stats._sum.idlingHours ?? 0,
     };
   }
+
+  /**
+   * Analiza el historial de telemetría de un vehículo para determinar
+   * cómo se consumió o drenó el combustible en un rango de días.
+   */
+  async getFuelAnalysis(vehicleId: string, days = 7) {
+    // Limitar el análisis a un rango razonable para proteger la base de datos
+    const safeDays = Math.min(30, Math.max(1, days));
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - safeDays);
+
+    // Obtener registros de telemetría con nivel de combustible no nulo
+    const logs = await this.prisma.telemetryLog.findMany({
+      where: {
+        vehicleId,
+        timestamp: { gte: startDate },
+        fuelLevel: { not: null },
+      },
+      orderBy: { timestamp: 'asc' },
+      select: {
+        timestamp: true,
+        fuelLevel: true,
+        fuelConsumption: true,
+        fuelRate: true,
+        ignition: true,
+        speed: true,
+        latitude: true,
+        longitude: true,
+      },
+    });
+
+    if (logs.length === 0) {
+      return {
+        summary: {
+          totalConsumed: 0,
+          totalDrained: 0,
+          totalRefueled: 0,
+          currentLevel: null,
+        },
+        events: [],
+        history: [],
+      };
+    }
+
+    let totalConsumed = 0;
+    let totalDrained = 0;
+    let totalRefueled = 0;
+    const events: any[] = [];
+
+    // Procesar y analizar transiciones de nivel de combustible
+    for (let i = 1; i < logs.length; i++) {
+      const prev = logs[i - 1];
+      const curr = logs[i];
+
+      if (prev.fuelLevel === null || curr.fuelLevel === null) continue;
+
+      const diff = curr.fuelLevel - prev.fuelLevel;
+
+      if (diff > 0) {
+        // Incremento significativo del nivel de combustible (Recarga)
+        if (diff >= 3.0) {
+          totalRefueled += diff;
+          events.push({
+            type: 'REFUEL',
+            timestamp: curr.timestamp,
+            beforeLevel: prev.fuelLevel,
+            afterLevel: curr.fuelLevel,
+            delta: diff,
+            latitude: curr.latitude,
+            longitude: curr.longitude,
+          });
+        }
+      } else if (diff < 0) {
+        const drop = Math.abs(diff);
+
+        // Si la ignición estaba apagada, se clasifica como drenado manual (robo/pérdida)
+        if (!prev.ignition && !curr.ignition && drop >= 3.0) {
+          totalDrained += drop;
+          events.push({
+            type: 'DRAIN',
+            timestamp: curr.timestamp,
+            beforeLevel: prev.fuelLevel,
+            afterLevel: curr.fuelLevel,
+            delta: -drop,
+            latitude: curr.latitude,
+            longitude: curr.longitude,
+          });
+        } else {
+          // Caída gradual o con motor encendido es consumo normal
+          totalConsumed += drop;
+        }
+      }
+    }
+
+    // Obtener el último nivel de combustible registrado
+    const currentLevel = logs[logs.length - 1].fuelLevel;
+
+    // Reducir la cantidad de puntos de la gráfica (downsampling) para optimizar el rendimiento de red y cliente
+    const history: any[] = [];
+    const step = Math.max(1, Math.floor(logs.length / 300));
+    
+    // Guardar timestamps de eventos detectados para asegurar su presencia en la gráfica
+    const eventTimes = new Set<number>(
+      events.map((e) => new Date(e.timestamp).getTime()),
+    );
+
+    for (let i = 0; i < logs.length; i++) {
+      const log = logs[i];
+      const timeMs = new Date(log.timestamp).getTime();
+
+      // Forzar la inclusión de puntos de inicio, fin, muestras periódicas y eventos exactos
+      if (
+        i === 0 ||
+        i === logs.length - 1 ||
+        i % step === 0 ||
+        eventTimes.has(timeMs)
+      ) {
+        history.push({
+          timestamp: log.timestamp,
+          fuelLevel: log.fuelLevel,
+          fuelConsumption: log.fuelConsumption,
+          fuelRate: log.fuelRate,
+          ignition: log.ignition,
+        });
+      }
+    }
+
+    return {
+      summary: {
+        totalConsumed: Math.round(totalConsumed * 100) / 100,
+        totalDrained: Math.round(totalDrained * 100) / 100,
+        totalRefueled: Math.round(totalRefueled * 100) / 100,
+        currentLevel: currentLevel !== null ? Math.round(currentLevel * 100) / 100 : null,
+      },
+      events,
+      history,
+    };
+  }
 }
+
