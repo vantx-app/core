@@ -1029,8 +1029,11 @@ export class VehiclesService {
       endTimestamp: Date,
     ) => {
       const delta = finalLevel - evt.startLevel;
-      if (Math.abs(delta) >= 3.0) {
-        if (evt.type === 'REFUEL' && delta > 0) {
+      const durationMs = endTimestamp.getTime() - evt.startTime.getTime();
+
+      if (evt.type === 'REFUEL') {
+        // Las recargas de combustible en camiones reales requieren volumen y tiempo significativos (min 5% y 60 segundos)
+        if (delta >= 5.0 && durationMs >= 60000) {
           totalRefueled += delta;
           events.push({
             type: 'REFUEL',
@@ -1041,7 +1044,10 @@ export class VehiclesService {
             latitude: evt.lat,
             longitude: evt.lng,
           });
-        } else if (evt.type === 'DRAIN' && delta < 0) {
+        }
+      } else if (evt.type === 'DRAIN') {
+        // Los drenados/robos pueden ser pequeños y rápidos, mantenemos el umbral de 3%
+        if (delta <= -3.0) {
           const drop = Math.abs(delta);
           totalDrained += drop;
           events.push({
@@ -1118,7 +1124,7 @@ export class VehiclesService {
           // Inicio de recarga (exigimos que el nivel no sea una mera recuperación de una caída por sloshing)
           eventInProgress = {
             type: 'REFUEL',
-            startTime: curr.timestamp,
+            startTime: prev.timestamp,
             startLevel: lastStableLevel,
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
@@ -1128,7 +1134,7 @@ export class VehiclesService {
           // Inicio de drenado/robo (solo con ignición apagada)
           eventInProgress = {
             type: 'DRAIN',
-            startTime: curr.timestamp,
+            startTime: prev.timestamp,
             startLevel: lastStableLevel,
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
