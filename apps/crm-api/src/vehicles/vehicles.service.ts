@@ -1022,6 +1022,15 @@ export class VehiclesService {
     let totalRefueled = 0;
     const events: any[] = [];
 
+    // Encontrar el primer nivel de combustible no nulo para el punto de partida
+    let startLevel = 0;
+    for (let i = 0; i < logs.length; i++) {
+      if (logs[i].fuelLevel !== null) {
+        startLevel = logs[i].fuelLevel!;
+        break;
+      }
+    }
+
     // Función auxiliar para registrar eventos consolidados
     const finalizeEvent = (
       evt: { type: 'REFUEL' | 'DRAIN'; startTime: Date; startLevel: number; lat: number; lng: number },
@@ -1044,6 +1053,10 @@ export class VehiclesService {
             latitude: evt.lat,
             longitude: evt.lng,
           });
+        } else if (delta > 0) {
+          // Si el evento de recarga se descarta (por ser demasiado pequeño o rápido),
+          // ajustamos el startLevel hacia arriba para absorber este falso aumento en el consumo.
+          startLevel += delta;
         }
       } else if (evt.type === 'DRAIN') {
         // Los drenados/robos pueden ser pequeños y rápidos, mantenemos el umbral de 3%
@@ -1063,10 +1076,11 @@ export class VehiclesService {
       }
     };
 
-    let lastStableLevel = logs[0].fuelLevel ?? 0;
+    let lastStableLevel = startLevel;
     let peakLevel = lastStableLevel;
     let eventInProgress: { type: 'REFUEL' | 'DRAIN'; startTime: Date; startLevel: number; lat: number; lng: number } | null = null;
     let wasMoving = false;
+    let maxObservedLevel = startLevel;
 
     for (let i = 1; i < logs.length; i++) {
       const prev = logs[i - 1];
@@ -1086,10 +1100,22 @@ export class VehiclesService {
           eventInProgress = null;
         }
 
+        // Auto-corregir el nivel de partida si el nivel sube mientras el vehículo se mueve (ruido/pendiente/temperatura)
+        if (curr.fuelLevel > maxObservedLevel) {
+          startLevel += curr.fuelLevel - maxObservedLevel;
+        }
+        maxObservedLevel = Math.max(maxObservedLevel, curr.fuelLevel);
+
         lastStableLevel = curr.fuelLevel;
         peakLevel = curr.fuelLevel; // Restablecer nivel de pico durante movimiento
         wasMoving = true;
         continue;
+      }
+
+      // Si el vehículo está detenido, actualizamos maxObservedLevel sin ajustar startLevel directamente
+      // (los aumentos detenidos se manejan a través de la máquina de estados o finalizeEvent)
+      if (curr.fuelLevel > maxObservedLevel) {
+        maxObservedLevel = curr.fuelLevel;
       }
 
       // Si el vehículo se detiene, reseteamos el nivel de referencia al nivel actual detenido
@@ -1164,14 +1190,7 @@ export class VehiclesService {
       );
     }
 
-    // Encontrar el primer y último nivel de combustible no nulo
-    let startLevel = 0;
-    for (let i = 0; i < logs.length; i++) {
-      if (logs[i].fuelLevel !== null) {
-        startLevel = logs[i].fuelLevel!;
-        break;
-      }
-    }
+    // Encontrar el último nivel de combustible no nulo
     let endLevel = 0;
     for (let i = logs.length - 1; i >= 0; i--) {
       if (logs[i].fuelLevel !== null) {
