@@ -1059,7 +1059,7 @@ export class VehiclesService {
 
     let lastStableLevel = logs[0].fuelLevel ?? 0;
     let eventInProgress: { type: 'REFUEL' | 'DRAIN'; startTime: Date; startLevel: number; lat: number; lng: number } | null = null;
-    let startMovingLevel: number | null = null;
+    let wasMoving = false;
 
     for (let i = 1; i < logs.length; i++) {
       const prev = logs[i - 1];
@@ -1067,17 +1067,12 @@ export class VehiclesService {
 
       if (prev.fuelLevel === null || curr.fuelLevel === null) continue;
 
-      const totalDiff = curr.fuelLevel - lastStableLevel;
+      let totalDiff = curr.fuelLevel - lastStableLevel;
       const stepDiff = curr.fuelLevel - prev.fuelLevel;
       // Se considera en movimiento si tiene velocidad superior a 2 km/h
       const isMoving = (curr.speed ?? 0) > 2 || (prev.speed ?? 0) > 2;
 
       if (isMoving) {
-        // Registrar el nivel inicial de combustible al entrar en movimiento
-        if (startMovingLevel === null) {
-          startMovingLevel = prev.fuelLevel;
-        }
-
         // Si había un evento en progreso, lo finalizamos inmediatamente al iniciar movimiento
         if (eventInProgress) {
           finalizeEvent(eventInProgress, prev.fuelLevel, prev.timestamp);
@@ -1085,16 +1080,16 @@ export class VehiclesService {
         }
 
         lastStableLevel = curr.fuelLevel;
+        wasMoving = true;
         continue;
       }
 
-      // Si el vehículo se detiene, consolidamos el consumo que ocurrió durante el movimiento
-      if (startMovingLevel !== null) {
-        const movingConsumed = startMovingLevel - prev.fuelLevel;
-        if (movingConsumed > 0) {
-          totalConsumed += movingConsumed;
-        }
-        startMovingLevel = null;
+      // Si el vehículo se detiene, reseteamos el nivel de referencia al nivel actual detenido
+      // para evitar comparar con el nivel inestable o ruidoso del movimiento.
+      if (wasMoving) {
+        lastStableLevel = curr.fuelLevel;
+        totalDiff = 0; // Recalculamos la diferencia con la nueva referencia estable
+        wasMoving = false;
       }
 
       // Lógica de estado estacionario
@@ -1132,22 +1127,10 @@ export class VehiclesService {
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
           };
-        } else if (stepDiff < 0) {
-          // Consumo estacionario normal o pequeña fluctuación
-          totalConsumed += Math.abs(stepDiff);
-          lastStableLevel = curr.fuelLevel;
-        } else if (stepDiff > 0) {
-          // Pequeñas fluctuaciones positivas, actualizamos nivel de referencia
+        } else {
+          // Pequeñas fluctuaciones o consumo normal, actualizamos nivel de referencia
           lastStableLevel = curr.fuelLevel;
         }
-      }
-    }
-
-    // Al finalizar el bucle, consolidamos el consumo de movimiento si seguía en marcha
-    if (startMovingLevel !== null) {
-      const movingConsumed = startMovingLevel - logs[logs.length - 1].fuelLevel!;
-      if (movingConsumed > 0) {
-        totalConsumed += movingConsumed;
       }
     }
 
@@ -1159,6 +1142,11 @@ export class VehiclesService {
         logs[logs.length - 1].timestamp,
       );
     }
+
+    // Calcular el consumo total de combustible de forma matemática para evitar la acumulación de ruido (tanto por sloshing como por ruido eléctrico)
+    const startLevel = logs[0].fuelLevel ?? 0;
+    const endLevel = logs[logs.length - 1].fuelLevel ?? 0;
+    totalConsumed = Math.max(0, startLevel - endLevel + totalRefueled - totalDrained);
 
     // Obtener el último nivel de combustible registrado
     const currentLevel = logs[logs.length - 1].fuelLevel;
