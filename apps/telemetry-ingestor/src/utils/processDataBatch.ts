@@ -5,6 +5,7 @@ import {
   DEVICE_PROFILES,
   Logger,
   getTelemetryProfile,
+  haversineDistance,
 } from "@vantx/telemetry-parser";
 import { snapTelemetryRecords } from "./snapTelemetry";
 import { saveTelemetryBatchData } from "./dbTelemetryWriter";
@@ -32,6 +33,28 @@ const ingestionQueue = new Map<string, Promise<void>>();
 export interface IngestionState {
   activeTrip?: { id: string; startTime: Date };
   lastClosedTrip?: { id: string; startTime: Date; closeTime: number };
+}
+
+export interface FuelVirtualState {
+  currentDisplayPercent: number | null;
+  lastValidAnchorPercent: number | null;
+  vehicleState: "PARKED" | "MOVING";
+  segmentReadings: number[];
+  distanceAccumulator: number;
+  timeAccumulator: number;
+  ignitionOnTime: number | null;
+  ignitionOnReadings: number[];
+}
+
+const fuelVirtualStateCache = new Map<string, FuelVirtualState>();
+
+function calculateMedian(values: number[]): number {
+  if (values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const half = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0
+    ? sorted[half]
+    : (sorted[half - 1] + sorted[half]) / 2;
 }
 
 export async function processDataBatch(
@@ -261,6 +284,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
           lastOdometer: true,
           lastFuelLevel: true,
           lastAngle: true,
+          lastLat: true,
+          lastLng: true,
+          lastUpdate: true,
         },
       },
     },
@@ -432,7 +458,26 @@ async function processDataBatchInternal(records: any[], imei: string) {
     odometer: vehicle.liveState?.lastOdometer ?? null,
     fuelLevel: vehicle.liveState?.lastFuelLevel ?? null,
     angle: vehicle.liveState?.lastAngle ?? 0,
+    latitude: vehicle.liveState?.lastLat ?? undefined,
+    longitude: vehicle.liveState?.lastLng ?? undefined,
+    timestamp: vehicle.liveState?.lastUpdate ?? undefined,
   };
+
+  let virtualState = fuelVirtualStateCache.get(vehicle.id);
+  if (!virtualState) {
+    const initialLevel = vehicle.liveState?.lastFuelLevel ?? null;
+    virtualState = {
+      currentDisplayPercent: initialLevel,
+      lastValidAnchorPercent: initialLevel,
+      vehicleState: vehicle.liveState?.currentStatus === "MOVING" ? "MOVING" : "PARKED",
+      segmentReadings: [],
+      distanceAccumulator: 0,
+      timeAccumulator: 0,
+      ignitionOnTime: null,
+      ignitionOnReadings: [],
+    };
+    fuelVirtualStateCache.set(vehicle.id, virtualState);
+  }
 
   const telemetryLogs: any = [];
 
@@ -447,6 +492,127 @@ async function processDataBatchInternal(records: any[], imei: string) {
       recordAngle = previousState.angle;
     }
 
+    let distanceDeltaMeters = 0;
+    if (parsed.odometer !== null && previousState.odometer !== null && previousState.odometer !== undefined) {
+      distanceDeltaMeters = Math.max(0, (parsed.odometer - previousState.odometer) * 1000);
+    } else if (previousState.latitude !== undefined && previousState.longitude !== undefined) {
+      distanceDeltaMeters = haversineDistance(
+        previousState.latitude,
+        previousState.longitude,
+        rec.latitude,
+        rec.longitude
+      ) * 1000;
+    }
+
+    let timeDeltaSeconds = 0;
+    if (previousState.timestamp) {
+      timeDeltaSeconds = Math.max(0, ((rec.timestamp as Date).getTime() - previousState.timestamp.getTime()) / 1000);
+    }
+
+    // Process Virtual Tank State Machine
+    const rawFuelPercent = parsed.fuelLevel;
+    if (rawFuelPercent !== null) {
+      if (virtualState.currentDisplayPercent === null) {
+        virtualState.currentDisplayPercent = rawFuelPercent;
+        virtualState.lastValidAnchorPercent = rawFuelPercent;
+      }
+
+      // 1. Ignition-On Anchor Observation Window
+      const isTransitionIgnition = parsed.trueIgnition && !previousState.ignition;
+      if (isTransitionIgnition) {
+        virtualState.ignitionOnTime = (rec.timestamp as Date).getTime();
+        virtualState.ignitionOnReadings = [rawFuelPercent];
+      } else if (virtualState.ignitionOnTime !== null) {
+        const elapsedMs = (rec.timestamp as Date).getTime() - virtualState.ignitionOnTime;
+        if (elapsedMs <= 60000) {
+          if (parsed.speedToUse <= 5) {
+            virtualState.ignitionOnReadings.push(rawFuelPercent);
+          }
+        } else {
+          // Observation window finished
+          if (virtualState.ignitionOnReadings.length > 0) {
+            const calibratedAnchor = calculateMedian(virtualState.ignitionOnReadings);
+            virtualState.currentDisplayPercent = calibratedAnchor;
+            virtualState.lastValidAnchorPercent = calibratedAnchor;
+          }
+          virtualState.ignitionOnTime = null;
+          virtualState.ignitionOnReadings = [];
+        }
+      }
+
+      // 2. Kinematic Gating Rule
+      const accelX_G = parsed.accelX !== null ? Math.abs(parsed.accelX) : 0;
+      const accelY_G = parsed.accelY !== null ? Math.abs(parsed.accelY) : 0;
+      const isSloshing = accelX_G > 0.15 || accelY_G > 0.15;
+
+      // 3. Dynamic State Transitions
+      const isMoving = parsed.speedToUse > 5;
+      if (isMoving && virtualState.vehicleState === "PARKED") {
+        virtualState.vehicleState = "MOVING";
+        virtualState.distanceAccumulator = 0;
+        virtualState.timeAccumulator = 0;
+        virtualState.segmentReadings = [];
+      } else if (!isMoving && virtualState.vehicleState === "MOVING") {
+        virtualState.vehicleState = "PARKED";
+        virtualState.segmentReadings = [];
+        virtualState.distanceAccumulator = 0;
+        virtualState.timeAccumulator = 0;
+      }
+
+      // 4. Execution Path Based on Operational State
+      if (virtualState.vehicleState === "MOVING") {
+        if (!isSloshing) {
+          virtualState.segmentReadings.push(rawFuelPercent);
+        }
+        virtualState.distanceAccumulator += distanceDeltaMeters;
+        virtualState.timeAccumulator += timeDeltaSeconds;
+
+        // Process segment calculation every 2.0 km (2000m) or 10 minutes (600s)
+        const isDistanceLimit = virtualState.distanceAccumulator >= 2000;
+        const isTimeLimit = virtualState.timeAccumulator >= 600;
+
+        if (isDistanceLimit || isTimeLimit) {
+          if (virtualState.segmentReadings.length > 0) {
+            const currentMedian = calculateMedian(virtualState.segmentReadings);
+            const fuelDelta = virtualState.currentDisplayPercent! - currentMedian;
+
+            // Strictly enforce down-only consumption during movement
+            if (fuelDelta > 0) {
+              const alpha = mapping.movingFuelAlpha ?? 0.02;
+              virtualState.currentDisplayPercent = (alpha * currentMedian) + 
+                                                   ((1 - alpha) * virtualState.currentDisplayPercent!);
+            }
+          }
+          virtualState.distanceAccumulator = 0;
+          virtualState.timeAccumulator = 0;
+          virtualState.segmentReadings = [];
+        }
+      } else {
+        // Stationary Logic: Settle data over a rolling buffer of 20 elements
+        virtualState.segmentReadings.push(rawFuelPercent);
+        if (virtualState.segmentReadings.length > 20) {
+          virtualState.segmentReadings.shift();
+        }
+
+        const stableMedian = calculateMedian(virtualState.segmentReadings);
+        const parkedDelta = stableMedian - virtualState.lastValidAnchorPercent!;
+
+        // Standardized Refuel Event Boundary (>3.0%)
+        if (parkedDelta > 3.0) {
+          virtualState.currentDisplayPercent = stableMedian;
+          virtualState.lastValidAnchorPercent = stableMedian;
+        } 
+        // Standardized Critical Theft Boundary (<-4.0%)
+        else if (parkedDelta < -4.0) {
+          virtualState.currentDisplayPercent = stableMedian;
+          virtualState.lastValidAnchorPercent = stableMedian;
+        }
+      }
+    }
+
+    // Set parsed.fuelLevel to our state machine display value
+    parsed.fuelLevel = virtualState.currentDisplayPercent;
+
     previousState = {
       ignition: parsed.trueIgnition,
       unplugged: parsed.isUnplugged,
@@ -455,6 +621,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
       odometer: parsed.odometer,
       fuelLevel: parsed.fuelLevel,
       angle: recordAngle,
+      latitude: rec.latitude,
+      longitude: rec.longitude,
+      timestamp: rec.timestamp as Date,
     };
 
     if (

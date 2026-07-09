@@ -8,6 +8,9 @@ export interface PreviousState {
   odometer?: number | null;
   fuelLevel?: number | null;
   angle?: number;
+  latitude?: number;
+  longitude?: number;
+  timestamp?: Date;
 }
 
 export interface ParsedTelemetry {
@@ -45,6 +48,11 @@ export interface ParsedTelemetry {
   fuelLevel: number | null;
   fuelConsumption: number | null;
   fuelRate: number | null;
+
+  // Accelerometer values
+  accelX: number | null;
+  accelY: number | null;
+  accelZ: number | null;
 }
 
 // Función auxiliar para obtener el valor de un AVL ID aplicando su multiplicador si existe
@@ -204,20 +212,13 @@ export function parseTelemetryRecord(
   }
 
   // Nuevos campos dinámicos
-  let fuelLevel = getAvlValue(rec.ioData, mapping.fuelLevel);
-  if (fuelLevel !== null) {
-    if (previous?.fuelLevel !== undefined && previous.fuelLevel !== null) {
-      const isMoving = status === "MOVING";
-      // Aplicamos suavizado exponencial basado en el estado de movimiento (cuando está detenido, alpha = 1.0 para aceptar valor real)
-      const alpha = isMoving ? (mapping.movingFuelAlpha ?? 0.05) : 1.0;
-      fuelLevel = alpha * fuelLevel + (1 - alpha) * previous.fuelLevel;
-    }
-  } else if (previous?.fuelLevel !== undefined && previous.fuelLevel !== null) {
-    fuelLevel = previous.fuelLevel;
-  }
+  const fuelLevel = getAvlValue(rec.ioData, mapping.fuelLevel);
 
   const fuelConsumption = getAvlValue(rec.ioData, mapping.fuelConsumption);
   const fuelRate = getAvlValue(rec.ioData, mapping.fuelRate);
+  const accelX = getAvlValue(rec.ioData, mapping.accelX);
+  const accelY = getAvlValue(rec.ioData, mapping.accelY);
+  const accelZ = getAvlValue(rec.ioData, mapping.accelZ);
 
   // Deduplicación dinámica de I/O extra (se eliminan las claves ya mapeadas)
   const extraIoData = { ...rec.ioData };
@@ -272,5 +273,8 @@ export function parseTelemetryRecord(
     fuelLevel,
     fuelConsumption,
     fuelRate,
+    accelX,
+    accelY,
+    accelZ,
   };
 }
