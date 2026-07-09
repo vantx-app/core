@@ -1041,8 +1041,8 @@ export class VehiclesService {
       const durationMs = endTimestamp.getTime() - evt.startTime.getTime();
 
       if (evt.type === 'REFUEL') {
-        // Las recargas de combustible en camiones reales requieren volumen y tiempo significativos (min 5% y 60 segundos)
-        if (delta >= 5.0 && durationMs >= 60000) {
+        // Alineado con máquina virtual de estados (umbral de 3.0%) sin restricciones artificiales de tiempo
+        if (delta >= 3.0) {
           totalRefueled += delta;
           events.push({
             type: 'REFUEL',
@@ -1054,13 +1054,12 @@ export class VehiclesService {
             longitude: evt.lng,
           });
         } else if (delta > 0) {
-          // Si el evento de recarga se descarta (por ser demasiado pequeño o rápido),
-          // ajustamos el startLevel hacia arriba para absorber este falso aumento en el consumo.
+          // Si el evento de recarga se descarta, ajustamos el startLevel hacia arriba
           startLevel += delta;
         }
       } else if (evt.type === 'DRAIN') {
-        // Los drenados/robos pueden ser pequeños y rápidos, mantenemos el umbral de 3%
-        if (delta <= -3.0) {
+        // Alineado con máquina virtual de estados (umbral de robo de -4.0%)
+        if (delta <= -4.0) {
           const drop = Math.abs(delta);
           totalDrained += drop;
           events.push({
@@ -1147,7 +1146,7 @@ export class VehiclesService {
       // Si no hay evento en progreso, evaluamos iniciar uno nuevo
       if (!eventInProgress) {
         if (totalDiff >= 3.0 && (curr.fuelLevel - peakLevel) >= 2.0) {
-          // Inicio de recarga (exigimos que el nivel no sea una mera recuperación de una caída por sloshing)
+          // Inicio de recarga (umbral 3.0% de máquina virtual y subida respecto al pico)
           eventInProgress = {
             type: 'REFUEL',
             startTime: prev.timestamp,
@@ -1155,9 +1154,9 @@ export class VehiclesService {
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
           };
-          peakLevel = curr.fuelLevel; // Resetear nivel de pico al iniciar evento
-        } else if (totalDiff <= -3.0 && !curr.ignition && !prev.ignition) {
-          // Inicio de drenado/robo (solo con ignición apagada)
+          peakLevel = curr.fuelLevel;
+        } else if (totalDiff <= -4.0 && !curr.ignition && !prev.ignition) {
+          // Inicio de drenado/robo (umbral -4.0% de máquina virtual con ignición apagada)
           eventInProgress = {
             type: 'DRAIN',
             startTime: prev.timestamp,
@@ -1165,7 +1164,7 @@ export class VehiclesService {
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
           };
-          peakLevel = curr.fuelLevel; // Resetear nivel de pico al iniciar evento
+          peakLevel = curr.fuelLevel;
         } else {
           // Pequeñas fluctuaciones o consumo normal, actualizamos nivel de referencia
           lastStableLevel = curr.fuelLevel;
