@@ -125,6 +125,42 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       expect(parsed?.records[0].ioData[36]).toBe(2000);
       expect(parsed?.records[0].eventId).toBe(250);
     });
+
+    it('debe decodificar un buffer binario Codec 12 (datos transparentes) sin parsear registros de telemetría', () => {
+      const payloadString = "Hola FMC650";
+      const payloadBuffer = Buffer.from(payloadString, "ascii");
+      const commandSize = payloadBuffer.length;
+
+      const dataFieldLength = 1 + 1 + 1 + 4 + commandSize + 1; // Codec (1) + Qty1 (1) + Type (1) + Size (4) + Payload + Qty2 (1) = 19
+      const totalSize = 8 + dataFieldLength + 4; // 8 + 19 + 4 = 31
+
+      const dataBuffer = Buffer.alloc(totalSize);
+      dataBuffer.writeUInt32BE(0, 0); // Preamble
+      dataBuffer.writeUInt32BE(dataFieldLength, 4); // Data field length
+      dataBuffer.writeUInt8(12, 8); // Codec ID (12)
+      dataBuffer.writeUInt8(1, 9); // Command Quantity 1
+      dataBuffer.writeUInt8(6, 10); // Command Type (6)
+      dataBuffer.writeUInt32BE(commandSize, 11); // Command Size
+      payloadBuffer.copy(dataBuffer, 15); // Command payload
+      dataBuffer.writeUInt8(1, 15 + commandSize); // Command Quantity 2
+
+      // CRC
+      dataBuffer.writeUInt32BE(0x12345678, 15 + commandSize + 1);
+
+      const parsed = parseTeltonikaData(dataBuffer);
+      expect(parsed).not.toBeNull();
+      expect(parsed?.totalInBatch).toBe(1);
+      expect(parsed?.records).toEqual([]);
+      expect(parsed?.isCodec12).toBe(true);
+      expect(parsed?.codec12Data).toEqual({
+        commandQuantity1: 1,
+        commandType: 6,
+        commandSize: commandSize,
+        payloadHex: payloadBuffer.toString("hex"),
+        payloadAscii: payloadString,
+        commandQuantity2: 1,
+      });
+    });
   });
 
   describe('processDataBatch', () => {
@@ -194,6 +230,9 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
               lastOdometer: true,
               lastFuelLevel: true,
               lastAngle: true,
+              lastLat: true,
+              lastLng: true,
+              lastUpdate: true,
             },
           },
         },
@@ -1438,13 +1477,13 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       // Odómetro: LKV 100.0 se arrastra
       // Nivel de combustible:
       // Registro 1: LKV 80.0
-      // Registro 2: combustible 78% -> cambio de 2% estando detenido -> alpha=1.0 -> 78% directo sin suavizado
+      // Registro 2: combustible 78% -> cambio de 2% estando detenido (menor que el umbral de ruido, por lo que se suaviza/mantiene en 80.0)
       expect(mockPrisma.vehicleLiveState.upsert).toHaveBeenLastCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({
             lastAngle: 45,
             lastOdometer: 100.0,
-            lastFuelLevel: 78,
+            lastFuelLevel: 80,
           }),
         })
       );

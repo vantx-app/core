@@ -13,6 +13,38 @@ export function parseTeltonikaData(buffer: Buffer) {
     const codecId = buffer.readUInt8(8);
     const numberOfRecords = buffer.readUInt8(9);
 
+    if (codecId === 12) {
+      if (buffer.length < 15) {
+        logger.warn("Paquete Codec 12 descartado: Tamaño insuficiente.");
+        return null;
+      }
+      const commandQuantity1 = buffer.readUInt8(9);
+      const commandType = buffer.readUInt8(10);
+      const commandSize = buffer.readUInt32BE(11);
+      
+      if (buffer.length < 15 + commandSize + 1) {
+        logger.warn("Paquete Codec 12 descartado: Payload incompleto.");
+        return null;
+      }
+      
+      const payload = buffer.subarray(15, 15 + commandSize);
+      const commandQuantity2 = buffer.readUInt8(15 + commandSize);
+      
+      return {
+        totalInBatch: commandQuantity1,
+        records: [],
+        isCodec12: true,
+        codec12Data: {
+          commandQuantity1,
+          commandType,
+          commandSize,
+          payloadHex: payload.toString("hex"),
+          payloadAscii: payload.toString("ascii").replace(/\0/g, "").trim(),
+          commandQuantity2,
+        }
+      };
+    }
+
     if (codecId !== 8 && codecId !== 142) {
       logger.warn(`Codec ignorado o no soportado: ${codecId}`);
       return null;
