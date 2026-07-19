@@ -35,6 +35,10 @@ model TelemetryLog {
   fuelConsumption   Float?
   fuelRate          Float?
   
+  accelX            Float?
+  accelY            Float?
+  accelZ            Float?
+  
   extra             Json?
   tripId            String?               @db.Uuid
   trip              Trip?                 @relation(fields: [tripId], references: [id])

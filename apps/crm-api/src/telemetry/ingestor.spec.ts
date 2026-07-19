@@ -24,6 +24,7 @@ jest.mock('@prisma/client', () => {
       deleteMany: mockDeleteMany,
     },
     telemetryLog: { createMany: mockCreateMany, updateMany: jest.fn() },
+    dailyTelemetryRollup: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
     vehicleLiveState: { upsert: mockUpsert },
     mapLink: { findMany: jest.fn().mockResolvedValue([]) },
     $queryRaw: jest.fn().mockResolvedValue([]),

@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "TelemetryLog" ADD COLUMN     "accelX" DOUBLE PRECISION,
+ADD COLUMN     "accelY" DOUBLE PRECISION,
+ADD COLUMN     "accelZ" DOUBLE PRECISION;

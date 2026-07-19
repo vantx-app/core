@@ -85,6 +85,19 @@ export async function saveTelemetryBatchData({
     );
   }
 
+  // 3.5 Delete daily telemetry rollups for deleted ghost/merged trips to avoid unique constraint violation on tripId = null
+  if (tripsToDelete.size > 0) {
+    transactionPromises.push(
+      prisma.dailyTelemetryRollup.deleteMany({
+        where: {
+          tripId: {
+            in: Array.from(tripsToDelete),
+          },
+        },
+      }),
+    );
+  }
+
   // 4. Delete the ghost trips physically
   for (const tripId of tripsToDelete) {
     transactionPromises.push(
