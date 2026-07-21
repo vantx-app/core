@@ -72,8 +72,7 @@ export async function snapTelemetryRecords(
           let isHardwareExcessiveIdling = false;
           const mappedExcessiveIdling = getAvlValue(rec.ioData, mapping.excessiveIdling);
           if (mappedExcessiveIdling !== null) {
-            const id = typeof mapping.excessiveIdling === "number" ? mapping.excessiveIdling : mapping.excessiveIdling?.id;
-            isHardwareExcessiveIdling = rec.eventId === id || mappedExcessiveIdling === 1;
+            isHardwareExcessiveIdling = mappedExcessiveIdling === 1;
           }
 
           const trueIgnition =

@@ -461,6 +461,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
     latitude: vehicle.liveState?.lastLat ?? undefined,
     longitude: vehicle.liveState?.lastLng ?? undefined,
     timestamp: vehicle.liveState?.lastUpdate ?? undefined,
+    tripActive: vehicle.liveState?.currentStatus !== "STOPPED" && vehicle.liveState?.currentStatus !== "UNPLUGGED",
   };
 
   let virtualState = fuelVirtualStateCache.get(vehicle.id);
@@ -624,6 +625,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       latitude: rec.latitude,
       longitude: rec.longitude,
       timestamp: rec.timestamp as Date,
+      tripActive: parsed.tripActive,
     };
 
     if (

@@ -11,6 +11,7 @@ export interface PreviousState {
   latitude?: number;
   longitude?: number;
   timestamp?: Date;
+  tripActive?: boolean;
 }
 
 export interface ParsedTelemetry {
@@ -112,8 +113,7 @@ export function parseTelemetryRecord(
   let isHardwareExcessiveIdling = false;
   const mappedExcessiveIdling = getAvlValue(rec.ioData, mapping.excessiveIdling);
   if (mappedExcessiveIdling !== null) {
-    const id = typeof mapping.excessiveIdling === "number" ? mapping.excessiveIdling : mapping.excessiveIdling?.id;
-    isHardwareExcessiveIdling = rec.eventId === id || mappedExcessiveIdling === 1;
+    isHardwareExcessiveIdling = mappedExcessiveIdling === 1;
   } else if (previous?.excessiveIdling !== undefined) {
     isHardwareExcessiveIdling = previous.excessiveIdling;
   }
@@ -242,8 +242,24 @@ export function parseTelemetryRecord(
   delete extraIoData[528];
 
   // Detección de viaje
-  const mappedTripStatus = getAvlValue(rec.ioData, mapping.tripStatus);
-  const tripActive = mappedTripStatus !== null ? mappedTripStatus === 1 : trueIgnition;
+  let tripActive = false;
+  if (trueIgnition) {
+    const ignitionOnTransition = previous?.ignition === false;
+    if (ignitionOnTransition) {
+      tripActive = true;
+    } else if (mapping.tripStatus !== undefined) {
+      const mappedTripStatus = getAvlValue(rec.ioData, mapping.tripStatus);
+      if (mappedTripStatus !== null) {
+        tripActive = mappedTripStatus === 1;
+      } else if (previous?.tripActive !== undefined) {
+        tripActive = previous.tripActive;
+      } else {
+        tripActive = true;
+      }
+    } else {
+      tripActive = true;
+    }
+  }
 
   return {
     rawRpm,

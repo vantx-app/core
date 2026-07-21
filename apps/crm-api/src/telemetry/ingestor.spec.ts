@@ -1752,5 +1752,194 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         })
       );
     });
+
+    it('debe mantener tripActive en registros eventuales y evitar la fragmentación del viaje al detenerse', async () => {
+      const mockVehicleId = 'vehicle-uuid-eventual-trips';
+      const mockImei = 'imei-eventual-trips';
+
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Eventual',
+        device: { model: 'TELTONIKA_STANDARD' },
+        vin: 'VIN123',
+      });
+
+      // Lote de 4 registros simulando eventual records:
+      // 1. Inicia viaje (250 = 1, ignición on)
+      // 2. Detenido temporalmente (250 = 0, ignición on)
+      // 3. Registro eventual intermedio donde no se envía 250 (ignición on) -> debe mantener tripActive del LKV (que era false)
+      // 4. Inicia movimiento nuevamente (250 = 1, ignición on)
+      const records = [
+        {
+          timestamp: new Date(1716570000000), // T0
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 30,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Ignition on
+            250: 1, // Trip active
+          },
+        },
+        {
+          timestamp: new Date(1716570120000), // T0 + 2 min (trip closed)
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Ignition on
+            250: 0, // Trip inactive
+          },
+        },
+        {
+          timestamp: new Date(1716570180000), // T0 + 3 min (eventual packet, no 250 -> debe continuar cerrado)
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 1,
+          ioData: {
+            239: 1, // Ignition on
+          },
+        },
+        {
+          timestamp: new Date(1716570240000), // T0 + 4 min (trip starts again)
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 20,
+          priority: 1,
+          eventId: 250,
+          ioData: {
+            239: 1, // Ignition on
+            250: 1, // Trip active
+          },
+        },
+      ];
+
+      mockPrisma.trip.findFirst.mockResolvedValue(null);
+      mockPrisma.trip.findMany.mockResolvedValue([]);
+
+      await processDataBatch(records, mockImei);
+
+      // Verificaciones:
+      // Debe haber creado dos viajes en total (uno de T0 a T0+2min, y otro que inicia a T0+4min)
+      // No debe haber creado un viaje en el T0+3min intermedio.
+      expect(mockPrisma.trip.create).toHaveBeenCalledTimes(2);
+      
+      const firstCreate = mockPrisma.trip.create.mock.calls[0][0].data;
+      const secondCreate = mockPrisma.trip.create.mock.calls[1][0].data;
+      
+      expect(firstCreate.startTime).toEqual(records[0].timestamp);
+      expect(firstCreate.endTime).toEqual(records[1].timestamp);
+      expect(secondCreate.startTime).toEqual(records[3].timestamp);
+      expect(secondCreate.endTime).toBeUndefined();
+    });
+
+    it('debe activar y desactivar hardware excessive idling en registros eventuales sin quedarse pegado', async () => {
+      const mockVehicleId = 'vehicle-uuid-eventual-idling';
+      const mockImei = 'imei-eventual-idling';
+
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-999',
+        alias: 'Truck Idling',
+        device: { model: 'TELTONIKA_STANDARD' },
+        vin: 'VIN123',
+      });
+
+      // Lote de 4 registros eventuales:
+      // 1. Idling normal (status IDLING, 251 no presente)
+      // 2. Comienza excessive idling (status EXCESSIVE_IDLING, eventId=251, 251=1)
+      // 3. Registro intermedio sin 251 (debe mantener EXCESSIVE_IDLING debido al LKV)
+      // 4. Termina excessive idling (status IDLING, eventId=251, 251=0) -> debe desactivar y quedar en IDLING
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 1,
+          ioData: {
+            239: 1, // Ignition on
+          },
+        },
+        {
+          timestamp: new Date(1716570100000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 251,
+          ioData: {
+            239: 1,
+            251: 1, // Excessive idling ON
+          },
+        },
+        {
+          timestamp: new Date(1716570200000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 1,
+          ioData: {
+            239: 1,
+          },
+        },
+        {
+          timestamp: new Date(1716570300000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 251,
+          ioData: {
+            239: 1,
+            251: 0, // Excessive idling OFF
+          },
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
+      const logs = mockPrisma.telemetryLog.createMany.mock.calls[
+        mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+      ][0].data;
+
+      expect(logs[0].status).toBe('IDLING');
+      expect(logs[1].status).toBe('EXCESSIVE_IDLING');
+      expect(logs[2].status).toBe('EXCESSIVE_IDLING');
+      expect(logs[3].status).toBe('IDLING'); // Debe haber vuelto a IDLING (desactivado)
+    });
   });
 });
