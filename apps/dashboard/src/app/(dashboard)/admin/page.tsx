@@ -14,6 +14,7 @@ import {
   Loader2,
   Briefcase,
   Cpu,
+  Map,
 } from "lucide-react";
 import { AdminCard } from "@/components/dashboard/AdminCard";
 
@@ -151,6 +152,17 @@ function AdminOverview() {
           iconColorClass="bg-indigo-500/10 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white"
           title="Dispositivos GPS"
           description="Gestiona el inventario de hardware de la plataforma, registra trackers GPS, asocia tarjetas SIM y asígnalos a vehículos de la flota."
+        />
+      )}
+
+      {/* Card 6: Segmentos de Mapa (Autolearning) */}
+      {role === ROLES.SUPER_ADMIN && (
+        <AdminCard
+          href={getLink("/admin/segments")}
+          icon={Map}
+          iconColorClass="bg-violet-500/10 text-violet-600 group-hover:bg-violet-600 group-hover:text-white"
+          title="Segmentos de Mapa"
+          description="Visualiza el mapa de todos los segmentos de calle (MapLink) en la base de datos, con límites de velocidad, clases funcionales e indicadores de rumbo."
         />
       )}
     </div>

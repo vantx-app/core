@@ -1,0 +1,97 @@
+import { Controller, Get, Query, UseGuards, BadRequestException } from '@nestjs/common';
+import { PrismaService } from '../prisma.service';
+import { ROLES } from 'src/common/enums/roles.enum';
+import { Roles } from 'src/common/decorators/roles.decorator';
+
+@Controller('map-links')
+export class MapLinksController {
+  constructor(private readonly prisma: PrismaService) {}
+
+  @Roles(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN)
+  @Get()
+  async getMapLinks(
+    @Query('minLat') minLat?: string,
+    @Query('maxLat') maxLat?: string,
+    @Query('minLng') minLng?: string,
+    @Query('maxLng') maxLng?: string,
+  ) {
+    let links: any[] = [];
+
+    const hasBbox = minLat && maxLat && minLng && maxLng;
+
+    if (hasBbox) {
+      const nMinLat = parseFloat(minLat);
+      const nMaxLat = parseFloat(maxLat);
+      const nMinLng = parseFloat(minLng);
+      const nMaxLng = parseFloat(maxLng);
+
+      if (isNaN(nMinLat) || isNaN(nMaxLat) || isNaN(nMinLng) || isNaN(nMaxLng)) {
+        throw new BadRequestException('Bounding box coordinates must be numbers');
+      }
+
+      // Query segments inside bounding box using spatial GIST index
+      links = await this.prisma.$queryRaw<any[]>`
+        SELECT * FROM "MapLink"
+        WHERE box(point("minLng", "minLat"), point("maxLng", "maxLat")) && box(point(${nMinLng}, ${nMinLat}), point(${nMaxLng}, ${nMaxLat}))
+        LIMIT 2000
+      `;
+    } else {
+      // Default: fetch all map links up to a limit
+      links = await this.prisma.mapLink.findMany({
+        take: 5000,
+      });
+    }
+
+    // Convert into a GeoJSON FeatureCollection
+    const features = links.map((link) => {
+      let coordinates: [number, number][] = [];
+      try {
+        if (link.geometry) {
+          coordinates = link.geometry.split(';').map((pair: string) => {
+            const [lng, lat] = pair.split(',').map(Number);
+            return [lng, lat] as [number, number];
+          });
+        }
+      } catch (err) {
+        // Skip malformed geometry
+      }
+
+      // Calculate approximate general heading of the segment (from first to last coordinate)
+      let segmentHeading = 0;
+      if (coordinates.length >= 2) {
+        const start = coordinates[0];
+        const end = coordinates[coordinates.length - 1];
+        // calculate heading
+        const dLon = ((end[0] - start[0]) * Math.PI) / 180;
+        const lat1Rad = (start[1] * Math.PI) / 180;
+        const lat2Rad = (end[1] * Math.PI) / 180;
+        const y = Math.sin(dLon) * Math.cos(lat2Rad);
+        const x =
+          Math.cos(lat1Rad) * Math.sin(lat2Rad) -
+          Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+        const brng = (Math.atan2(y, x) * 180) / Math.PI;
+        segmentHeading = Math.round((brng + 360) % 360);
+      }
+
+      return {
+        type: 'Feature',
+        id: link.linkId,
+        geometry: {
+          type: 'LineString',
+          coordinates,
+        },
+        properties: {
+          linkId: link.linkId,
+          functionalClass: link.functionalClass,
+          speedLimit: link.speedLimit,
+          heading: segmentHeading,
+        },
+      };
+    });
+
+    return {
+      type: 'FeatureCollection',
+      features,
+    };
+  }
+}
