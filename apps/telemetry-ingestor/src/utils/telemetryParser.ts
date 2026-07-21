@@ -58,7 +58,7 @@ export interface ParsedTelemetry {
 // Función auxiliar para obtener el valor de un AVL ID aplicando su multiplicador si existe
 export function getAvlValue(
   ioData: Record<number | string, number>,
-  config: number | { id: number; multiplier?: number } | undefined,
+  config: number | { id: number; multiplier?: number; signed?: boolean } | undefined,
 ): number | null {
   if (config === undefined || config === null) return null;
   
@@ -66,8 +66,13 @@ export function getAvlValue(
     return ioData[config] ?? null;
   }
   
-  const rawValue = ioData[config.id];
+  let rawValue = ioData[config.id];
   if (rawValue === undefined || rawValue === null) return null;
+  
+  // Si está marcado como signed, decodificar el valor de 16 bits complementado a dos
+  if (config.signed) {
+    rawValue = rawValue & 0x8000 ? rawValue - 0x10000 : rawValue;
+  }
   
   return config.multiplier !== undefined ? rawValue * config.multiplier : rawValue;
 }

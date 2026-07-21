@@ -19,6 +19,7 @@ export function getTelemetryProfile(
 export interface AvlPropertyConfig {
   id: number;
   multiplier?: number;
+  signed?: boolean;
 }
 
 export interface AvlMapping {
@@ -82,9 +83,9 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     fuelLevel: 48,
     fuelConsumption: { id: 111, multiplier: 0.001 },  // ml to Liters
     fuelRate: { id: 163, multiplier: 0.1 },           // deciliters/h to L/h
-    accelX: { id: 17, multiplier: 0.001 },
-    accelY: { id: 18, multiplier: 0.001 },
-    accelZ: { id: 19, multiplier: 0.001 },
+    accelX: { id: 17, multiplier: 0.001, signed: true },
+    accelY: { id: 18, multiplier: 0.001, signed: true },
+    accelZ: { id: 19, multiplier: 0.001, signed: true },
   },
   TELTONIKA_FMC150: {
     rpm: 85,
@@ -110,9 +111,9 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     fuelLevel: 89,
     fuelConsumption: 83,                              // Liters directly (no multiplier)
     fuelRate: { id: 110, multiplier: 0.1 },           // deciliters/h to L/h
-    accelX: { id: 17, multiplier: 0.001 },
-    accelY: { id: 18, multiplier: 0.001 },
-    accelZ: { id: 19, multiplier: 0.001 },
+    accelX: { id: 17, multiplier: 0.001, signed: true },
+    accelY: { id: 18, multiplier: 0.001, signed: true },
+    accelZ: { id: 19, multiplier: 0.001, signed: true },
   },
   TELTONIKA_FMC650: {
     rpm: 30,                                          // CAN Adapters Engine RPM
