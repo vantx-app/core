@@ -7,6 +7,7 @@ model MapLink {
   maxLat          Float
   minLng          Float
   maxLng          Float
+  isBidirectional Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 }

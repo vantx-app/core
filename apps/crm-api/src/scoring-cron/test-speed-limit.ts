@@ -207,7 +207,7 @@ async function getRouteSpeedLimits(
   }
 
   queryParams.append('return', 'polyline');
-  queryParams.append('spans', 'functionalClass,segmentId');
+  queryParams.append('spans', 'functionalClass,segmentRef');
   queryParams.append('departureTime', 'any');
 
   try {
@@ -236,9 +236,20 @@ async function getRouteSpeedLimits(
     for (let i = 0; i < apiSpans.length; i++) {
       const span = apiSpans[i];
       const fc = span.functionalClass || 3;
-      const rawLinkId =
-        span.segmentId || span.segmentRef || `gen-${i}-${Date.now()}`;
-      const linkId = String(rawLinkId);
+      const rawLinkId = span.segmentRef || `gen-${i}-${Date.now()}`;
+      const rawLinkIdStr = String(rawLinkId);
+
+      // Normalize segmentId: determine if traversed in reverse (starts with - or contains #-)
+      const isReverse =
+        rawLinkIdStr.startsWith('-') ||
+        rawLinkIdStr.includes('#-') ||
+        (rawLinkIdStr.includes('#') && rawLinkIdStr.split('#')[1].includes('-'));
+
+      // Extract canonical base ID by splitting on '#' and stripping leading +/- signs
+      let linkId = rawLinkIdStr.split('#')[0];
+      if (linkId.startsWith('-') || linkId.startsWith('+')) {
+        linkId = linkId.substring(1);
+      }
 
       // Mapeo oficial de límites de velocidad de Panamá (PANAMA_LEGAL_CEILINGS)
       // FC1 se establece en 110 km/h para reflejar límites reales en corredores y autopistas
@@ -742,9 +753,9 @@ async function run() {
         const fcStr = functionalClass !== null ? `, FC${functionalClass}` : '';
         console.log(
           `[LOG] Hora: ${log.timestamp} | Vel: ${log.speed} km/h | Límite: ${limitToUse} km/h (orig: ${originalLimit} km/h${fcStr}) | ` +
-            `DistRuta: ${(snapDist * 1000).toFixed(1)}m | ` +
-            `${log.speed > threshold ? (inDecelWindow ? '⏳ DECEL-SUSPEND' : '🚨 EXCESO') : 'OK'}` +
-            `${isOffRoute ? ' (OFF-ROUTE)' : ''}`,
+          `DistRuta: ${(snapDist * 1000).toFixed(1)}m | ` +
+          `${log.speed > threshold ? (inDecelWindow ? '⏳ DECEL-SUSPEND' : '🚨 EXCESO') : 'OK'}` +
+          `${isOffRoute ? ' (OFF-ROUTE)' : ''}`,
         );
       }
     }
@@ -801,7 +812,7 @@ async function run() {
         const offRouteStr = v.isOffRoute ? ' [Off-Route (Fallback)]' : '';
         console.log(
           `  ${idx + 1}. [${v.timestamp}] Vel: ${v.speed} km/h en zona de ${v.limit} km/h ` +
-            `(Exceso: +${v.excess} km/h) | Distancia a Ruta: ${v.distanceToRouteMeters.toFixed(1)}m${offRouteStr}`,
+          `(Exceso: +${v.excess} km/h) | Distancia a Ruta: ${v.distanceToRouteMeters.toFixed(1)}m${offRouteStr}`,
         );
       });
       if (violations.length > 15) {

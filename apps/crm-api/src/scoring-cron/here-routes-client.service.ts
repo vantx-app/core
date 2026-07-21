@@ -29,7 +29,7 @@ export class HereRoutesClientService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Calcula una ruta con límites de velocidad para una secuencia de coordenadas GPS usando la API de Atributos de Mapa.
@@ -87,6 +87,7 @@ export class HereRoutesClientService {
             functionalClass: link.functionalClass,
             speedLimit: link.speedLimit,
             points: pts,
+            isBidirectional: link.isBidirectional,
           };
         });
 
@@ -183,7 +184,7 @@ export class HereRoutesClientService {
     }
 
     queryParams.append('return', 'polyline');
-    queryParams.append('spans', 'functionalClass,segmentId');
+    queryParams.append('spans', 'functionalClass,segmentRef,streetAttributes');
     queryParams.append('departureTime', 'any');
 
     try {
@@ -213,14 +214,34 @@ export class HereRoutesClientService {
         maxLat: number;
         minLng: number;
         maxLng: number;
+        isBidirectional: boolean;
       }[] = [];
 
       for (let i = 0; i < apiSpans.length; i++) {
         const span = apiSpans[i];
         const fc = span.functionalClass || 3;
-        const rawLinkId =
-          span.segmentId || span.segmentRef || `gen-${i}-${Date.now()}`;
-        const linkId = String(rawLinkId);
+        const rawLinkId = span.segmentRef || `gen-${i}-${Date.now()}`;
+        const rawLinkIdStr = String(rawLinkId);
+
+        // Normalize segmentId: determine if traversed in reverse (starts with - or contains #-)
+        const isReverse =
+          rawLinkIdStr.startsWith('-') ||
+          rawLinkIdStr.includes('#-') ||
+          (rawLinkIdStr.includes('#') && rawLinkIdStr.split('#')[1].includes('-'));
+
+        // Extract canonical base ID by splitting on '#' and stripping leading +/- signs
+        let linkId = rawLinkIdStr.split('#')[0];
+        if (linkId.startsWith('-') || linkId.startsWith('+')) {
+          linkId = linkId.substring(1);
+        }
+
+        // Parse streetAttributes to determine if the road is bidirectional
+        const streetAttrs: string[] = span.streetAttributes || [];
+        const isDivided =
+          streetAttrs.includes('dividedRoad') ||
+          streetAttrs.includes('ramp') ||
+          streetAttrs.includes('roundabout');
+        const isBidirectional = !isDivided;
 
         // Mapeo oficial de límites de velocidad de Panamá (PANAMA_LEGAL_CEILINGS)
         // FC1 se establece en 110 km/h para reflejar límites reales en corredores y autopistas
@@ -243,6 +264,11 @@ export class HereRoutesClientService {
         const segmentPts = polylinePoints.slice(startOffset, endOffset + 1);
         if (segmentPts.length === 0) continue;
 
+        // If segment is traversed in reverse, store geometry in canonical direction
+        if (isReverse) {
+          segmentPts.reverse();
+        }
+
         const lats = segmentPts.map((p) => p[0]);
         const lons = segmentPts.map((p) => p[1]);
 
@@ -262,6 +288,7 @@ export class HereRoutesClientService {
           maxLat,
           minLng,
           maxLng,
+          isBidirectional,
         });
       }
 
@@ -278,6 +305,7 @@ export class HereRoutesClientService {
             maxLat: link.maxLat,
             minLng: link.minLng,
             maxLng: link.maxLng,
+            isBidirectional: link.isBidirectional,
           },
           update: {
             functionalClass: link.functionalClass,
@@ -287,6 +315,7 @@ export class HereRoutesClientService {
             maxLat: link.maxLat,
             minLng: link.minLng,
             maxLng: link.maxLng,
+            isBidirectional: link.isBidirectional,
           },
         });
       }
@@ -306,6 +335,7 @@ export class HereRoutesClientService {
           functionalClass: link.functionalClass,
           speedLimit: link.speedLimit,
           points: pts,
+          isBidirectional: link.isBidirectional,
         };
       });
 

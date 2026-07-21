@@ -126,6 +126,7 @@ describe('Route Utils', () => {
         linkId: 'link-westbound',
         functionalClass: 1,
         speedLimit: 110,
+        isBidirectional: false,
         points: [
           [-79.519, 8.982], // ptA (Este)
           [-79.521, 8.982], // ptB (Oeste)
@@ -137,6 +138,7 @@ describe('Route Utils', () => {
         linkId: 'link-eastbound',
         functionalClass: 1,
         speedLimit: 110,
+        isBidirectional: false,
         points: [
           [-79.521, 8.9818], // ptA (Oeste)
           [-79.519, 8.9818], // ptB (Este)
@@ -176,6 +178,7 @@ describe('Route Utils', () => {
         linkId: 'link-twoway',
         functionalClass: 3,
         speedLimit: 60,
+        isBidirectional: true,
         points: [
           [-79.519, 8.982],
           [-79.521, 8.982],
@@ -199,6 +202,54 @@ describe('Route Utils', () => {
       );
 
       // Debe snap correctamente porque es la única opción dentro del rango (35m)
+      expect(res.snapped).toBe(true);
+      expect(res.matchedLink?.linkId).toBe('link-twoway');
+    });
+
+    it('debe snap a la calle de doble sentido en dirección opuesta sin penalización y no confundirse con una calle paralela', () => {
+      // Calle de doble sentido digitizada de Este a Oeste (rumbo ~270)
+      const linkTwoWay = {
+        linkId: 'link-twoway',
+        functionalClass: 3,
+        speedLimit: 60,
+        isBidirectional: true,
+        points: [
+          [-79.519, 8.982],
+          [-79.521, 8.982],
+        ] as [number, number][],
+      };
+
+      // Otra calle paralela a 15 metros al norte, digitizada de Oeste a Este (rumbo ~90)
+      const linkParallel = {
+        linkId: 'link-parallel',
+        functionalClass: 3,
+        speedLimit: 60,
+        isBidirectional: true,
+        points: [
+          [-79.521, 8.98213], // ~15m al norte de A
+          [-79.519, 8.98213], // ~15m al norte de B
+        ] as [number, number][],
+      };
+
+      // El vehículo viaja en sentido contrario al link-twoway (Este, rumbo 90 grados)
+      // Está físicamente a 2 metros de link-twoway (muy cerca)
+      const vehicleAngle = 90;
+      const vehicleSpeed = 50;
+
+      const gpsLat = 8.98202; // Físicamente más cerca de link-twoway (~2 metros) que de link-parallel (~12 metros)
+      const gpsLng = -79.52;
+
+      const res = snapPointToLinks(
+        gpsLat,
+        gpsLng,
+        vehicleSpeed,
+        vehicleAngle,
+        [linkTwoWay, linkParallel],
+        0.035, // 35m
+      );
+
+      // Debe haber elegido link-twoway porque está más cerca,
+      // y no haber sido penalizado por viajar en sentido contrario (ya que es bidirectional)
       expect(res.snapped).toBe(true);
       expect(res.matchedLink?.linkId).toBe('link-twoway');
     });

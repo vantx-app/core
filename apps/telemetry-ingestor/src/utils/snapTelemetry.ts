@@ -60,6 +60,7 @@ export async function snapTelemetryRecords(
             functionalClass: link.functionalClass,
             speedLimit: link.speedLimit,
             points: pts,
+            isBidirectional: link.isBidirectional,
           };
         });
 

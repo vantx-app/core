@@ -53,6 +53,7 @@ export interface SnappingLink {
   functionalClass: number;
   speedLimit: number;
   points: [number, number][]; // Array of [lng, lat]
+  isBidirectional?: boolean;
 }
 
 /**
@@ -153,7 +154,8 @@ export function snapPointToLinks(
         const diffReverse = getAngleDiff(angle, (segmentHeading + 180) % 360);
 
         let reversePenalty = 0;
-        if (diffNormal > 90) {
+        const isBidirectional = link.isBidirectional ?? (link.functionalClass >= 3);
+        if (diffNormal > 90 && !isBidirectional) {
           reversePenalty = 0.04; // Penalización de 40m si va en dirección opuesta al sentido del segmento
         }
 
