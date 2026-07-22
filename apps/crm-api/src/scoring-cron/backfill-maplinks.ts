@@ -427,10 +427,7 @@ async function processTrajectory(
       const segmentPts = polylinePoints.slice(startOffset, endOffset + 1);
       if (segmentPts.length === 0) continue;
 
-      if (isReverse) {
-        segmentPts.reverse();
-      }
-
+      // Preserve geometry in actual direction of vehicle travel for right-hand traffic flow
       const lats = segmentPts.map((p) => p[0]);
       const lons = segmentPts.map((p) => p[1]);
 
