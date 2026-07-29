@@ -250,7 +250,7 @@ export default function SegmentsMap() {
       mapInstance.on("click", "segments-line", (e) => {
         if (!e.features || e.features.length === 0) return;
 
-        const feature = e.features[0];
+        const feature = e.features[0] as any;
         const props = feature.properties;
         if (!props) return;
         const geom = feature.geometry as any;
