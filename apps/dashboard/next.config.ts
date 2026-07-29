@@ -28,7 +28,25 @@ const nextConfig: NextConfig = {
     return [];
   },
   async redirects() {
+    const isDev = process.env.NODE_ENV === "development";
+
     return [
+      ...(isDev
+        ? [
+            {
+              source: "/",
+              destination: "/dashboard",
+              basePath: false as const,
+              permanent: false,
+            },
+          ]
+        : []),
+      {
+        source: "/sw.js",
+        destination: "/dashboard/sw.js",
+        basePath: false as const,
+        permanent: false,
+      },
       {
         // Evita bucles de redirección limitando el ID a un solo segmento (sin barras /)
         source: "/vehicle/:id((?!new$)[^/]+)",

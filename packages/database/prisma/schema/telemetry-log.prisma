@@ -27,6 +27,7 @@ model TelemetryLog {
   unplugged         Boolean               @default(false)
   status            VehicleMovementStatus @default(STOPPED)
   odometer          Float?
+  engineHours       Float?
   dtcCount          Int                   @default(0) @db.SmallInt
   faultCodes        String?
   vin               String?               @db.VarChar(50)

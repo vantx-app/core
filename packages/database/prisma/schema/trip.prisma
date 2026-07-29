@@ -3,6 +3,14 @@ model Trip {
   vehicleId String         @db.Uuid
   startTime DateTime
   endTime   DateTime?
+  
+  fuelConsumedLiters Float?
+  startFuelLevel     Float?
+  endFuelLevel       Float?
+  fuelEfficiencyKmL  Float?
+  engineHours        Float?
+  distanceKm         Float?
+
   telemetry             TelemetryLog[]
   vehicle               Vehicle                @relation(fields: [vehicleId], references: [id])
   dailyTelemetryRollups DailyTelemetryRollup[]

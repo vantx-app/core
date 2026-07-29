@@ -1,21 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { OverspeedCalculationService } from './overspeed-calculation.service';
-import { HereRoutesClientService } from './here-routes-client.service';
+import { ValhallaRoutesClientService } from './valhalla-routes-client.service';
 import { VehicleCategory } from '@prisma/client';
 
 describe('OverspeedCalculationService', () => {
   let service: OverspeedCalculationService;
-  let hereRoutesClientMock: any;
+  let valhallaRoutesClientMock: any;
 
   beforeEach(async () => {
-    hereRoutesClientMock = {
+    valhallaRoutesClientMock = {
       calculateRouteWithSpeedLimits: jest.fn(),
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OverspeedCalculationService,
-        { provide: HereRoutesClientService, useValue: hereRoutesClientMock },
+        { provide: ValhallaRoutesClientService, useValue: valhallaRoutesClientMock },
       ],
     }).compile();
 
@@ -62,7 +62,7 @@ describe('OverspeedCalculationService', () => {
       expect(result.overspeedCount).toBe(0);
       expect(result.overspeedSeverity).toBe(0);
       expect(
-        hereRoutesClientMock.calculateRouteWithSpeedLimits,
+        valhallaRoutesClientMock.calculateRouteWithSpeedLimits,
       ).not.toHaveBeenCalled();
     });
 
@@ -79,12 +79,12 @@ describe('OverspeedCalculationService', () => {
       expect(result.overspeedCount).toBe(0);
       expect(result.overspeedSeverity).toBe(0);
       expect(
-        hereRoutesClientMock.calculateRouteWithSpeedLimits,
+        valhallaRoutesClientMock.calculateRouteWithSpeedLimits,
       ).not.toHaveBeenCalled();
     });
 
     it('evaluateOverspeedingWithHereRoutes debe usar fallback si HERE API retorna null (error o suspendido)', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue(
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue(
         null,
       );
 
@@ -112,12 +112,12 @@ describe('OverspeedCalculationService', () => {
       expect(result.overspeedCount).toBe(1);
       expect(result.overspeedSeverity).toBe(10);
       expect(
-        hereRoutesClientMock.calculateRouteWithSpeedLimits,
+        valhallaRoutesClientMock.calculateRouteWithSpeedLimits,
       ).toHaveBeenCalled();
     });
 
     it('evaluateOverspeedingWithHereRoutes debe usar los límites de velocidad de HERE API con buffer de 10km/h', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [
           { geometryOffset: 0, speedLimit: 80, functionalClass: 2 },
           { geometryOffset: 1, speedLimit: 50, functionalClass: 3 },
@@ -165,7 +165,7 @@ describe('OverspeedCalculationService', () => {
     });
 
     it('evaluateOverspeedingWithHereRoutes debe enviar TravelMode Truck para HEAVY_DUTY y machinery', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [{ geometryOffset: 0, speedLimit: 60, functionalClass: 3 }],
         geometry: [
           [-79.991, 9.991],
@@ -206,12 +206,12 @@ describe('OverspeedCalculationService', () => {
       expect(result.overspeedCount).toBe(1);
       expect(result.overspeedSeverity).toBe(15);
       expect(
-        hereRoutesClientMock.calculateRouteWithSpeedLimits,
+        valhallaRoutesClientMock.calculateRouteWithSpeedLimits,
       ).toHaveBeenCalledWith(expect.any(Array), 'Truck');
     });
 
     it('evaluateOverspeedingWithHereRoutes debe caer al limite general si no hay límite de span', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [
           { geometryOffset: 0, speedLimit: null }, // Sin límite definido
         ],
@@ -250,7 +250,7 @@ describe('OverspeedCalculationService', () => {
     });
 
     it('evaluateOverspeedingWithHereRoutes debe usar fallback cuando el GPS está Off Route (> 20m del punto más cercano)', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [{ geometryOffset: 0, speedLimit: 30, functionalClass: 5 }],
         geometry: [
           [-79.534, 8.994],
@@ -280,7 +280,7 @@ describe('OverspeedCalculationService', () => {
     });
 
     it('evaluateOverspeedingWithHereRoutes debe usar Inertial Fallback para puntos Off Route (heredar límite del último punto válido)', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [{ geometryOffset: 0, speedLimit: 40, functionalClass: 5 }],
         geometry: [
           [-79.991, 9.991],
@@ -328,7 +328,7 @@ describe('OverspeedCalculationService', () => {
     });
 
     it('evaluateOverspeedingWithHereRoutes debe aplicar Smart Fallback cuando speedLimit es null basado en FC', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [{ geometryOffset: 0, speedLimit: null, functionalClass: 1 }],
         geometry: [
           [-79.991, 9.991],
@@ -367,7 +367,7 @@ describe('OverspeedCalculationService', () => {
     });
 
     it('evaluateOverspeedingWithHereRoutes debe suspender la evaluación durante la ventana de gracia de desaceleración (drop >= 20 km/h)', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [
           { geometryOffset: 0, speedLimit: 100, functionalClass: 1 },
           { geometryOffset: 1, speedLimit: 60, functionalClass: 3 },
@@ -427,7 +427,7 @@ describe('OverspeedCalculationService', () => {
     });
 
     it('evaluateOverspeedingWithHereRoutes debe descartar episodios con duración menor a 5 segundos', async () => {
-      hereRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
+      valhallaRoutesClientMock.calculateRouteWithSpeedLimits.mockResolvedValue({
         spans: [{ geometryOffset: 0, speedLimit: 50, functionalClass: 5 }],
         geometry: [
           [-79.991, 9.991],

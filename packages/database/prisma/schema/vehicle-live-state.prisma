@@ -9,6 +9,8 @@ model VehicleLiveState {
   currentStatus VehicleMovementStatus @default(STOPPED)
   lastOdometer  Float?
   lastFuelLevel Float?
+  lastEngineHours Float?
+  virtualState  Json?
   lastUpdate    DateTime              @default(now())
   vehicle       Vehicle               @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 }

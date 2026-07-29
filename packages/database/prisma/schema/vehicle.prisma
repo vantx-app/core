@@ -19,6 +19,7 @@ model Vehicle {
   listingDescription    String?
   hasOptionToBuy        Boolean                @default(false)
   capabilities          Json?
+  tankCapacity          Float?                 @default(60)
 
   createdAt             DateTime               @default(now())
   device                Device?

@@ -3,10 +3,12 @@ import * as path from 'path';
 import axios from 'axios';
 import { PrismaClient, MapLink } from '@prisma/client';
 import {
-  downsampleByDistance,
-  decodeFlexiblePolyline,
+  removeConsecutiveDuplicateCoords,
+  decodePolyline6,
+  flipCoordinatesToGeoJSON,
 } from './route-utils';
 import { snapPointToLinks } from '@vantx/telemetry-parser';
+import { mapValhallaRoadClassToFC } from './valhalla-routes-client.service';
 
 // Cargar variables de entorno desde .env local o raíz del proyecto
 function loadEnv() {
@@ -42,9 +44,11 @@ function parseArgs() {
   const params = {
     maxApiCalls: 5000,
     delayMs: 300,
-    batchSize: 50,
+    batchSize: 20,
     minPoints: 5,
+    valhallaUrl: process.env.VALHALLA_URL || 'http://localhost:8002',
     dryRun: false,
+    force: false,
     verbose: false,
   };
 
@@ -56,13 +60,18 @@ function parseArgs() {
       params.delayMs = parseInt(args[i + 1], 10) || 300;
       i++;
     } else if (args[i] === '--batch-size' && args[i + 1]) {
-      params.batchSize = parseInt(args[i + 1], 10) || 50;
+      params.batchSize = parseInt(args[i + 1], 10) || 20;
       i++;
     } else if (args[i] === '--min-points' && args[i + 1]) {
       params.minPoints = parseInt(args[i + 1], 10) || 5;
       i++;
+    } else if (args[i] === '--valhalla-url' && args[i + 1]) {
+      params.valhallaUrl = args[i + 1];
+      i++;
     } else if (args[i] === '--dry-run') {
       params.dryRun = true;
+    } else if (args[i] === '--force') {
+      params.force = true;
     } else if (args[i] === '--verbose') {
       params.verbose = true;
     }
@@ -71,7 +80,7 @@ function parseArgs() {
   return params;
 }
 
-// Helper de retraso para rate-limiting
+// Helper de retraso para throttling de recursos del servidor
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function run() {
@@ -79,21 +88,16 @@ async function run() {
   const params = parseArgs();
 
   console.log('===========================================================');
-  console.log('🗺️  BACKFILL DE CACHÉ DE MAPLINK DESDE REGISTROS DE TELEMETRÍA');
+  console.log('🗺️  BACKFILL DE CACHÉ DE MAPLINK DESDE REGISTROS DE TELEMETRÍA (VALHALLA OSM)');
   console.log('===========================================================');
-  console.log(`- Límite de llamadas API (Límite mensual HERE: 30,000 | Usados: 458): ${params.maxApiCalls}`);
-  console.log(`- Retraso entre llamadas (Rate Throttling): ${params.delayMs} ms`);
-  console.log(`- Tamaño de lote: ${params.batchSize}`);
-  console.log(`- Mínimo de puntos por viaje: ${params.minPoints}`);
-  console.log(`- Modo Dry-Run (Simulación sin API ni DB): ${params.dryRun ? 'SÍ (ACTIVO)' : 'NO'}`);
-  console.log(`- Modo Verbose: ${params.verbose ? 'SÍ' : 'NO'}`);
+  console.log(`- Endpoint Valhalla:              ${params.valhallaUrl}`);
+  console.log(`- Límite de llamadas API:        ${params.maxApiCalls}`);
+  console.log(`- Retraso entre llamadas (Throttle): ${params.delayMs} ms`);
+  console.log(`- Tamaño de lote (Batch Size):    ${params.batchSize}`);
+  console.log(`- Mínimo de puntos por viaje:     ${params.minPoints}`);
+  console.log(`- Modo Dry-Run (Simulación sin API/DB): ${params.dryRun ? 'SÍ (ACTIVO)' : 'NO'}`);
+  console.log(`- Modo Verbose:                   ${params.verbose ? 'SÍ' : 'NO'}`);
   console.log('-----------------------------------------------------------');
-
-  const apiKey = process.env.HERE_API_KEY;
-  if (!apiKey && !params.dryRun) {
-    console.error('❌ [ERROR] HERE_API_KEY no encontrada en las variables de entorno.');
-    process.exit(1);
-  }
 
   const prisma = new PrismaClient();
 
@@ -104,10 +108,8 @@ async function run() {
   let totalTripsProcessed = 0;
 
   try {
-    // 1. Obtener viajes / grupos de telemetría por tripId o vehicleId
-    console.log('[DB] Consultando registros de telemetría en PostgreSQL...');
+    console.log('[DB] Consultando viajes en PostgreSQL para backfill de MapLink...');
 
-    // Obtener tripIds distintos que tengan telemetría válida
     const tripsWithLogs = await prisma.telemetryLog.groupBy({
       by: ['tripId'],
       where: {
@@ -125,7 +127,6 @@ async function run() {
 
     let tripIds = tripsWithLogs.map((t) => t.tripId as string);
 
-    // Si no hay tripIds explícitos, procesar por vehículos
     if (tripIds.length === 0) {
       console.log('[DB] No se encontraron tripIds explícitos. Agrupando telemetría por vehículo...');
       const vehicles = await prisma.vehicle.findMany({ select: { id: true } });
@@ -151,13 +152,12 @@ async function run() {
             ignition: true,
             timestamp: true,
           },
-          take: 500,
         });
 
         if (logs.length < params.minPoints) continue;
 
         totalTripsProcessed++;
-        await processTrajectory(logs, prisma, apiKey || '', params, {
+        await processTrajectory(logs, prisma, params, {
           onSuccess: (linksSaved, wasApiCalled, wasCacheHit) => {
             if (wasCacheHit) skippedCacheHitCount++;
             if (wasApiCalled) apiCallsCount++;
@@ -166,17 +166,19 @@ async function run() {
         });
       }
     } else {
-      // Procesar viajes agrupados por tripId
+      console.log(`[INFO] Iniciando procesamiento de ${tripIds.length} viajes en lotes de ${params.batchSize}...`);
+
       for (let i = 0; i < tripIds.length; i += params.batchSize) {
-        if (apiCallsCount >= params.maxApiCalls && !params.dryRun) {
-          console.log(`\n🛑 [CUOTA] Se alcanzó el límite de presupuesto de ${params.maxApiCalls} llamadas API. Deteniendo proceso.`);
+        if (apiCallsCount >= params.maxApiCalls) {
+          console.log(`\n🛑 [PROTECCIÓN SERVIDOR] Se alcanzó el límite configurado de ${params.maxApiCalls} solicitudes. Deteniendo proceso.`);
           break;
         }
 
         const batchTripIds = tripIds.slice(i, i + params.batchSize);
+        console.log(`[PROGRESO] Procesando lote ${Math.floor(i / params.batchSize) + 1} (${i + 1} - ${Math.min(i + params.batchSize, tripIds.length)} de ${tripIds.length} viajes)...`);
 
         for (const tId of batchTripIds) {
-          if (apiCallsCount >= params.maxApiCalls && !params.dryRun) break;
+          if (apiCallsCount >= params.maxApiCalls) break;
 
           const logs = await prisma.telemetryLog.findMany({
             where: {
@@ -203,7 +205,7 @@ async function run() {
           }
 
           totalTripsProcessed++;
-          await processTrajectory(logs, prisma, apiKey || '', params, {
+          await processTrajectory(logs, prisma, params, {
             onSuccess: (linksSaved, wasApiCalled, wasCacheHit) => {
               if (wasCacheHit) skippedCacheHitCount++;
               if (wasApiCalled) apiCallsCount++;
@@ -211,6 +213,9 @@ async function run() {
             },
           });
         }
+
+        // Breve pausa entre lotes para liberar memoria y recursos de CPU
+        await sleep(1000);
       }
     }
   } catch (error: any) {
@@ -219,22 +224,14 @@ async function run() {
     await prisma.$disconnect();
   }
 
-  // 3. Resumen final
-  const totalAccountUsedBefore = 458;
-  const totalAccountUsedNow = totalAccountUsedBefore + apiCallsCount;
-  const remainingMonthlyQuota = 30000 - totalAccountUsedNow;
-
   console.log('\n===========================================================');
-  console.log('🏆 RESUMEN FINAL DEL BACKFILL DE MAPLINK');
+  console.log('🏆 RESUMEN FINAL DEL BACKFILL DE MAPLINK (VALHALLA)');
   console.log('===========================================================');
   console.log(`Trips evaluados:                  ${totalTripsProcessed}`);
   console.log(`Trips omitidos por baja cant pts:  ${skippedTooFewPoints}`);
   console.log(`Trips omitidos por Caché HIT (>85%): ${skippedCacheHitCount}`);
-  console.log(`Llamadas a HERE API ejecutadas:   ${apiCallsCount} de máximo ${params.maxApiCalls}`);
+  console.log(`Solicitudes ejecutadas a Valhalla: ${apiCallsCount}`);
   console.log(`Segmentos MapLink creados/upd:    ${totalSavedLinks}`);
-  console.log('-----------------------------------------------------------');
-  console.log(`Consumo total de HERE API estimado: ${totalAccountUsedNow} / 30,000 solicitudes mensuales.`);
-  console.log(`Cuota disponible restante:        ${remainingMonthlyQuota} solicitudes.`);
   console.log('===========================================================');
 }
 
@@ -250,7 +247,6 @@ async function processTrajectory(
     timestamp: Date;
   }[],
   prisma: PrismaClient,
-  apiKey: string,
   params: ReturnType<typeof parseArgs>,
   callbacks: {
     onSuccess: (linksSaved: number, wasApiCalled: boolean, wasCacheHit: boolean) => void;
@@ -306,7 +302,7 @@ async function processTrajectory(
       }
 
       const coverageRatio = snappedCount / coordinates.length;
-      if (coverageRatio >= 0.85) {
+      if (!params.force && coverageRatio >= 0.85) {
         if (params.verbose) {
           console.log(`[SKIP CACHÉ] Viaje cubierto al ${(coverageRatio * 100).toFixed(1)}% con ${cachedLinks.length} segmentos existentes.`);
         }
@@ -320,59 +316,74 @@ async function processTrajectory(
     }
   }
 
-  // B. Si es modo Dry-Run, simular llamada sin consumir API
+  // B. Filtrar duplicados estacionarios conservando toda la resolución espacial
+  const processedCoords = removeConsecutiveDuplicateCoords(coordinates);
+
+  // C. Si es modo Dry-Run, simular llamada sin consumir API
   if (params.dryRun) {
     if (params.verbose) {
-      console.log(`[DRY-RUN] Se ejecutaría 1 llamada a HERE Routing API v8 para ${coordinates.length} puntos GPS.`);
+      console.log(
+        `[DRY-RUN] Se ejecutaría 1 llamada a Valhalla (${coordinates.length} puntos GPS ➔ ${processedCoords.length} waypoints reducidos).`,
+      );
     }
     callbacks.onSuccess(0, true, false);
     return;
   }
 
-  // C. Downsampling inteligente para ajustar en 1 sola llamada API
-  const processedCoords = downsampleByDistance(coordinates, 0.2, 60);
+  const shapePayload = processedCoords.map((c) => ({
+    lat: c.lat,
+    lon: c.lng,
+    search_radius: 80,
+  }));
 
-  const transportMode = 'truck';
-  const url = 'https://router.hereapi.com/v8/routes';
-  const queryParams = new URLSearchParams();
-  queryParams.append('apikey', apiKey);
-  queryParams.append('transportMode', transportMode);
-  queryParams.append(
-    'origin',
-    `${processedCoords[0].lat},${processedCoords[0].lng}`,
-  );
-  queryParams.append(
-    'destination',
-    `${processedCoords[processedCoords.length - 1].lat},${processedCoords[processedCoords.length - 1].lng}`,
-  );
 
-  for (let i = 1; i < processedCoords.length - 1; i++) {
-    queryParams.append(
-      'via',
-      `${processedCoords[i].lat},${processedCoords[i].lng}!passThrough=true`,
-    );
-  }
-
-  queryParams.append('return', 'polyline');
-  queryParams.append('spans', 'functionalClass,segmentRef,streetAttributes');
-  queryParams.append('departureTime', 'any');
+  const payload = {
+    shape: shapePayload,
+    costing: 'auto',
+    shape_match: 'walk_or_snap',
+    trace_options: {
+      search_radius: 80,
+    },
+    filters: {
+      attributes: [
+        'edge.way_id',
+        'edge.speed',
+        'edge.speed_limit',
+        'edge.road_class',
+        'edge.use',
+        'edge.traversability',
+        'edge.drive_on_right',
+        'edge.begin_shape_index',
+        'edge.end_shape_index',
+        'edge.shape',
+        'matched.point',
+        'shape',
+      ],
+      action: 'include',
+    },
+  };
 
   try {
-    // Aplicar rate-limiting throttle antes de la llamada
+    // Aplicar rate-limiting throttle antes de la llamada para no saturar CPU
     await sleep(params.delayMs);
 
-    const response = await axios.get(`${url}?${queryParams.toString()}`, {
-      timeout: 20000,
+    const valhallaBaseUrl = params.valhallaUrl.replace(/\/$/, '');
+    const response = await axios.post(`${valhallaBaseUrl}/trace_attributes`, payload, {
+      timeout: 15000,
+      headers: { 'Content-Type': 'application/json' },
     });
 
-    const section = response.data?.routes?.[0]?.sections?.[0];
-    if (!section || !section.polyline) {
-      throw new Error('No se encontró sección o polilínea en la respuesta del API de HERE');
+    const data = response.data;
+    const edges = data?.edges || [];
+    const shapePolyline6 = data?.shape;
+
+    if (!edges.length && !shapePolyline6) {
+      throw new Error('Sin bordes ni geometría en la respuesta de Valhalla');
     }
 
-    const decoded = decodeFlexiblePolyline(section.polyline);
-    const polylinePoints = decoded.polyline;
-    const apiSpans = section.spans || [];
+    // Decodificar polilínea de 6 decimales y transformar [lat, lon] -> [lng, lat]
+    const decodedLatLng = shapePolyline6 ? decodePolyline6(shapePolyline6) : [];
+    const decodedGeoJSON = flipCoordinatesToGeoJSON(decodedLatLng);
 
     const linksToSave: {
       linkId: string;
@@ -384,107 +395,186 @@ async function processTrajectory(
       minLng: number;
       maxLng: number;
       isBidirectional: boolean;
+      isVerified: boolean;
     }[] = [];
 
-    for (let i = 0; i < apiSpans.length; i++) {
-      const span = apiSpans[i];
-      const fc = span.functionalClass || 3;
-      const rawLinkId = span.segmentRef || `gen-${i}-${Date.now()}`;
-      const rawLinkIdStr = String(rawLinkId);
+    // 1. Group consecutive edges of the same OpenStreetMap way to construct complete, unbroken road geometries
+    const groupedWayEdges: {
+      wayId: string;
+      roadClass: string;
+      use: string;
+      speedLimitValhalla?: number;
+      traversability: string;
+      beginIdx: number;
+      endIdx: number;
+    }[] = [];
 
-      const isReverse =
-        rawLinkIdStr.startsWith('-') ||
-        rawLinkIdStr.includes('#-') ||
-        (rawLinkIdStr.includes('#') && rawLinkIdStr.split('#')[1].includes('-'));
+    let currentGroup: (typeof groupedWayEdges)[0] | null = null;
 
-      let linkId = rawLinkIdStr.split('#')[0];
-      if (linkId.startsWith('-') || linkId.startsWith('+')) {
-        linkId = linkId.substring(1);
+    for (let i = 0; i < edges.length; i++) {
+      const edge = edges[i];
+      const wayId = edge.way_id ? String(edge.way_id) : `valhalla_${i}`;
+      const bIdx =
+        edge.begin_shape_index !== undefined
+          ? edge.begin_shape_index
+          : Math.floor((i / edges.length) * (decodedGeoJSON.length - 1));
+      const eIdx =
+        edge.end_shape_index !== undefined
+          ? edge.end_shape_index
+          : Math.min(
+            Math.ceil(((i + 1) / edges.length) * (decodedGeoJSON.length - 1)),
+            decodedGeoJSON.length - 1,
+          );
+
+      if (currentGroup && currentGroup.wayId === wayId) {
+        currentGroup.endIdx = Math.max(currentGroup.endIdx, eIdx);
+        if (edge.speed_limit && edge.speed_limit > 0) {
+          currentGroup.speedLimitValhalla = edge.speed_limit;
+        }
+      } else {
+        if (currentGroup) groupedWayEdges.push(currentGroup);
+        currentGroup = {
+          wayId,
+          roadClass: edge.road_class || '',
+          use: edge.use || '',
+          speedLimitValhalla: edge.speed_limit,
+          traversability: edge.traversability || '',
+          beginIdx: bIdx,
+          endIdx: eIdx,
+        };
+      }
+    }
+    if (currentGroup) groupedWayEdges.push(currentGroup);
+
+    for (const group of groupedWayEdges) {
+      const { fc, speedLimit, isVerified } = mapValhallaRoadClassToFC(
+        group.roadClass,
+        group.speedLimitValhalla,
+        group.use,
+      );
+
+      const trav = String(group.traversability || '').toLowerCase().trim();
+      const isRampOrTurn = group.use === 'ramp' || group.use === 'turn_channel';
+      const isMotorway = group.roadClass === 'motorway' || group.roadClass === '0';
+      const isBidirectional = trav === 'both' && !isRampOrTurn && !isMotorway;
+
+      let edgePtsLngLat: [number, number][] = [];
+      if (decodedGeoJSON.length > 0) {
+        const safeBegin = Math.max(0, Math.min(group.beginIdx, decodedGeoJSON.length - 1));
+        const safeEnd = Math.max(safeBegin, Math.min(group.endIdx, decodedGeoJSON.length - 1));
+        edgePtsLngLat = decodedGeoJSON.slice(safeBegin, safeEnd + 1);
       }
 
-      const streetAttrs: string[] = span.streetAttributes || [];
-      const isDivided =
-        streetAttrs.includes('dividedRoad') ||
-        streetAttrs.includes('ramp') ||
-        streetAttrs.includes('roundabout');
-      const isBidirectional = !isDivided;
+      if (edgePtsLngLat.length < 2) continue;
 
-      // Panamá Speed Ceiling mapping per FC
-      const speedLimit =
-        fc === 1
-          ? 110
-          : fc === 2
-            ? 80
-            : fc === 3 || fc === 4
-              ? 60
-              : 40;
+      const startPt = edgePtsLngLat[0];
+      const endPt = edgePtsLngLat[edgePtsLngLat.length - 1];
+      const kStart = `${startPt[0].toFixed(5)},${startPt[1].toFixed(5)}`;
+      const kEnd = `${endPt[0].toFixed(5)},${endPt[1].toFixed(5)}`;
+      const [p1, p2] = kStart < kEnd ? [kStart, kEnd] : [kEnd, kStart];
 
-      const startOffset = span.offset;
-      const endOffset =
-        i < apiSpans.length - 1
-          ? apiSpans[i + 1].offset
-          : polylinePoints.length - 1;
-      const segmentPts = polylinePoints.slice(startOffset, endOffset + 1);
-      if (segmentPts.length === 0) continue;
+      const linkId = `${group.wayId}_${p1}_${p2}`;
 
-      // Preserve geometry in actual direction of vehicle travel for right-hand traffic flow
-      const lats = segmentPts.map((p) => p[0]);
-      const lons = segmentPts.map((p) => p[1]);
-
-      const geometryStr = segmentPts.map((p) => `${p[1]},${p[0]}`).join(';');
-      const sMinLat = Math.min(...lats);
-      const sMaxLat = Math.max(...lats);
-      const sMinLng = Math.min(...lons);
-      const sMaxLng = Math.max(...lons);
+      const lons = edgePtsLngLat.map((p) => p[0]);
+      const lats = edgePtsLngLat.map((p) => p[1]);
 
       linksToSave.push({
         linkId,
         functionalClass: fc,
         speedLimit,
-        geometry: geometryStr,
-        minLat: sMinLat,
-        maxLat: sMaxLat,
-        minLng: sMinLng,
-        maxLng: sMaxLng,
+        geometry: edgePtsLngLat.map((p) => `${p[0]},${p[1]}`).join(';'),
+        minLat: Math.min(...lats),
+        maxLat: Math.max(...lats),
+        minLng: Math.min(...lons),
+        maxLng: Math.max(...lons),
         isBidirectional,
+        isVerified,
       });
     }
 
-    // Upsertar secuencialmente en Postgres MapLink
+    // Deduplicate in memory by linkId
+    const uniqueLinksMap = new Map<string, typeof linksToSave[0]>();
     for (const link of linksToSave) {
-      await prisma.mapLink.upsert({
-        where: { linkId: link.linkId },
-        create: {
-          linkId: link.linkId,
-          functionalClass: link.functionalClass,
-          speedLimit: link.speedLimit,
-          geometry: link.geometry,
-          minLat: link.minLat,
-          maxLat: link.maxLat,
-          minLng: link.minLng,
-          maxLng: link.maxLng,
-          isBidirectional: link.isBidirectional,
-        },
-        update: {
-          functionalClass: link.functionalClass,
-          speedLimit: link.speedLimit,
-          geometry: link.geometry,
-          minLat: link.minLat,
-          maxLat: link.maxLat,
-          minLng: link.minLng,
-          maxLng: link.maxLng,
-          isBidirectional: link.isBidirectional,
-        },
-      });
+      uniqueLinksMap.set(link.linkId, link);
+    }
+    const uniqueLinksToSave = Array.from(uniqueLinksMap.values());
+
+    // Batch lookup existing map links to avoid N+1 queries
+    const linkIdsToSave = uniqueLinksToSave.map((l) => l.linkId);
+    const existingMapLinks = await prisma.mapLink.findMany({
+      where: { linkId: { in: linkIdsToSave } },
+      select: { linkId: true, isVerified: true },
+    });
+    const verifiedSet = new Set(
+      existingMapLinks.filter((m) => m.isVerified).map((m) => m.linkId),
+    );
+
+    const updates: any[] = [];
+    for (const link of uniqueLinksToSave) {
+      if (verifiedSet.has(link.linkId)) {
+        // Si el usuario ya verificó manualmente el segmento en la UI, no sobreescribir la velocidad
+        updates.push(
+          prisma.mapLink.update({
+            where: { linkId: link.linkId },
+            data: {
+              functionalClass: link.functionalClass,
+              geometry: link.geometry,
+              minLat: link.minLat,
+              maxLat: link.maxLat,
+              minLng: link.minLng,
+              maxLng: link.maxLng,
+              isBidirectional: link.isBidirectional,
+            },
+          }),
+        );
+      } else {
+        updates.push(
+          prisma.mapLink.upsert({
+            where: { linkId: link.linkId },
+            create: {
+              linkId: link.linkId,
+              functionalClass: link.functionalClass,
+              speedLimit: link.speedLimit,
+              geometry: link.geometry,
+              minLat: link.minLat,
+              maxLat: link.maxLat,
+              minLng: link.minLng,
+              maxLng: link.maxLng,
+              isBidirectional: link.isBidirectional,
+              isVerified: link.isVerified,
+            },
+            update: {
+              functionalClass: link.functionalClass,
+              speedLimit: link.speedLimit,
+              geometry: link.geometry,
+              minLat: link.minLat,
+              maxLat: link.maxLat,
+              minLng: link.minLng,
+              maxLng: link.maxLng,
+              isBidirectional: link.isBidirectional,
+              isVerified: link.isVerified,
+            },
+          }),
+        );
+      }
+    }
+
+    if (updates.length > 0) {
+      for (let i = 0; i < updates.length; i += 50) {
+        await prisma.$transaction(updates.slice(i, i + 50));
+      }
     }
 
     if (params.verbose) {
-      console.log(`[HERE API OK] Guardados/Actualizados ${linksToSave.length} segmentos MapLink en BD.`);
+      console.log(`[VALHALLA API OK] Guardados/Actualizados ${uniqueLinksToSave.length} segmentos MapLink en BD.`);
     }
 
-    callbacks.onSuccess(linksToSave.length, true, false);
+    callbacks.onSuccess(uniqueLinksToSave.length, true, false);
   } catch (error: any) {
-    console.error(`⚠️ [HERE API ERROR] ${error.message}`);
+    const detail = error.response?.data
+      ? JSON.stringify(error.response.data)
+      : error.message;
+    console.error(`⚠️ [VALHALLA API ERROR] ${detail}`);
     callbacks.onSuccess(0, false, false);
   }
 }

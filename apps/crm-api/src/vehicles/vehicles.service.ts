@@ -18,6 +18,7 @@ import {
   DEFAULT_RULE_ENGINE_CONFIG,
 } from 'src/scoring-cron/scoring.interfaces';
 import {
+  decodePolyline6,
   decodeFlexiblePolyline,
   haversineDistance,
 } from 'src/scoring-cron/route-utils';
@@ -43,7 +44,7 @@ export class VehiclesService {
     } else if (baseUrl.includes(',')) {
       baseUrl = baseUrl.split(',')[0].trim();
     }
-    return baseUrl;
+    return baseUrl.replace(/\/dashboard\/?$/, '').replace(/\/$/, '');
   }
 
   async create(createVehicleDto: CreateVehicleDto) {
@@ -519,44 +520,57 @@ export class VehiclesService {
     }
 
     if (trip.polyline) {
-      const decoded = decodeFlexiblePolyline(trip.polyline);
-      const rawLogs = await this.prisma.telemetryLog.findMany({
-        where: { tripId },
-        orderBy: { timestamp: 'asc' },
-        select: {
-          latitude: true,
-          longitude: true,
-          speed: true,
-        },
-      });
+      let decodedPts: [number, number][] = [];
+      try {
+        decodedPts = decodePolyline6(trip.polyline);
+      } catch {
+        try {
+          const flex = decodeFlexiblePolyline(trip.polyline);
+          decodedPts = flex.polyline;
+        } catch {
+          decodedPts = [];
+        }
+      }
 
-      if (rawLogs.length > 0) {
-        return decoded.polyline.map((p) => {
-          const lat = p[0];
-          const lng = p[1];
-
-          let closestLog = rawLogs[0];
-          let minDist = Infinity;
-
-          for (const log of rawLogs) {
-            const dist = haversineDistance(
-              lat,
-              lng,
-              log.latitude,
-              log.longitude,
-            );
-            if (dist < minDist) {
-              minDist = dist;
-              closestLog = log;
-            }
-          }
-
-          return {
-            latitude: lat,
-            longitude: lng,
-            speed: closestLog.speed,
-          };
+      if (decodedPts.length > 0) {
+        const rawLogs = await this.prisma.telemetryLog.findMany({
+          where: { tripId },
+          orderBy: { timestamp: 'asc' },
+          select: {
+            latitude: true,
+            longitude: true,
+            speed: true,
+          },
         });
+
+        if (rawLogs.length > 0) {
+          return decodedPts.map((p) => {
+            const lat = p[0];
+            const lng = p[1];
+
+            let closestLog = rawLogs[0];
+            let minDist = Infinity;
+
+            for (const log of rawLogs) {
+              const dist = haversineDistance(
+                lat,
+                lng,
+                log.latitude,
+                log.longitude,
+              );
+              if (dist < minDist) {
+                minDist = dist;
+                closestLog = log;
+              }
+            }
+
+            return {
+              latitude: lat,
+              longitude: lng,
+              speed: closestLog.speed,
+            };
+          });
+        }
       }
     }
 
@@ -1198,7 +1212,9 @@ export class VehiclesService {
       }
     }
 
-    totalConsumed = Math.max(0, startLevel - endLevel + totalRefueled - totalDrained);
+    totalRefueled = Math.round(totalRefueled * 100) / 100;
+    totalDrained = Math.round(totalDrained * 100) / 100;
+    totalConsumed = Math.round(Math.max(0, startLevel - endLevel + totalRefueled - totalDrained) * 100) / 100;
 
     if (totalConsumed <= 0) {
       // Si la diferencia de nivel da 0 o negativo (debido a deriva del sensor o pendientes)

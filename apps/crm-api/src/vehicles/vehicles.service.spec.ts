@@ -203,7 +203,7 @@ describe('VehiclesService', () => {
       );
       expect(result).toEqual({
         ...mockLink,
-        trackingUrl: 'http://localhost:3001/dashboard/track/link-uuid',
+        trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid',
       });
       expect(prismaMock.trackingLink.create).toHaveBeenCalledWith({
         data: {
@@ -234,7 +234,7 @@ describe('VehiclesService', () => {
       expect(result).toEqual([
         {
           ...mockLinks[0],
-          trackingUrl: 'http://localhost:3001/dashboard/track/link-uuid-1',
+          trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid-1',
         },
       ]);
       expect(prismaMock.trackingLink.findMany).toHaveBeenCalledWith({
@@ -270,7 +270,7 @@ describe('VehiclesService', () => {
       );
       expect(result).toEqual({
         ...mockUpdatedLink,
-        trackingUrl: 'http://localhost:3001/dashboard/track/link-uuid',
+        trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid',
       });
       expect(prismaMock.trackingLink.findUnique).toHaveBeenCalledWith({
         where: { id: 'link-uuid' },

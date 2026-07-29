@@ -3,7 +3,7 @@ import { ScoringCronService } from './scoring-cron.service';
 import { PrismaService } from 'src/prisma.service';
 import { RulesEngineService } from '../rules-engine/rules-engine.service';
 import { ConfigService } from '@nestjs/config';
-import { HereRoutesClientService } from './here-routes-client.service';
+import { ValhallaRoutesClientService } from './valhalla-routes-client.service';
 import { TelemetryRollupService } from './telemetry-rollup.service';
 import { WeeklyScoringService } from './weekly-scoring.service';
 import { VehicleCategory } from '@prisma/client';
@@ -12,7 +12,7 @@ import { OverspeedCalculationService } from './overspeed-calculation.service';
 describe('ScoringCronService', () => {
   let service: ScoringCronService;
   let prismaMock: any;
-  let hereRoutesClientMock: any;
+  let valhallaRoutesClientMock: any;
   let overspeedCalculationMock: any;
   let module: TestingModule;
 
@@ -69,14 +69,15 @@ describe('ScoringCronService', () => {
       }),
     };
 
-    hereRoutesClientMock = {
+    valhallaRoutesClientMock = {
       calculateRouteWithSpeedLimits: jest.fn(),
+      getValhallaUrl: jest.fn().mockReturnValue('http://localhost:8005'),
       resetSuspension: jest.fn(),
     };
 
     overspeedCalculationMock = {
       calculateOverspeedingFallback: jest.fn(),
-      evaluateOverspeedingWithHereRoutes: jest.fn(),
+      evaluateOverspeedingWithValhallaRoutes: jest.fn(),
     };
 
     module = await Test.createTestingModule({
@@ -85,7 +86,7 @@ describe('ScoringCronService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: RulesEngineService, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: HereRoutesClientService, useValue: hereRoutesClientMock },
+        { provide: ValhallaRoutesClientService, useValue: valhallaRoutesClientMock },
         {
           provide: OverspeedCalculationService,
           useValue: overspeedCalculationMock,
@@ -224,7 +225,7 @@ describe('ScoringCronService', () => {
       ];
       prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
 
-      overspeedCalculationMock.calculateOverspeedingFallback.mockReturnValue({
+      overspeedCalculationMock.evaluateOverspeedingWithValhallaRoutes.mockResolvedValue({
         overspeedCount: 1,
         overspeedSeverity: 10,
       });
@@ -241,9 +242,9 @@ describe('ScoringCronService', () => {
       });
     });
 
-    it('debe realizar el post-procesamiento y actualizar los rollups cuando HERE_API_KEY está configurada', async () => {
+    it('debe realizar el post-procesamiento y actualizar los rollups cuando Valhalla está disponible', async () => {
       (configService.get as jest.Mock).mockImplementation((key) => {
-        if (key === 'HERE_API_KEY') return 'valid-api-key';
+        if (key === 'VALHALLA_URL') return 'http://localhost:8005';
         return undefined;
       });
 
@@ -288,7 +289,7 @@ describe('ScoringCronService', () => {
       ];
       prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
 
-      overspeedCalculationMock.evaluateOverspeedingWithHereRoutes.mockResolvedValue(
+      overspeedCalculationMock.evaluateOverspeedingWithValhallaRoutes.mockResolvedValue(
         {
           overspeedCount: 2,
           overspeedSeverity: 30.0,

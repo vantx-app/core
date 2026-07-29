@@ -1393,7 +1393,9 @@ export function VehicleDetailClient({
                       Consumo Total
                     </span>
                     <span className="text-3xl font-black font-mono tracking-tight text-success mt-1 block">
-                      -{fuelAnalysis.summary.totalConsumed}%
+                      {fuelAnalysis.summary.totalConsumed > 0
+                        ? `-${fuelAnalysis.summary.totalConsumed}%`
+                        : `${fuelAnalysis.summary.totalConsumed}%`}
                     </span>
                   </div>
                   <p className="text-[10px] text-base-content/40 italic leading-relaxed mt-4">

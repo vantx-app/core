@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { RulesEngineService } from 'src/rules-engine/rules-engine.service';
 import { PrismaService } from 'src/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { HereRoutesClientService } from './here-routes-client.service';
+import { ValhallaRoutesClientService } from './valhalla-routes-client.service';
 import { TelemetryRollupService } from './telemetry-rollup.service';
 import { WeeklyScoringService } from './weekly-scoring.service';
 import { VehicleCategory } from '@prisma/client';
@@ -16,7 +16,7 @@ export class ScoringCronService {
     private prisma: PrismaService,
     private rulesEngine: RulesEngineService,
     private configService: ConfigService,
-    private hereRoutesClient: HereRoutesClientService,
+    private valhallaRoutesClient: ValhallaRoutesClientService,
     private telemetryRollupService: TelemetryRollupService,
     private weeklyScoringService: WeeklyScoringService,
     private overspeedCalculationService: OverspeedCalculationService,
@@ -36,18 +36,11 @@ export class ScoringCronService {
       dateStr = panamaTime.toISOString().split('T')[0];
     }
 
-    const apiKey = this.configService.get<string>('HERE_API_KEY');
-    if (!apiKey) {
-      this.logger.warn(
-        'HERE_API_KEY no configurada. Se realizará el post-procesamiento de límites de velocidad utilizando los límites fallback.',
-      );
-    } else {
-      this.logger.log(
-        `Iniciando post-procesamiento de límites de velocidad HERE para la fecha: ${dateStr}`,
-      );
-      // Reiniciar la suspensión del cliente de HERE antes de empezar
-      this.hereRoutesClient.resetSuspension();
-    }
+    const valhallaUrl = this.valhallaRoutesClient.getValhallaUrl();
+    this.logger.log(
+      `Iniciando post-procesamiento de límites de velocidad Valhalla (${valhallaUrl}) para la fecha: ${dateStr}`,
+    );
+    this.valhallaRoutesClient.resetSuspension();
 
     // Obtener rollups del día para viajes con conductor
     const rollups = await this.prisma.dailyTelemetryRollup.findMany({
@@ -117,16 +110,12 @@ export class ScoringCronService {
         continue;
       }
 
-      const result = apiKey
-        ? await this.overspeedCalculationService.evaluateOverspeedingWithHereRoutes(
-            logs,
-            fallbackThreshold,
-            category,
-          )
-        : this.overspeedCalculationService.calculateOverspeedingFallback(
-            logs,
-            fallbackThreshold,
-          );
+      const result =
+        await this.overspeedCalculationService.evaluateOverspeedingWithValhallaRoutes(
+          logs,
+          fallbackThreshold,
+          category,
+        );
 
       await this.prisma.dailyTelemetryRollup.update({
         where: { id: rollup.id },

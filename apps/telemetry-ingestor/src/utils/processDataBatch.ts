@@ -44,6 +44,12 @@ export interface FuelVirtualState {
   timeAccumulator: number;
   ignitionOnTime: number | null;
   ignitionOnReadings: number[];
+  session?: {
+    type: "REFUEL" | "DRAIN" | "NONE";
+    startAnchor: number | null;
+    stableCounter: number;
+    lastMedian: number | null;
+  };
 }
 
 const fuelVirtualStateCache = new Map<string, FuelVirtualState>();
@@ -267,6 +273,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       alias: true,
       vin: true,
       fuelType: true,
+      tankCapacity: true,
       isOdometerAbsolute: true,
       odometerSource: true,
       capabilities: true,
@@ -283,6 +290,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
           currentStatus: true,
           lastOdometer: true,
           lastFuelLevel: true,
+          lastEngineHours: true,
+          virtualState: true,
           lastAngle: true,
           lastLat: true,
           lastLng: true,
@@ -456,6 +465,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
     rpm: 0,
     excessiveIdling: vehicle.liveState?.currentStatus === "EXCESSIVE_IDLING",
     odometer: vehicle.liveState?.lastOdometer ?? null,
+    engineHours: vehicle.liveState?.lastEngineHours ?? null,
     fuelLevel: vehicle.liveState?.lastFuelLevel ?? null,
     angle: vehicle.liveState?.lastAngle ?? 0,
     latitude: vehicle.liveState?.lastLat ?? undefined,
@@ -466,18 +476,37 @@ async function processDataBatchInternal(records: any[], imei: string) {
 
   let virtualState = fuelVirtualStateCache.get(vehicle.id);
   if (!virtualState) {
-    const initialLevel = vehicle.liveState?.lastFuelLevel ?? null;
-    virtualState = {
-      currentDisplayPercent: initialLevel,
-      lastValidAnchorPercent: initialLevel,
-      vehicleState: vehicle.liveState?.currentStatus === "MOVING" ? "MOVING" : "PARKED",
-      segmentReadings: [],
-      distanceAccumulator: 0,
-      timeAccumulator: 0,
-      ignitionOnTime: null,
-      ignitionOnReadings: [],
-    };
+    if (vehicle.liveState?.virtualState && typeof vehicle.liveState.virtualState === "object") {
+      virtualState = vehicle.liveState.virtualState as unknown as FuelVirtualState;
+    } else {
+      const initialLevel = vehicle.liveState?.lastFuelLevel ?? null;
+      virtualState = {
+        currentDisplayPercent: initialLevel,
+        lastValidAnchorPercent: initialLevel,
+        vehicleState: vehicle.liveState?.currentStatus === "MOVING" ? "MOVING" : "PARKED",
+        segmentReadings: [],
+        distanceAccumulator: 0,
+        timeAccumulator: 0,
+        ignitionOnTime: null,
+        ignitionOnReadings: [],
+        session: {
+          type: "NONE",
+          startAnchor: null,
+          stableCounter: 0,
+          lastMedian: null,
+        },
+      };
+    }
     fuelVirtualStateCache.set(vehicle.id, virtualState);
+  }
+
+  if (!virtualState.session) {
+    virtualState.session = {
+      type: "NONE",
+      startAnchor: null,
+      stableCounter: 0,
+      lastMedian: null,
+    };
   }
 
   const telemetryLogs: any = [];
@@ -494,20 +523,47 @@ async function processDataBatchInternal(records: any[], imei: string) {
     }
 
     let distanceDeltaMeters = 0;
-    if (parsed.odometer !== null && previousState.odometer !== null && previousState.odometer !== undefined) {
-      distanceDeltaMeters = Math.max(0, (parsed.odometer - previousState.odometer) * 1000);
-    } else if (previousState.latitude !== undefined && previousState.longitude !== undefined) {
-      distanceDeltaMeters = haversineDistance(
-        previousState.latitude,
-        previousState.longitude,
-        rec.latitude,
-        rec.longitude
-      ) * 1000;
+    if (!isStopped) {
+      if (parsed.odometer !== null && previousState.odometer !== null && previousState.odometer !== undefined) {
+        distanceDeltaMeters = Math.max(0, (parsed.odometer - previousState.odometer) * 1000);
+      } else if (previousState.latitude !== undefined && previousState.longitude !== undefined) {
+        distanceDeltaMeters = haversineDistance(
+          previousState.latitude,
+          previousState.longitude,
+          rec.latitude,
+          rec.longitude
+        ) * 1000;
+      }
     }
 
     let timeDeltaSeconds = 0;
     if (previousState.timestamp) {
       timeDeltaSeconds = Math.max(0, ((rec.timestamp as Date).getTime() - previousState.timestamp.getTime()) / 1000);
+    }
+
+    // Engine Hours Accumulator & Normalization
+    let recordEngineHours: number | null = parsed.engineHours;
+    if (recordEngineHours === null || recordEngineHours === undefined) {
+      const prevEH = previousState.engineHours ?? vehicle.liveState?.lastEngineHours ?? 0;
+      if (parsed.trueIgnition) {
+        const cappedSeconds = Math.min(timeDeltaSeconds, 120); // Cap gap at 120s to prevent disconnect spikes
+        recordEngineHours = prevEH + (cappedSeconds / 3600.0);
+      } else {
+        recordEngineHours = prevEH;
+      }
+    }
+    if (recordEngineHours !== null) {
+      parsed.engineHours = Math.round(recordEngineHours * 10000) / 10000;
+    }
+
+    // Odometer Fallback Accumulator
+    let recordOdometer: number | null = parsed.odometer;
+    if (recordOdometer === null || recordOdometer === undefined) {
+      const prevOdo = previousState.odometer ?? vehicle.liveState?.lastOdometer ?? 0;
+      recordOdometer = prevOdo + (distanceDeltaMeters / 1000.0);
+    }
+    if (recordOdometer !== null) {
+      parsed.odometer = Math.round(recordOdometer * 100) / 100;
     }
 
     // Process Virtual Tank State Machine
@@ -596,17 +652,50 @@ async function processDataBatchInternal(records: any[], imei: string) {
         }
 
         const stableMedian = calculateMedian(virtualState.segmentReadings);
-        const parkedDelta = stableMedian - virtualState.lastValidAnchorPercent!;
+        const currentAnchor = virtualState.lastValidAnchorPercent ?? stableMedian;
 
-        // Standardized Refuel Event Boundary (>3.0%)
-        if (parkedDelta > 3.0) {
+        // Evaluate starting a session when no active session exists
+        if (!virtualState.session || virtualState.session.type === "NONE") {
+          const parkedDelta = stableMedian - currentAnchor;
+          if (parkedDelta > 3.0) {
+            virtualState.session = {
+              type: "REFUEL",
+              startAnchor: currentAnchor,
+              stableCounter: 0,
+              lastMedian: stableMedian,
+            };
+          } else if (parkedDelta < -4.0) {
+            virtualState.session = {
+              type: "DRAIN",
+              startAnchor: currentAnchor,
+              stableCounter: 0,
+              lastMedian: stableMedian,
+            };
+          }
+        }
+
+        // Process active Refuel/Drain session
+        if (virtualState.session && virtualState.session.type !== "NONE") {
           virtualState.currentDisplayPercent = stableMedian;
-          virtualState.lastValidAnchorPercent = stableMedian;
-        } 
-        // Standardized Critical Theft Boundary (<-4.0%)
-        else if (parkedDelta < -4.0) {
-          virtualState.currentDisplayPercent = stableMedian;
-          virtualState.lastValidAnchorPercent = stableMedian;
+
+          const prevMed = virtualState.session.lastMedian ?? stableMedian;
+          if (Math.abs(stableMedian - prevMed) <= 0.5) {
+            virtualState.session.stableCounter++;
+          } else {
+            virtualState.session.stableCounter = 0;
+          }
+          virtualState.session.lastMedian = stableMedian;
+
+          // Confirm and settle session after 3 consecutive stable readings
+          if (virtualState.session.stableCounter >= 3) {
+            virtualState.lastValidAnchorPercent = stableMedian;
+            virtualState.session = {
+              type: "NONE",
+              startAnchor: null,
+              stableCounter: 0,
+              lastMedian: null,
+            };
+          }
         }
       }
     }
@@ -620,6 +709,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       rpm: parsed.rawRpm,
       excessiveIdling: parsed.isHardwareExcessiveIdling,
       odometer: parsed.odometer,
+      engineHours: parsed.engineHours,
       fuelLevel: parsed.fuelLevel,
       angle: recordAngle,
       latitude: rec.latitude,
@@ -696,6 +786,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       engineLoad: parsed.engineLoad,
       coolantTemp: parsed.coolantTemp,
       odometer: parsed.odometer,
+      engineHours: parsed.engineHours,
       dtcCount: parsed.dtcCount,
       faultCodes: parsed.faultCodes,
       fuelLevel: parsed.fuelLevel,
@@ -724,6 +815,45 @@ async function processDataBatchInternal(records: any[], imei: string) {
   }
 
   if (telemetryLogs.length === 0) return;
+
+  // Calculate trip-level metrics for created or updated trips that have ended
+  const allTripsToFinalize = new Map<string, any>();
+  for (const [id, data] of tripsToCreate) {
+    if (data.endTime) allTripsToFinalize.set(id, data);
+  }
+  for (const [id, data] of tripsToUpdate) {
+    if (data.endTime) allTripsToFinalize.set(id, data);
+  }
+
+  for (const [tripId, tripObj] of allTripsToFinalize) {
+    const tripLogs = telemetryLogs.filter((l: any) => l.tripId === tripId);
+    if (tripLogs.length > 0) {
+      const firstLog = tripLogs[0];
+      const lastLog = tripLogs[tripLogs.length - 1];
+
+      const dist = Math.max(0, (lastLog.odometer ?? 0) - (firstLog.odometer ?? 0));
+      const eh = Math.max(0, (lastLog.engineHours ?? 0) - (firstLog.engineHours ?? 0));
+      const startFuel = firstLog.fuelLevel;
+      const endFuel = lastLog.fuelLevel;
+      const capacity = vehicle.tankCapacity ?? 60;
+
+      let consumedLiters: number | null = null;
+      if (lastLog.fuelConsumption !== null && firstLog.fuelConsumption !== null && firstLog.fuelConsumption !== undefined && lastLog.fuelConsumption !== undefined) {
+        consumedLiters = Math.max(0, lastLog.fuelConsumption - firstLog.fuelConsumption);
+      } else if (startFuel !== null && endFuel !== null && startFuel !== undefined && endFuel !== undefined) {
+        consumedLiters = Math.max(0, ((startFuel - endFuel) / 100.0) * capacity);
+      }
+
+      const efficiency = consumedLiters && consumedLiters > 0 ? dist / consumedLiters : null;
+
+      tripObj.distanceKm = Math.round(dist * 100) / 100;
+      tripObj.engineHours = Math.round(eh * 100) / 100;
+      tripObj.startFuelLevel = startFuel;
+      tripObj.endFuelLevel = endFuel;
+      tripObj.fuelConsumedLiters = consumedLiters !== null ? Math.round(consumedLiters * 100) / 100 : null;
+      tripObj.fuelEfficiencyKmL = efficiency !== null ? Math.round(efficiency * 100) / 100 : null;
+    }
+  }
 
   const lastRecord = telemetryLogs[telemetryLogs.length - 1];
 

@@ -38,23 +38,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" data-theme="light">
-      {/*
-        pageEntry animation: fades the page in from the canvas background color.
-        Runs before React hydrates — pure CSS, no framework dependency.
-        Masks the visual flash when arriving from a cross-app transition.
-      */}
-      <style>{`
-        @keyframes pageEntry {
-          from { opacity: 0; background: #f8fafc; }
-          to   { opacity: 1; }
-        }
-        html {
-          animation: pageEntry 250ms ease forwards;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          html { animation: none; }
-        }
-      `}</style>
       <body>
         <PWARegistration />
         {/* Cross-app transition overlay — dynamically theme-aware */}

@@ -6,6 +6,7 @@ export interface PreviousState {
   excessiveIdling?: boolean;
   unplugged?: boolean;
   odometer?: number | null;
+  engineHours?: number | null;
   fuelLevel?: number | null;
   angle?: number;
   latitude?: number;
@@ -46,6 +47,7 @@ export interface ParsedTelemetry {
   detectedFuelType: "GASOLINE" | "DIESEL" | "ELECTRIC" | "HYBRID" | null;
 
   // Nuevos campos normalizados
+  engineHours: number | null;
   fuelLevel: number | null;
   fuelConsumption: number | null;
   fuelRate: number | null;
@@ -217,6 +219,7 @@ export function parseTelemetryRecord(
   }
 
   // Nuevos campos dinámicos
+  const engineHours = getAvlValue(rec.ioData, mapping.engineHours);
   const fuelLevel = getAvlValue(rec.ioData, mapping.fuelLevel);
 
   const fuelConsumption = getAvlValue(rec.ioData, mapping.fuelConsumption);
@@ -272,6 +275,7 @@ export function parseTelemetryRecord(
     engineLoad,
     coolantTemp,
     odometer,
+    engineHours,
     vin,
     dtcCount,
     faultCodes,

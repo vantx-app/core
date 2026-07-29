@@ -1,4 +1,5 @@
 import { TelemetryLog } from '@prisma/client';
+import polyline from '@mapbox/polyline';
 import {
   haversineDistance,
   calculateHeading,
@@ -7,6 +8,34 @@ import {
 } from '@vantx/telemetry-parser';
 
 export { haversineDistance, calculateHeading, getAngleDiff };
+
+/**
+ * Decodifica una polilínea de Valhalla con 6 decimales (precision = 6).
+ * Retorna un array de coordenadas en formato [lat, lon].
+ */
+export function decodePolyline6(encoded: string): [number, number][] {
+  if (!encoded) return [];
+  return polyline.decode(encoded, 6);
+}
+
+/**
+ * Invierte el orden de los elementos de un array de coordenadas de [lat, lon] a [lng, lat]
+ * requerido por GeoJSON, Mapbox GL JS y MapLibre.
+ */
+export function flipCoordinatesToGeoJSON(
+  coords: [number, number][],
+): [number, number][] {
+  return coords.map(([lat, lon]) => [lon, lat]);
+}
+
+/**
+ * Codifica un array de coordenadas [lat, lon] en una polilínea de precisión 6 de Valhalla.
+ */
+export function encodePolyline6(coords: [number, number][]): string {
+  if (!coords || coords.length === 0) return '';
+  return polyline.encode(coords, 6);
+}
+
 
 /** Un tramo de ruta con su límite de velocidad y posición en la geometría */
 export interface RouteSpanWithSpeedLimit {
@@ -20,6 +49,25 @@ export interface CalculatedRouteResult {
   spans: RouteSpanWithSpeedLimit[];
   geometry: [number, number][]; // [lng, lat] puntos decodificados de la ruta
   polyline?: string;
+}
+
+/**
+ * Elimina coordenadas consecutivas idénticas (vehículo estacionado/ralentí)
+ * sin perder resolución ni modificar la trayectoria durante el movimiento.
+ */
+export function removeConsecutiveDuplicateCoords<T extends { lat: number; lng: number }>(
+  coords: T[],
+): T[] {
+  if (!coords || coords.length <= 1) return coords || [];
+
+  const result: T[] = [coords[0]];
+  for (let i = 1; i < coords.length; i++) {
+    const last = result[result.length - 1];
+    if (coords[i].lat !== last.lat || coords[i].lng !== last.lng) {
+      result.push(coords[i]);
+    }
+  }
+  return result;
 }
 
 /**

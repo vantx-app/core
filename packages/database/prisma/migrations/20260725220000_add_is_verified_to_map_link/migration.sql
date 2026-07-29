@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "MapLink" ADD COLUMN IF NOT EXISTS "isVerified" BOOLEAN NOT NULL DEFAULT false;

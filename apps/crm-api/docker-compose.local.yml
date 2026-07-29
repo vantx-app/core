@@ -84,5 +84,21 @@ services:
     depends_on:
       - vantx_db
 
+  # ----------------------------------
+  # VALHALLA ROUTING ENGINE (OSM Panama)
+  # ----------------------------------
+  vantx_valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    environment:
+      - tile_urls=https://download.geofabrik.de/central-america/panama-latest.osm.pbf
+      - tile_extract_url=https://download.geofabrik.de/central-america/panama-latest.osm.pbf
+      - build_elevation=false
+      - build_admins=true
+      - build_time_zones=false
+      - use_tiles_ignore_pbf=false
+    volumes:
+      - valhalla-data:/custom_files
+
 volumes:
   db-data:
+  valhalla-data:

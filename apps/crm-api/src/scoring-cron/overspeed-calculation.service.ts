@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { TelemetryLog, VehicleCategory } from '@prisma/client';
-import { HereRoutesClientService } from './here-routes-client.service';
+import { ValhallaRoutesClientService } from './valhalla-routes-client.service';
 import { haversineDistance, RouteSpanWithSpeedLimit } from './route-utils';
 
 export interface ResolvedSpeedingLog {
@@ -14,7 +14,7 @@ export interface ResolvedSpeedingLog {
 
 @Injectable()
 export class OverspeedCalculationService {
-  constructor(private hereRoutesClient: HereRoutesClientService) {}
+  constructor(private valhallaRoutesClient: ValhallaRoutesClientService) {}
 
   /**
    * Calcula el exceso de velocidad basándose en el límite fallback (110 km/h o configurado en el perfil)
@@ -82,9 +82,10 @@ export class OverspeedCalculationService {
 
   /**
    * Evalúa el exceso de velocidad utilizando la ruta real obtenida de HERE API.
+   * Evalúa el exceso de velocidad utilizando la ruta real obtenida de Valhalla API.
    * Aplica la ponderación por Functional Class y fallback por inercia/reglas específicas de Panamá.
    */
-  public async evaluateOverspeedingWithHereRoutes(
+  public async evaluateOverspeedingWithValhallaRoutes(
     logs: TelemetryLog[],
     fallbackOverspeedThreshold: number,
     category: VehicleCategory,
@@ -134,7 +135,7 @@ export class OverspeedCalculationService {
     }));
 
     const routeResult =
-      await this.hereRoutesClient.calculateRouteWithSpeedLimits(
+      await this.valhallaRoutesClient.calculateRouteWithSpeedLimits(
         coordinates,
         travelMode as 'Car' | 'Truck',
       );
@@ -166,6 +167,21 @@ export class OverspeedCalculationService {
   }
 
   /**
+   * Alias de compatibilidad para evaluateOverspeedingWithValhallaRoutes
+   */
+  public async evaluateOverspeedingWithHereRoutes(
+    logs: TelemetryLog[],
+    fallbackOverspeedThreshold: number,
+    category: VehicleCategory,
+  ) {
+    return this.evaluateOverspeedingWithValhallaRoutes(
+      logs,
+      fallbackOverspeedThreshold,
+      category,
+    );
+  }
+
+  /**
    * Mapea una clase funcional (FC) a su correspondiente multiplicador de riesgo/severidad (Bypass Factor)
    */
   private mapFCToMultiplier(fc: number): number {
@@ -193,10 +209,11 @@ export class OverspeedCalculationService {
       const { index: closestIdx, distanceKm: snapDist } =
         this.findClosestGeometryIndex(log.latitude, log.longitude, geometry);
       if (snapDist <= 0.05) {
-        const { functionalClass: fc } =
+        const { speedLimit: spanLimit, functionalClass: fc } =
           this.getSpeedLimitAndClassForGeometryIndex(closestIdx, spans);
         let limit: number;
-        if (fc === 1) limit = 110;
+        if (spanLimit && spanLimit > 0) limit = spanLimit;
+        else if (fc === 1) limit = 90;
         else if (fc === 2) limit = 80;
         else if (fc === 3 || fc === 4) limit = 60;
         else if (fc === 5) limit = 40;
@@ -250,19 +267,21 @@ export class OverspeedCalculationService {
         limitToUse = lastValidOnRouteSpeedLimit;
         fcToUse = lastValidOnRouteFC;
       } else {
-        const { functionalClass: fc } =
+        const { speedLimit: spanLimit, functionalClass: fc } =
           this.getSpeedLimitAndClassForGeometryIndex(closestIdx, spans);
         fcToUse = fc ?? 3;
 
-        // Smart Fallback Ingestion: Asignar base conservadora basada en Reglamento de Tránsito de Panamá
-        if (fc === 1) {
-          limitToUse = 110; // Autopistas / Corredores
+        // Prefer the exact road link speed limit returned by Valhalla (e.g. 90 km/h vs 110 km/h)
+        if (spanLimit && spanLimit > 0) {
+          limitToUse = spanLimit;
+        } else if (fc === 1) {
+          limitToUse = 90; // Autopistas / Corredores fallback (90 km/h)
         } else if (fc === 2) {
-          limitToUse = 80; // Carreteras / Vías Interurbanas
+          limitToUse = 80; // Carreteras / Vías Interurbanas fallback
         } else if (fc === 3 || fc === 4) {
-          limitToUse = 60; // Avenidas Urbanas Principales / Vías Colectoras
+          limitToUse = 60; // Avenidas Urbanas Principales / Vías Colectoras fallback
         } else if (fc === 5) {
-          limitToUse = 40; // Calles Residenciales / Urbanas comerciales
+          limitToUse = 40; // Calles Residenciales / Urbanas comerciales fallback
         } else {
           limitToUse = fallbackThreshold;
           fcToUse = 3;

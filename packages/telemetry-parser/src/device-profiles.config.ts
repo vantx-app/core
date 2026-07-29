@@ -46,6 +46,7 @@ export interface AvlMapping {
   fuelType?: number | AvlPropertyConfig;
 
   // New normalized properties
+  engineHours?: number | AvlPropertyConfig;
   fuelLevel?: number | AvlPropertyConfig;
   fuelConsumption?: number | AvlPropertyConfig;
   fuelRate?: number | AvlPropertyConfig;
@@ -80,6 +81,7 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     crashTrace: 257,
     unplugged: 252,
     fuelType: 759,
+    engineHours: { id: 102, multiplier: 0.0002777777777777778 }, // seconds to hours
     fuelLevel: 48,
     fuelConsumption: { id: 111, multiplier: 0.001 },  // ml to Liters
     fuelRate: { id: 163, multiplier: 0.1 },           // deciliters/h to L/h
@@ -108,6 +110,7 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     crashTrace: 257,
     unplugged: 252,
     fuelType: 759,
+    engineHours: { id: 102, multiplier: 0.0002777777777777778 }, // seconds to hours
     fuelLevel: 89,
     fuelConsumption: 83,                              // Liters directly (no multiplier)
     fuelRate: { id: 110, multiplier: 0.1 },           // deciliters/h to L/h
@@ -136,6 +139,7 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     crashTrace: 257,
     unplugged: 252,
     fuelType: 759,
+    engineHours: { id: 102, multiplier: 0.0002777777777777778 }, // seconds to hours
     fuelLevel: 37,                                    // CAN Adapters Fuel Level %
     fuelConsumption: { id: 17, multiplier: 0.1 },     // CAN Adapters Fuel Consumed (deciliters)
     fuelRate: { id: 18, multiplier: 0.1 },            // CAN Adapters Fuel Rate (deciliters/h)
@@ -161,6 +165,7 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     crashTrace: 257,
     unplugged: 252,
     fuelType: 759,
+    engineHours: { id: 88, multiplier: 0.05 },        // FMS Total Engine Hours (0.05 h resolution)
     fuelLevel: 87,                                    // FMS Fuel Level %
     fuelConsumption: 86,                              // FMS Total Fuel Consumed (L)
     fuelRate: { id: 110, multiplier: 0.1 },           // FMS Fuel Rate (deciliters/h)

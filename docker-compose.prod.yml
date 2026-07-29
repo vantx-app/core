@@ -126,11 +126,42 @@ services:
     environment:
       - NODE_ENV=production
       - NODE_OPTIONS=--max-old-space-size=300
+      - VALHALLA_URL=http://vantx_valhalla:8002
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
       vantx_db:
         condition: service_healthy
+      vantx_valhalla:
+        condition: service_started
+
+  # ----------------------------------
+  # VALHALLA ROUTING ENGINE (OSM Panama)
+  # ----------------------------------
+  vantx_valhalla:
+    image: ghcr.io/gis-ops/docker-valhalla/valhalla:latest
+    container_name: vantx_valhalla
+    networks:
+      - vantx-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    restart: unless-stopped
+    environment:
+      - tile_urls=https://download.geofabrik.de/central-america/panama-latest.osm.pbf
+      - tile_extract_url=https://download.geofabrik.de/central-america/panama-latest.osm.pbf
+      - build_elevation=false
+      - build_admins=true
+      - build_time_zones=false
+      - use_tiles_ignore_pbf=false
+    volumes:
+      - valhalla_custom_files:/custom_files
 
   # ----------------------------------
   # TELEMETRY TCP INGESTOR (Teltonika listener)
@@ -250,6 +281,8 @@ volumes:
   vantx_prod_db_data:
     external: true
     name: vantx_vantx_prod_db_data
+  valhalla_custom_files:
+    driver: local
 
 networks:
   vantx-network:
