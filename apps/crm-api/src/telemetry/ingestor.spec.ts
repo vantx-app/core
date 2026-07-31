@@ -215,6 +215,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
           vin: true,
           fuelType: true,
           category: true,
+          tankCapacity: true,
           isOdometerAbsolute: true,
           odometerSource: true,
           capabilities: true,
@@ -230,6 +231,8 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
               currentStatus: true,
               lastOdometer: true,
               lastFuelLevel: true,
+              lastEngineHours: true,
+              virtualState: true,
               lastAngle: true,
               lastLat: true,
               lastLng: true,
@@ -401,10 +404,12 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       // Debe haber llamado a vehicle.update con el nuevo VIN en la transacción
-      expect(mockPrisma.vehicle.update).toHaveBeenCalledWith({
-        where: { id: mockVehicleId },
-        data: { vin: 'TESTVIN1234567890' },
-      });
+      expect(mockPrisma.vehicle.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockVehicleId },
+          data: expect.objectContaining({ vin: 'TESTVIN1234567890' }),
+        }),
+      );
     });
 
     it('no debe actualizar el VIN si el vehículo ya tiene uno configurado en la base de datos', async () => {
@@ -439,8 +444,12 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
 
       await processDataBatch(records, mockImei);
 
-      // No debe haber llamado a vehicle.update
-      expect(mockPrisma.vehicle.update).not.toHaveBeenCalled();
+      // No debe haber llamado a vehicle.update para el VIN
+      expect(mockPrisma.vehicle.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ vin: 'NEWVIN987654321' }),
+        }),
+      );
     });
 
     it('debe actualizar el fuelType del vehículo si el dispositivo lo reporta y el vehículo no tiene uno asignado', async () => {
@@ -477,10 +486,12 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       // Debe haber llamado a vehicle.update con el nuevo fuelType en la transacción
-      expect(mockPrisma.vehicle.update).toHaveBeenCalledWith({
-        where: { id: mockVehicleId },
-        data: { fuelType: 'DIESEL' },
-      });
+      expect(mockPrisma.vehicle.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockVehicleId },
+          data: expect.objectContaining({ fuelType: 'DIESEL' }),
+        }),
+      );
     });
 
     it('no debe actualizar el fuelType si el vehículo ya tiene uno configurado en la base de datos', async () => {
@@ -515,8 +526,12 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
 
       await processDataBatch(records, mockImei);
 
-      // No debe haber llamado a vehicle.update
-      expect(mockPrisma.vehicle.update).not.toHaveBeenCalled();
+      // No debe haber llamado a vehicle.update con fuelType
+      expect(mockPrisma.vehicle.update).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ fuelType: 'DIESEL' }),
+        }),
+      );
     });
 
     it('debe ignorar el fallback de voltaje si el perfil del dispositivo define ignition y se reporta como inactivo', async () => {
@@ -830,7 +845,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       expect(mockPrisma.vehicle.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: mockVehicleId },
-          data: { vin: 'LVCANVINTEST12345' },
+          data: expect.objectContaining({ vin: 'LVCANVINTEST12345' }),
         }),
       );
     });

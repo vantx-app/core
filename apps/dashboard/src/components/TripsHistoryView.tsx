@@ -17,6 +17,7 @@ import {
   Shield,
   Leaf,
   Wrench,
+  MapPin,
 } from "lucide-react";
 import api from "@/utils/client/api-client";
 import { RadialScoreGauge } from "@/components/ui/RadialScoreGauge";
@@ -336,10 +337,18 @@ export default function TripsHistoryView({
                             </span>
                           )}
                         </div>
-                        <span className="opacity-60 font-mono flex items-center gap-0.5">
-                          <Clock className="size-2.5" />
-                          {formatTripDuration(trip.startTime, trip.endTime)}
-                        </span>
+                        <div className="flex items-center gap-2 text-base-content/60 font-mono">
+                          {trip.distanceKm != null && trip.distanceKm > 0 && (
+                            <span className="flex items-center gap-0.5 font-bold text-emerald-600 dark:text-emerald-400">
+                              <MapPin className="size-2.5" />
+                              {trip.distanceKm.toFixed(1)} km
+                            </span>
+                          )}
+                          <span className="opacity-60 flex items-center gap-0.5">
+                            <Clock className="size-2.5" />
+                            {formatTripDuration(trip.startTime, trip.endTime)}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="text-xs font-bold text-base-content/85 pl-0.5">
@@ -676,7 +685,23 @@ export default function TripsHistoryView({
         </div>
 
         {/* Metrics Grid */}
-        <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+        <div className="flex-1 w-full grid grid-cols-2 sm:grid-cols-4 gap-3.5">
+          {/* Distancia */}
+          <div className="bg-base-200/15 dark:bg-base-900/10 hover:bg-base-200/30 dark:hover:bg-base-900/20 border border-base-200/50 dark:border-base-800/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all duration-300">
+            <div className="flex items-center justify-between w-full gap-2 text-base-content/40">
+              <span className="text-[10px] font-bold uppercase tracking-wider">
+                Distancia
+              </span>
+              <MapPin className="size-4 text-emerald-500/80 shrink-0" />
+            </div>
+            <div className="mt-3 font-bold text-base text-base-content/95 font-mono">
+              {selectedTrip.distanceKm != null && selectedTrip.distanceKm > 0
+                ? selectedTrip.distanceKm.toFixed(1)
+                : "-"}{" "}
+              <span className="text-xs font-normal font-sans">km</span>
+            </div>
+          </div>
+
           {/* Duración */}
           <div className="bg-base-200/15 dark:bg-base-900/10 hover:bg-base-200/30 dark:hover:bg-base-900/20 border border-base-200/50 dark:border-base-800/20 p-3.5 rounded-2xl flex flex-col justify-between transition-all duration-300">
             <div className="flex items-center justify-between w-full gap-2 text-base-content/40">

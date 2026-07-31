@@ -252,4 +252,24 @@ export class VehiclesController {
   ) {
     return this.vehiclesService.getPublicTrackingDetails(linkId);
   }
+
+  @Public()
+  @Get('tracking-links/public/:linkId/route')
+  async getPublicTrackingRoute(
+    @Param('linkId') linkId: string,
+    @Query('userLat') userLatStr: string,
+    @Query('userLng') userLngStr: string,
+  ) {
+    const cleanLinkId = (linkId || '').split('?')[0].trim();
+    const userLat = parseFloat(userLatStr);
+    const userLng = parseFloat(userLngStr);
+    if (!cleanLinkId || isNaN(userLat) || isNaN(userLng)) {
+      throw new BadRequestException('Parámetros de ruta o coordenadas inválidos.');
+    }
+    return this.vehiclesService.getPublicTrackingRoute(
+      cleanLinkId,
+      userLat,
+      userLng,
+    );
+  }
 }

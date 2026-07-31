@@ -14,7 +14,7 @@ export interface ResolvedSpeedingLog {
 
 @Injectable()
 export class OverspeedCalculationService {
-  constructor(private valhallaRoutesClient: ValhallaRoutesClientService) {}
+  constructor(private valhallaRoutesClient: ValhallaRoutesClientService) { }
 
   /**
    * Calcula el exceso de velocidad basándose en el límite fallback (110 km/h o configurado en el perfil)
@@ -81,7 +81,6 @@ export class OverspeedCalculationService {
   }
 
   /**
-   * Evalúa el exceso de velocidad utilizando la ruta real obtenida de HERE API.
    * Evalúa el exceso de velocidad utilizando la ruta real obtenida de Valhalla API.
    * Aplica la ponderación por Functional Class y fallback por inercia/reglas específicas de Panamá.
    */
@@ -93,6 +92,7 @@ export class OverspeedCalculationService {
     overspeedCount: number;
     overspeedSeverity: number;
     polyline?: string;
+    matchedDistanceKm?: number;
   }> {
     const validLogs = logs.filter(
       (log) => log.latitude !== 0 && log.longitude !== 0,
@@ -163,6 +163,7 @@ export class OverspeedCalculationService {
     return {
       ...overspeedResult,
       polyline,
+      matchedDistanceKm: routeResult.matchedDistanceKm,
     };
   }
 

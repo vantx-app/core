@@ -83,4 +83,4 @@ import { MapLinksModule } from './map-links/map-links.module';
     MapLinksModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

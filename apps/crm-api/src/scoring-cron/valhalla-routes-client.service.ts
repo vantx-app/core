@@ -13,6 +13,7 @@ import {
   encodePolyline6,
   removeConsecutiveDuplicateCoords,
   buildHybridPolyline,
+  calculatePolylineDistanceKm,
 } from './route-utils';
 
 /**
@@ -100,7 +101,7 @@ export class ValhallaRoutesClientService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
-  ) {}
+  ) { }
 
   /**
    * Obtiene la URL de Valhalla desde las variables de entorno (default: http://localhost:8002)
@@ -220,7 +221,13 @@ export class ValhallaRoutesClientService {
             0.035,
           );
           const polylineStr = encodePolyline6(hybridPts);
-          return { spans, geometry: snappedGeometry, polyline: polylineStr };
+          const matchedDistanceKm = calculatePolylineDistanceKm(snappedGeometry);
+          return {
+            spans,
+            geometry: snappedGeometry,
+            polyline: polylineStr,
+            matchedDistanceKm,
+          };
         }
       }
     } catch (dbError: any) {
@@ -255,6 +262,7 @@ export class ValhallaRoutesClientService {
       },
       filters: {
         attributes: [
+          'edge.length',
           'edge.way_id',
           'edge.speed',
           'edge.speed_limit',
@@ -331,9 +339,9 @@ export class ValhallaRoutesClientService {
           edge.end_shape_index !== undefined
             ? edge.end_shape_index
             : Math.min(
-                Math.ceil(((i + 1) / edges.length) * (decodedGeoJSON.length - 1)),
-                decodedGeoJSON.length - 1,
-              );
+              Math.ceil(((i + 1) / edges.length) * (decodedGeoJSON.length - 1)),
+              decodedGeoJSON.length - 1,
+            );
 
         if (currentGroup && currentGroup.wayId === wayId) {
           currentGroup.endIdx = Math.max(currentGroup.endIdx, eIdx);
@@ -536,7 +544,27 @@ export class ValhallaRoutesClientService {
       this.consecutiveErrors = 0;
       const hybridPts = buildHybridPolyline(coordinates, parsedLinks, 0.035);
       const polylineStr = shapePolyline6 || encodePolyline6(hybridPts);
-      return { spans, geometry: snappedGeometry, polyline: polylineStr };
+
+      let matchedDistanceKm = 0;
+      if (edges && edges.length > 0) {
+        const totalEdgeKm = edges.reduce(
+          (sum: number, edge: any) => sum + (edge.length || 0),
+          0,
+        );
+        matchedDistanceKm = parseFloat(totalEdgeKm.toFixed(2));
+      }
+
+      if (matchedDistanceKm <= 0) {
+        matchedDistanceKm = calculatePolylineDistanceKm(
+          decodedGeoJSON.length > 0 ? decodedGeoJSON : snappedGeometry,
+        );
+      }
+      return {
+        spans,
+        geometry: snappedGeometry,
+        polyline: polylineStr,
+        matchedDistanceKm,
+      };
     } catch (error: any) {
       this.consecutiveErrors++;
       this.logger.error(
@@ -550,6 +578,82 @@ export class ValhallaRoutesClientService {
           'Se suspenden temporalmente las llamadas a Valhalla por 60 segundos por exceso de errores consecutivos.',
         );
       }
+      return null;
+    }
+  }
+
+  /**
+   * Calcula una ruta punto a punto entre la ubicación de un usuario y un vehículo
+   * utilizando el endpoint /route de Valhalla.
+   */
+  async calculatePointToPointRoute(
+    userLat: number,
+    userLng: number,
+    vehicleLat: number,
+    vehicleLng: number,
+    travelMode: 'Car' | 'Truck' = 'Car',
+  ): Promise<{
+    distanceKm: number;
+    durationMinutes: number;
+    coordinates: [number, number][];
+    polyline?: string;
+  } | null> {
+    this.resetSuspension();
+    const baseUrl = this.getValhallaUrl();
+    const costing = travelMode.toLowerCase() === 'truck' ? 'truck' : 'auto';
+    const payload = {
+      locations: [
+        { lat: vehicleLat, lon: vehicleLng },
+        { lat: userLat, lon: userLng },
+      ],
+      costing,
+      costing_options: {
+        truck: {
+          use_highways: 0.9,
+          use_distance: 0.35,
+          service_penalty: 30,
+          maneuver_penalty: 15,
+        },
+        auto: {
+          use_highways: 0.9,
+          use_distance: 0.35,
+          service_penalty: 25,
+          maneuver_penalty: 12,
+        },
+      },
+      directions_options: { units: 'km' },
+    };
+
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post(`${baseUrl}/route`, payload, {
+          timeout: 10000,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      );
+
+      const trip = response.data?.trip;
+      if (!trip || !trip.legs || trip.legs.length === 0) return null;
+
+      const summary = trip.summary || {};
+      const distanceKm = summary.length ? parseFloat(summary.length.toFixed(2)) : 0;
+      const durationMinutes = summary.time ? Math.round(summary.time / 60) : 0;
+
+      const shapePolyline6 = trip.legs[0].shape;
+      const decodedLatLng = shapePolyline6 ? decodePolyline6(shapePolyline6) : [];
+      const coordinates = flipCoordinatesToGeoJSON(decodedLatLng);
+
+      return {
+        distanceKm,
+        durationMinutes,
+        coordinates,
+        polyline: shapePolyline6,
+      };
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || error.message;
+      this.logger.error(
+        `Error al calcular ruta punto a punto en Valhalla: ${errorMsg}`,
+      );
       return null;
     }
   }

@@ -85,9 +85,33 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
+  const [roadRoute, setRoadRoute] = useState<{
+    distanceKm: number;
+    durationMinutes: number;
+    coordinates: [number, number][];
+  } | null>(null);
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+
   const setIsFollowing = (val: boolean) => {
     setIsFollowingState(val);
     isFollowingRef.current = val;
+  };
+
+  const fetchRoadRoute = async (uLat: number, uLng: number) => {
+    if (!id) return;
+    setIsLoadingRoute(true);
+    try {
+      const response = await axios.get(
+        `/api/vehicles/tracking-links/public/${id}/route?userLat=${uLat}&userLng=${uLng}`,
+      );
+      if (response.data) {
+        setRoadRoute(response.data);
+      }
+    } catch (err) {
+      console.error("Error al obtener la ruta de carreteras:", err);
+    } finally {
+      setIsLoadingRoute(false);
+    }
   };
 
   const distance = useMemo(() => {
@@ -256,6 +280,64 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
     };
   }, []);
 
+  // 1.5 Update GeoJSON route layer when roadRoute is updated
+  useEffect(() => {
+    if (!map.current) return;
+    const sourceId = "user-vehicle-route-source";
+    const layerId = "user-vehicle-route-layer";
+
+    const updateRouteLayer = () => {
+      if (!map.current) return;
+
+      if (!roadRoute || roadRoute.coordinates.length === 0) {
+        if (map.current.getLayer(layerId)) map.current.removeLayer(layerId);
+        if (map.current.getSource(sourceId)) map.current.removeSource(sourceId);
+        return;
+      }
+
+      const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "LineString",
+          coordinates: roadRoute.coordinates,
+        },
+      };
+
+      if (map.current.getSource(sourceId)) {
+        (map.current.getSource(sourceId) as mapboxgl.GeoJSONSource).setData(
+          geojson,
+        );
+      } else {
+        map.current.addSource(sourceId, {
+          type: "geojson",
+          data: geojson,
+        });
+
+        map.current.addLayer({
+          id: layerId,
+          type: "line",
+          source: sourceId,
+          layout: {
+            "line-join": "round",
+            "line-cap": "round",
+          },
+          paint: {
+            "line-color": "#2563eb",
+            "line-width": 5,
+            "line-opacity": 0.85,
+          },
+        });
+      }
+    };
+
+    if (map.current.isStyleLoaded()) {
+      updateRouteLayer();
+    } else {
+      map.current.once("load", updateRouteLayer);
+    }
+  }, [roadRoute]);
+
   // 2. Connect WebSockets
   useEffect(() => {
     const isDev = process.env.NODE_ENV === "development";
@@ -392,6 +474,7 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
         const { latitude, longitude } = position.coords;
         setUserLocation({ lat: latitude, lng: longitude });
         setIsLocating(false);
+        fetchRoadRoute(latitude, longitude);
 
         if (!map.current) return;
 
@@ -498,15 +581,43 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
             </div>
           )}
 
-          {/* Distancia dinámica al vehículo (con mayor espaciado superior) */}
-          {distance !== null && (
-            <div className="flex items-center justify-between text-xs pt-4 mt-4 border-t border-base-300 animate-in fade-in duration-300">
-              <span className="text-base-content/65 font-medium">
-                Distancia a ti:
-              </span>
-              <span className="font-bold text-base-content/90">
-                {formatDistance(distance)}
-              </span>
+          {/* Distancia dinámica al vehículo por carretera o línea recta */}
+          {(distance !== null || roadRoute !== null || isLoadingRoute) && (
+            <div className="flex flex-col gap-1 text-xs pt-4 mt-4 border-t border-base-300 animate-in fade-in duration-300">
+              {isLoadingRoute ? (
+                <div className="flex items-center gap-2 text-primary text-[11px] font-semibold">
+                  <span className="loading loading-spinner loading-xs" />
+                  Calculando ruta por carretera...
+                </div>
+              ) : roadRoute ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-base-content/65 font-medium">
+                      Distancia por carretera:
+                    </span>
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                      {roadRoute.distanceKm.toFixed(1)} km
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-base-content/50 font-medium">
+                      Tiempo estimado (ETA):
+                    </span>
+                    <span className="font-semibold text-base-content/80 font-mono">
+                      ~{roadRoute.durationMinutes} min
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-base-content/65 font-medium">
+                    Distancia (línea recta):
+                  </span>
+                  <span className="font-bold text-base-content/90">
+                    {formatDistance(distance!)}
+                  </span>
+                </div>
+              )}
             </div>
           )}
         </div>

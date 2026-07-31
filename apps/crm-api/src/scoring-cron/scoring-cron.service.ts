@@ -117,18 +117,30 @@ export class ScoringCronService {
           category,
         );
 
+      const rollupUpdateData: any = {
+        overspeedCount: result.overspeedCount,
+        overspeedSeverity: result.overspeedSeverity,
+      };
+
+      const tripUpdateData: any = {};
+      if ('polyline' in result && result.polyline) {
+        tripUpdateData.polyline = result.polyline;
+      }
+
+      if (result.matchedDistanceKm && result.matchedDistanceKm > 0) {
+        tripUpdateData.distanceKm = result.matchedDistanceKm;
+        rollupUpdateData.totalKm = result.matchedDistanceKm;
+      }
+
       await this.prisma.dailyTelemetryRollup.update({
         where: { id: rollup.id },
-        data: {
-          overspeedCount: result.overspeedCount,
-          overspeedSeverity: result.overspeedSeverity,
-        },
+        data: rollupUpdateData,
       });
 
-      if ('polyline' in result && result.polyline) {
+      if (Object.keys(tripUpdateData).length > 0) {
         await this.prisma.trip.update({
           where: { id: rollup.tripId! },
-          data: { polyline: result.polyline },
+          data: tripUpdateData,
         });
       }
     }

@@ -134,4 +134,48 @@ describe('ValhallaRoutesClientService', () => {
     expect(result!.geometry[1]).toEqual([-79.5286, 9.0123]);
     expect(prismaMock.mapLink.upsert).toHaveBeenCalledTimes(1);
   });
+
+  it('debe calcular matchedDistanceKm sumando edge.length de los bordes de Valhalla', async () => {
+    const latLonPts: [number, number][] = [
+      [9.0083, -79.5246],
+      [9.0123, -79.5286],
+    ];
+    const shapePolyline6 = encodePolyline6(latLonPts);
+
+    const mockResponse = {
+      data: {
+        shape: shapePolyline6,
+        edges: [
+          {
+            way_id: 998877,
+            road_class: 'primary',
+            speed_limit: 80,
+            drive_on_right: true,
+            length: 1.45,
+          },
+          {
+            way_id: 998878,
+            road_class: 'primary',
+            speed_limit: 80,
+            drive_on_right: true,
+            length: 2.35,
+          },
+        ],
+      },
+    };
+
+    httpMock.post.mockReturnValue(of(mockResponse));
+
+    const result = await service.calculateRouteWithSpeedLimits(
+      [
+        { lat: 9.0083, lng: -79.5246 },
+        { lat: 9.0123, lng: -79.5286 },
+      ],
+      'Car',
+    );
+
+    expect(result).not.toBeNull();
+    expect(result!.matchedDistanceKm).toBe(3.8);
+  });
 });
+

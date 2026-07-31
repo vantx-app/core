@@ -204,12 +204,18 @@ export function parseTelemetryRecord(
     (mapping.ignition === undefined && rawVoltage > 13200) ||
     isHardwareExcessiveIdling;
 
+  // Si no hay ignición o el vehículo está en movimiento, desactivar excessive idling
+  const isMoving = movement || speedToUse > 2;
+  if (!trueIgnition || isMoving) {
+    isHardwareExcessiveIdling = false;
+  }
+
   // Estado de movimiento
   let status = "STOPPED";
   if (isUnplugged) {
     status = "UNPLUGGED";
   } else if (trueIgnition) {
-    if (movement || speedToUse > 2) {
+    if (isMoving) {
       status = "MOVING";
     } else if (isHardwareExcessiveIdling) {
       status = "EXCESSIVE_IDLING";

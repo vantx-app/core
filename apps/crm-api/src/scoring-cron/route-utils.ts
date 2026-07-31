@@ -49,6 +49,21 @@ export interface CalculatedRouteResult {
   spans: RouteSpanWithSpeedLimit[];
   geometry: [number, number][]; // [lng, lat] puntos decodificados de la ruta
   polyline?: string;
+  matchedDistanceKm?: number;
+}
+
+/**
+ * Calcula la distancia acumulada en kilómetros de una polilínea de puntos [lng, lat].
+ */
+export function calculatePolylineDistanceKm(coords: [number, number][]): number {
+  if (!coords || coords.length < 2) return 0;
+  let totalKm = 0;
+  for (let i = 0; i < coords.length - 1; i++) {
+    const [lng1, lat1] = coords[i];
+    const [lng2, lat2] = coords[i + 1];
+    totalKm += haversineDistance(lat1, lng1, lat2, lng2);
+  }
+  return parseFloat(totalKm.toFixed(2));
 }
 
 /**

@@ -948,6 +948,7 @@ export interface VehicleTripsTrip {
   safetyScore?: number;
   ecoScore?: number;
   assetScore?: number;
+  distanceKm?: number | null;
 }
 
 export interface VehicleTripsDriver {

@@ -23,6 +23,8 @@ import {
   haversineDistance,
 } from 'src/scoring-cron/route-utils';
 
+import { ValhallaRoutesClientService } from 'src/scoring-cron/valhalla-routes-client.service';
+
 @Injectable()
 export class VehiclesService {
   private readonly DEFAULT_CONFIG: RuleEngineConfig =
@@ -32,6 +34,7 @@ export class VehiclesService {
     private prisma: PrismaService,
     private cacheService: CacheService,
     private rulesEngineService: RulesEngineService,
+    private valhallaRoutesClient: ValhallaRoutesClientService,
   ) { }
 
   private getFrontendBaseUrl(): string {
@@ -1294,6 +1297,67 @@ export class VehiclesService {
       events,
       history: smoothedHistory,
     };
+  }
+
+  async getPublicTrackingRoute(
+    linkId: string,
+    userLat: number,
+    userLng: number,
+  ) {
+    const link = await this.prisma.trackingLink.findUnique({
+      where: { id: linkId },
+      include: {
+        vehicle: {
+          include: {
+            liveState: true,
+          },
+        },
+      },
+    });
+
+    if (!link || !link.isActive || new Date() > link.expiresAt) {
+      throw new NotFoundException(
+        'El enlace de rastreo ha expirado o no es válido',
+      );
+    }
+
+    const vehicleLat = link.vehicle.liveState?.lastLat;
+    const vehicleLng = link.vehicle.liveState?.lastLng;
+
+    if (vehicleLat == null || vehicleLng == null) {
+      throw new BadRequestException(
+        'El vehículo no cuenta con coordenadas GPS recientes.',
+      );
+    }
+
+    const isTruck =
+      link.vehicle.category === VehicleCategory.HEAVY_DUTY ||
+      link.vehicle.category === VehicleCategory.MACHINERY;
+    const travelMode = isTruck ? 'Truck' : 'Car';
+
+    const route = await this.valhallaRoutesClient.calculatePointToPointRoute(
+      userLat,
+      userLng,
+      vehicleLat,
+      vehicleLng,
+      travelMode,
+    );
+
+    if (!route) {
+      const distKm = parseFloat(
+        haversineDistance(userLat, userLng, vehicleLat, vehicleLng).toFixed(2),
+      );
+      return {
+        distanceKm: distKm,
+        durationMinutes: Math.max(1, Math.round((distKm / 35) * 60)),
+        coordinates: [
+          [vehicleLng, vehicleLat],
+          [userLng, userLat],
+        ],
+      };
+    }
+
+    return route;
   }
 }
 
