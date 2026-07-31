@@ -295,11 +295,11 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
         return;
       }
 
-      const geojson: GeoJSON.Feature<GeoJSON.LineString> = {
-        type: "Feature",
+      const geojson = {
+        type: "Feature" as const,
         properties: {},
         geometry: {
-          type: "LineString",
+          type: "LineString" as const,
           coordinates: roadRoute.coordinates,
         },
       };
@@ -682,11 +682,10 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
         {/* Centrar/Seguir Vehículo */}
         <button
           onClick={handleCenterMap}
-          className={`btn btn-circle shadow-md border transition-all w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
-            isFollowing
-              ? "btn-primary text-white border-primary"
-              : "bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200"
-          }`}
+          className={`btn btn-circle shadow-md border transition-all w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${isFollowing
+            ? "btn-primary text-white border-primary"
+            : "bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200"
+            }`}
           title={isFollowing ? "Siguiendo vehículo" : "Seguir vehículo"}
         >
           <Compass className="size-5 md:size-6" />
@@ -696,11 +695,10 @@ export default function TrackingMap({ id, initialDetails }: TrackingMapProps) {
         <button
           onClick={handleShowUserLocation}
           disabled={isLocating}
-          className={`btn btn-circle shadow-md border transition-all w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${
-            userLocation
-              ? "btn-primary text-white border-primary"
-              : "bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200"
-          }`}
+          className={`btn btn-circle shadow-md border transition-all w-12 h-12 md:w-14 md:h-14 flex items-center justify-center ${userLocation
+            ? "btn-primary text-white border-primary"
+            : "bg-base-100 text-base-content/70 border-base-300/80 hover:bg-base-200"
+            }`}
           title="Mi ubicación"
         >
           {isLocating ? (
