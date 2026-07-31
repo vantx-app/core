@@ -35,7 +35,7 @@ export class VehiclesService {
     private cacheService: CacheService,
     private rulesEngineService: RulesEngineService,
     private valhallaRoutesClient: ValhallaRoutesClientService,
-  ) { }
+  ) {}
 
   private getFrontendBaseUrl(): string {
     let baseUrl =
@@ -1050,7 +1050,13 @@ export class VehiclesService {
 
     // Función auxiliar para registrar eventos consolidados
     const finalizeEvent = (
-      evt: { type: 'REFUEL' | 'DRAIN'; startTime: Date; startLevel: number; lat: number; lng: number },
+      evt: {
+        type: 'REFUEL' | 'DRAIN';
+        startTime: Date;
+        startLevel: number;
+        lat: number;
+        lng: number;
+      },
       finalLevel: number,
       endTimestamp: Date,
     ) => {
@@ -1094,7 +1100,13 @@ export class VehiclesService {
 
     let lastStableLevel = startLevel;
     let peakLevel = lastStableLevel;
-    let eventInProgress: { type: 'REFUEL' | 'DRAIN'; startTime: Date; startLevel: number; lat: number; lng: number } | null = null;
+    let eventInProgress: {
+      type: 'REFUEL' | 'DRAIN';
+      startTime: Date;
+      startLevel: number;
+      lat: number;
+      lng: number;
+    } | null = null;
     let wasMoving = false;
     let maxObservedLevel = startLevel;
 
@@ -1162,7 +1174,7 @@ export class VehiclesService {
 
       // Si no hay evento en progreso, evaluamos iniciar uno nuevo
       if (!eventInProgress) {
-        if (totalDiff >= 3.0 && (curr.fuelLevel - peakLevel) >= 2.0) {
+        if (totalDiff >= 3.0 && curr.fuelLevel - peakLevel >= 2.0) {
           // Inicio de recarga (umbral 3.0% de máquina virtual y subida respecto al pico)
           eventInProgress = {
             type: 'REFUEL',
@@ -1217,7 +1229,10 @@ export class VehiclesService {
 
     totalRefueled = Math.round(totalRefueled * 100) / 100;
     totalDrained = Math.round(totalDrained * 100) / 100;
-    totalConsumed = Math.round(Math.max(0, startLevel - endLevel + totalRefueled - totalDrained) * 100) / 100;
+    totalConsumed =
+      Math.round(
+        Math.max(0, startLevel - endLevel + totalRefueled - totalDrained) * 100,
+      ) / 100;
 
     if (totalConsumed <= 0) {
       // Si la diferencia de nivel da 0 o negativo (debido a deriva del sensor o pendientes)
@@ -1230,7 +1245,8 @@ export class VehiclesService {
       }
       if (movingPoints > 0) {
         // Consumo mínimo estimado: 0.02% por registro de telemetría en movimiento
-        totalConsumed = Math.round(Math.max(0.1, movingPoints * 0.02) * 100) / 100;
+        totalConsumed =
+          Math.round(Math.max(0.1, movingPoints * 0.02) * 100) / 100;
       }
     }
 
@@ -1283,7 +1299,8 @@ export class VehiclesService {
       }
       return {
         ...item,
-        fuelLevel: count > 0 ? Math.round((sum / count) * 10) / 10 : item.fuelLevel,
+        fuelLevel:
+          count > 0 ? Math.round((sum / count) * 10) / 10 : item.fuelLevel,
       };
     });
 
@@ -1292,7 +1309,8 @@ export class VehiclesService {
         totalConsumed: Math.round(totalConsumed * 100) / 100,
         totalDrained: Math.round(totalDrained * 100) / 100,
         totalRefueled: Math.round(totalRefueled * 100) / 100,
-        currentLevel: currentLevel !== null ? Math.round(currentLevel * 100) / 100 : null,
+        currentLevel:
+          currentLevel !== null ? Math.round(currentLevel * 100) / 100 : null,
       },
       events,
       history: smoothedHistory,
@@ -1360,4 +1378,3 @@ export class VehiclesService {
     return route;
   }
 }
-

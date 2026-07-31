@@ -36,7 +36,6 @@ export function encodePolyline6(coords: [number, number][]): string {
   return polyline.encode(coords, 6);
 }
 
-
 /** Un tramo de ruta con su límite de velocidad y posición en la geometría */
 export interface RouteSpanWithSpeedLimit {
   geometryOffset: number;
@@ -55,7 +54,9 @@ export interface CalculatedRouteResult {
 /**
  * Calcula la distancia acumulada en kilómetros de una polilínea de puntos [lng, lat].
  */
-export function calculatePolylineDistanceKm(coords: [number, number][]): number {
+export function calculatePolylineDistanceKm(
+  coords: [number, number][],
+): number {
   if (!coords || coords.length < 2) return 0;
   let totalKm = 0;
   for (let i = 0; i < coords.length - 1; i++) {
@@ -70,9 +71,9 @@ export function calculatePolylineDistanceKm(coords: [number, number][]): number 
  * Elimina coordenadas consecutivas idénticas (vehículo estacionado/ralentí)
  * sin perder resolución ni modificar la trayectoria durante el movimiento.
  */
-export function removeConsecutiveDuplicateCoords<T extends { lat: number; lng: number }>(
-  coords: T[],
-): T[] {
+export function removeConsecutiveDuplicateCoords<
+  T extends { lat: number; lng: number },
+>(coords: T[]): T[] {
   if (!coords || coords.length <= 1) return coords || [];
 
   const result: T[] = [coords[0]];

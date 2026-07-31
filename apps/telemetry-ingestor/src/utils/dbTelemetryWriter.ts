@@ -12,8 +12,33 @@ export interface TelemetryBatchWriteParams {
     liveState?: any;
   };
   telemetryLogs: any[];
-  tripsToCreate: Map<string, { id: string; startTime: Date; endTime?: Date; fuelConsumedLiters?: number | null; startFuelLevel?: number | null; endFuelLevel?: number | null; fuelEfficiencyKmL?: number | null; engineHours?: number | null; distanceKm?: number | null }>;
-  tripsToUpdate: Map<string, { id: string; endTime: Date | null; fuelConsumedLiters?: number | null; startFuelLevel?: number | null; endFuelLevel?: number | null; fuelEfficiencyKmL?: number | null; engineHours?: number | null; distanceKm?: number | null }>;
+  tripsToCreate: Map<
+    string,
+    {
+      id: string;
+      startTime: Date;
+      endTime?: Date;
+      fuelConsumedLiters?: number | null;
+      startFuelLevel?: number | null;
+      endFuelLevel?: number | null;
+      fuelEfficiencyKmL?: number | null;
+      engineHours?: number | null;
+      distanceKm?: number | null;
+    }
+  >;
+  tripsToUpdate: Map<
+    string,
+    {
+      id: string;
+      endTime: Date | null;
+      fuelConsumedLiters?: number | null;
+      startFuelLevel?: number | null;
+      endFuelLevel?: number | null;
+      fuelEfficiencyKmL?: number | null;
+      engineHours?: number | null;
+      distanceKm?: number | null;
+    }
+  >;
   tripsToDelete: Set<string>;
   tripsToMerge?: Map<string, string>;
   virtualState?: any;
@@ -63,12 +88,18 @@ export async function saveTelemetryBatchData({
     const updateData: any = {
       endTime: tripData.endTime,
     };
-    if (tripData.fuelConsumedLiters !== undefined) updateData.fuelConsumedLiters = tripData.fuelConsumedLiters;
-    if (tripData.startFuelLevel !== undefined) updateData.startFuelLevel = tripData.startFuelLevel;
-    if (tripData.endFuelLevel !== undefined) updateData.endFuelLevel = tripData.endFuelLevel;
-    if (tripData.fuelEfficiencyKmL !== undefined) updateData.fuelEfficiencyKmL = tripData.fuelEfficiencyKmL;
-    if (tripData.engineHours !== undefined) updateData.engineHours = tripData.engineHours;
-    if (tripData.distanceKm !== undefined) updateData.distanceKm = tripData.distanceKm;
+    if (tripData.fuelConsumedLiters !== undefined)
+      updateData.fuelConsumedLiters = tripData.fuelConsumedLiters;
+    if (tripData.startFuelLevel !== undefined)
+      updateData.startFuelLevel = tripData.startFuelLevel;
+    if (tripData.endFuelLevel !== undefined)
+      updateData.endFuelLevel = tripData.endFuelLevel;
+    if (tripData.fuelEfficiencyKmL !== undefined)
+      updateData.fuelEfficiencyKmL = tripData.fuelEfficiencyKmL;
+    if (tripData.engineHours !== undefined)
+      updateData.engineHours = tripData.engineHours;
+    if (tripData.distanceKm !== undefined)
+      updateData.distanceKm = tripData.distanceKm;
 
     transactionPromises.push(
       prisma.trip.updateMany({
@@ -179,7 +210,8 @@ export async function saveTelemetryBatchData({
   telemetryLogs.forEach((log) => {
     if (log.rpm !== null) detectedKeys.add("rpm");
     if (log.odometer !== null) detectedKeys.add("odometer");
-    if (log.engineHours !== null && log.engineHours !== undefined) detectedKeys.add("engineHours");
+    if (log.engineHours !== null && log.engineHours !== undefined)
+      detectedKeys.add("engineHours");
     if (log.coolantTemp !== null) detectedKeys.add("coolantTemp");
     if (log.fuelLevel !== null) detectedKeys.add("fuelLevel");
     if (log.fuelConsumption !== null) detectedKeys.add("fuelConsumption");
@@ -189,8 +221,8 @@ export async function saveTelemetryBatchData({
   // Comparar y mezclar con las capacidades existentes del vehículo
   const currentCapabilities = new Set<string>(
     Array.isArray(vehicle.capabilities)
-      ? vehicle.capabilities.filter((c: any) => typeof c === 'string')
-      : []
+      ? vehicle.capabilities.filter((c: any) => typeof c === "string")
+      : [],
   );
   let capabilitiesChanged = false;
   detectedKeys.forEach((key) => {

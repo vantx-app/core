@@ -86,7 +86,10 @@ describe('ScoringCronService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: RulesEngineService, useValue: {} },
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: ValhallaRoutesClientService, useValue: valhallaRoutesClientMock },
+        {
+          provide: ValhallaRoutesClientService,
+          useValue: valhallaRoutesClientMock,
+        },
         {
           provide: OverspeedCalculationService,
           useValue: overspeedCalculationMock,
@@ -225,10 +228,12 @@ describe('ScoringCronService', () => {
       ];
       prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
 
-      overspeedCalculationMock.evaluateOverspeedingWithValhallaRoutes.mockResolvedValue({
-        overspeedCount: 1,
-        overspeedSeverity: 10,
-      });
+      overspeedCalculationMock.evaluateOverspeedingWithValhallaRoutes.mockResolvedValue(
+        {
+          overspeedCount: 1,
+          overspeedSeverity: 10,
+        },
+      );
 
       await service.runDailyRollup('2026-06-01');
 

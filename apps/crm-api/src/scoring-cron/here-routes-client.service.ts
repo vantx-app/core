@@ -29,7 +29,7 @@ export class HereRoutesClientService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   /**
    * Calcula una ruta con límites de velocidad para una secuencia de coordenadas GPS usando la API de Atributos de Mapa.
@@ -227,7 +227,8 @@ export class HereRoutesClientService {
         const isReverse =
           rawLinkIdStr.startsWith('-') ||
           rawLinkIdStr.includes('#-') ||
-          (rawLinkIdStr.includes('#') && rawLinkIdStr.split('#')[1].includes('-'));
+          (rawLinkIdStr.includes('#') &&
+            rawLinkIdStr.split('#')[1].includes('-'));
 
         // Extract canonical base ID by splitting on '#' and stripping leading +/- signs
         let linkId = rawLinkIdStr.split('#')[0];

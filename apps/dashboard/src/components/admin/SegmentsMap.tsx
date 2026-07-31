@@ -4,21 +4,21 @@ import { useEffect, useRef, useState, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import "mapbox-gl/dist/mapbox-gl.css";
 import api from "@/utils/client/api-client";
-import { 
-  ArrowLeft, 
-  MapPin, 
-  RefreshCw, 
-  Filter, 
-  Compass, 
-  Gauge, 
-  Layers, 
-  Layers2, 
+import {
+  ArrowLeft,
+  MapPin,
+  RefreshCw,
+  Filter,
+  Compass,
+  Gauge,
+  Layers,
+  Layers2,
   Database,
   HelpCircle,
   CheckCircle2,
   AlertTriangle,
   Save,
-  Check
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -96,13 +96,23 @@ export default function SegmentsMap() {
   const popupRef = useRef<mapboxgl.Popup | null>(null);
 
   // States
-  const [geojsonData, setGeojsonData] = useState<any>({ type: "FeatureCollection", features: [] });
+  const [geojsonData, setGeojsonData] = useState<any>({
+    type: "FeatureCollection",
+    features: [],
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewportOnly, setViewportOnly] = useState(false);
   const [selectedFc, setSelectedFc] = useState<number | "all">("all");
-  const [verificationFilter, setVerificationFilter] = useState<"all" | "unverified" | "verified">("all");
-  const [stats, setStats] = useState({ total: 0, filtered: 0, unverified: 0, verified: 0 });
+  const [verificationFilter, setVerificationFilter] = useState<
+    "all" | "unverified" | "verified"
+  >("all");
+  const [stats, setStats] = useState({
+    total: 0,
+    filtered: 0,
+    unverified: 0,
+    verified: 0,
+  });
 
   // Selected Segment & Training Edit states
   const [selectedSegment, setSelectedSegment] = useState<any | null>(null);
@@ -168,15 +178,26 @@ export default function SegmentsMap() {
     map.current = mapInstance;
 
     // Add controls
-    mapInstance.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+    mapInstance.addControl(
+      new mapboxgl.NavigationControl({ showCompass: false }),
+      "top-right",
+    );
 
     mapInstance.on("load", () => {
       // Load custom vector Canvas arrow icons
       const bidiImageData = createArrowIconImageData(true);
       const onewayImageData = createArrowIconImageData(false);
 
-      mapInstance.addImage("icon-arrow-bidi", { width: 32, height: 32, data: new Uint8Array(bidiImageData.data.buffer) });
-      mapInstance.addImage("icon-arrow-oneway", { width: 32, height: 32, data: new Uint8Array(onewayImageData.data.buffer) });
+      mapInstance.addImage("icon-arrow-bidi", {
+        width: 32,
+        height: 32,
+        data: new Uint8Array(bidiImageData.data.buffer),
+      });
+      mapInstance.addImage("icon-arrow-oneway", {
+        width: 32,
+        height: 32,
+        data: new Uint8Array(onewayImageData.data.buffer),
+      });
 
       // 1. Add GeoJSON Source
       mapInstance.addSource("segments", {
@@ -198,20 +219,28 @@ export default function SegmentsMap() {
           "line-color": [
             "match",
             ["get", "functionalClass"],
-            1, FC_COLORS[1],
-            2, FC_COLORS[2],
-            3, FC_COLORS[3],
-            4, FC_COLORS[4],
-            5, FC_COLORS[5],
-            "#94a3b8" // Fallback Slate color
+            1,
+            FC_COLORS[1],
+            2,
+            FC_COLORS[2],
+            3,
+            FC_COLORS[3],
+            4,
+            FC_COLORS[4],
+            5,
+            FC_COLORS[5],
+            "#94a3b8", // Fallback Slate color
           ],
           "line-width": [
             "interpolate",
             ["linear"],
             ["zoom"],
-            10, 1.5,
-            14, 3,
-            18, 6
+            10,
+            1.5,
+            14,
+            3,
+            18,
+            6,
           ],
           "line-opacity": 0.85,
         },
@@ -229,15 +258,18 @@ export default function SegmentsMap() {
             "case",
             ["==", ["get", "isBidirectional"], true],
             "icon-arrow-bidi",
-            "icon-arrow-oneway"
+            "icon-arrow-oneway",
           ],
           "icon-size": [
             "interpolate",
             ["linear"],
             ["zoom"],
-            10, 0.35,
-            14, 0.55,
-            18, 0.8
+            10,
+            0.35,
+            14,
+            0.55,
+            18,
+            0.8,
           ],
           "icon-rotation-alignment": "map",
           "icon-keep-upright": false,
@@ -283,9 +315,13 @@ export default function SegmentsMap() {
           ? `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-1.5 py-0.5 rounded">🟢 Verificado</span>`
           : `<span class="bg-amber-100 text-amber-800 text-[10px] font-bold px-1.5 py-0.5 rounded">⚠️ Por Verificar</span>`;
 
-        const popup = new mapboxgl.Popup({ closeButton: true, className: "rounded-xl overflow-hidden font-sans" })
+        const popup = new mapboxgl.Popup({
+          closeButton: true,
+          className: "rounded-xl overflow-hidden font-sans",
+        })
           .setLngLat(e.lngLat)
-          .setHTML(`
+          .setHTML(
+            `
             <div class="p-2 space-y-1.5 text-slate-800 text-xs">
               <div class="font-black text-slate-900 border-b pb-1 flex items-center justify-between">
                 <span>Segmento: ${props.linkId}</span>
@@ -297,7 +333,8 @@ export default function SegmentsMap() {
               <div><strong>Rumbo:</strong> ${props.heading}° (${getCardinals(props.heading)})</div>
               <div class="text-[10px] text-slate-400">Total puntos: ${coords.length}</div>
             </div>
-          `)
+          `,
+          )
           .addTo(mapInstance);
 
         popupRef.current = popup;
@@ -352,7 +389,7 @@ export default function SegmentsMap() {
               isBidirectional: editBidi,
               isVerified: true,
             }
-          : null
+          : null,
       );
 
       // Update GeoJSON features in memory
@@ -387,13 +424,16 @@ export default function SegmentsMap() {
 
   // Handle filtering updates
   const filteredGeojson = useMemo(() => {
-    if (!geojsonData.features) return { type: "FeatureCollection", features: [] };
+    if (!geojsonData.features)
+      return { type: "FeatureCollection", features: [] };
 
     let filtered = geojsonData.features;
 
     // Filter by Functional Class
     if (selectedFc !== "all") {
-      filtered = filtered.filter((f: any) => f.properties.functionalClass === selectedFc);
+      filtered = filtered.filter(
+        (f: any) => f.properties.functionalClass === selectedFc,
+      );
     }
 
     // Filter by Verification Status
@@ -410,7 +450,9 @@ export default function SegmentsMap() {
 
     // Update map layer source data dynamically without reloading the map!
     if (map.current && map.current.getSource("segments")) {
-      (map.current.getSource("segments") as mapboxgl.GeoJSONSource).setData(collection);
+      (map.current.getSource("segments") as mapboxgl.GeoJSONSource).setData(
+        collection,
+      );
     }
 
     return collection;
@@ -419,8 +461,12 @@ export default function SegmentsMap() {
   // Keep stats count in sync cleanly without side-effects in useMemo
   useEffect(() => {
     const features = geojsonData.features || [];
-    const unverified = features.filter((f: any) => f.properties.isVerified === false).length;
-    const verified = features.filter((f: any) => f.properties.isVerified === true).length;
+    const unverified = features.filter(
+      (f: any) => f.properties.isVerified === false,
+    ).length;
+    const verified = features.filter(
+      (f: any) => f.properties.isVerified === true,
+    ).length;
     setStats({
       total: features.length,
       filtered: filteredGeojson.features ? filteredGeojson.features.length : 0,
@@ -466,8 +512,8 @@ export default function SegmentsMap() {
         <div className="space-y-6">
           {/* Header */}
           <div className="space-y-2">
-            <Link 
-              href="/admin" 
+            <Link
+              href="/admin"
               className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-semibold transition-colors"
             >
               <ArrowLeft className="size-3.5" />
@@ -478,7 +524,8 @@ export default function SegmentsMap() {
               Segmentos de Ruta
             </h2>
             <p className="text-xs text-slate-400">
-              Visualiza y valida los segmentos de calle (`MapLink`) que almacena el sistema de autolearning durante la recolección de rutas.
+              Visualiza y valida los segmentos de calle (`MapLink`) que almacena
+              el sistema de autolearning durante la recolección de rutas.
             </p>
           </div>
 
@@ -494,8 +541,8 @@ export default function SegmentsMap() {
               <button
                 onClick={() => setViewportOnly(false)}
                 className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                  !viewportOnly 
-                    ? "bg-indigo-600 text-white shadow" 
+                  !viewportOnly
+                    ? "bg-indigo-600 text-white shadow"
                     : "text-slate-400 hover:bg-slate-900/60 hover:text-slate-200"
                 }`}
               >
@@ -504,8 +551,8 @@ export default function SegmentsMap() {
               <button
                 onClick={() => setViewportOnly(true)}
                 className={`py-2 px-3 rounded-lg text-xs font-bold transition-all ${
-                  viewportOnly 
-                    ? "bg-indigo-600 text-white shadow" 
+                  viewportOnly
+                    ? "bg-indigo-600 text-white shadow"
                     : "text-slate-400 hover:bg-slate-900/60 hover:text-slate-200"
                 }`}
               >
@@ -515,10 +562,9 @@ export default function SegmentsMap() {
             <div className="flex items-start gap-1.5 mt-1">
               <HelpCircle className="size-3.5 text-slate-500 mt-0.5 shrink-0" />
               <p className="text-[10px] text-slate-500 leading-normal">
-                {viewportOnly 
-                  ? "Carga solo segmentos en la zona visible del mapa. Útil si hay miles de segmentos en el país." 
-                  : "Carga todos los segmentos cargados en la BD (límite de 5000) de forma global."
-                }
+                {viewportOnly
+                  ? "Carga solo segmentos en la zona visible del mapa. Útil si hay miles de segmentos en el país."
+                  : "Carga todos los segmentos cargados en la BD (límite de 5000) de forma global."}
               </p>
             </div>
           </div>
@@ -539,11 +585,15 @@ export default function SegmentsMap() {
                 className="select select-bordered select-sm w-full bg-slate-950 border-slate-800 text-slate-200 rounded-xl focus:border-indigo-500 focus:ring-0 focus:outline-none text-xs h-9"
               >
                 <option value="all">Todas las clases funcionales</option>
-                <option value="1">FC1: Autopistas / Corredores (110 km/h)</option>
+                <option value="1">
+                  FC1: Autopistas / Corredores (110 km/h)
+                </option>
                 <option value="2">FC2: Carreteras Principales (80 km/h)</option>
                 <option value="3">FC3: Avenidas / Arterias (60 km/h)</option>
                 <option value="4">FC4: Calles Colectoras (60 km/h)</option>
-                <option value="5">FC5: Calles Residenciales / Locales (40 km/h)</option>
+                <option value="5">
+                  FC5: Calles Residenciales / Locales (40 km/h)
+                </option>
               </select>
             </div>
 
@@ -558,8 +608,12 @@ export default function SegmentsMap() {
                 className="select select-bordered select-sm w-full bg-slate-950 border-slate-800 text-slate-200 rounded-xl focus:border-indigo-500 focus:ring-0 focus:outline-none text-xs h-9"
               >
                 <option value="all">Todos los segmentos ({stats.total})</option>
-                <option value="unverified">⚠️ Por Verificar / Fallback ({stats.unverified})</option>
-                <option value="verified">🟢 Verificados (OSM / Manual) ({stats.verified})</option>
+                <option value="unverified">
+                  ⚠️ Por Verificar / Fallback ({stats.unverified})
+                </option>
+                <option value="verified">
+                  🟢 Verificados (OSM / Manual) ({stats.verified})
+                </option>
               </select>
             </div>
           </div>
@@ -571,13 +625,27 @@ export default function SegmentsMap() {
             </label>
             <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800/80 space-y-2.5">
               {Object.entries(FC_COLORS).map(([fc, color]) => (
-                <div key={fc} className="flex items-center justify-between text-[11px]">
+                <div
+                  key={fc}
+                  className="flex items-center justify-between text-[11px]"
+                >
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-1 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-slate-300 font-medium">{FC_NAMES[parseInt(fc, 10)]}</span>
+                    <span
+                      className="w-4 h-1 rounded-full"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="text-slate-300 font-medium">
+                      {FC_NAMES[parseInt(fc, 10)]}
+                    </span>
                   </div>
                   <span className="text-[10px] text-slate-500 font-mono font-bold">
-                    {parseInt(fc, 10) === 1 ? "110km/h" : parseInt(fc, 10) === 2 ? "80km/h" : parseInt(fc, 10) === 5 ? "40km/h" : "60km/h"}
+                    {parseInt(fc, 10) === 1
+                      ? "110km/h"
+                      : parseInt(fc, 10) === 2
+                        ? "80km/h"
+                        : parseInt(fc, 10) === 5
+                          ? "40km/h"
+                          : "60km/h"}
                   </span>
                 </div>
               ))}
@@ -591,11 +659,14 @@ export default function SegmentsMap() {
           {selectedSegment ? (
             <div className="bg-slate-950 border border-indigo-500/30 p-4 rounded-2xl space-y-4 relative overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200">
               {/* Decorative top border accent */}
-              <div 
-                className="absolute top-0 left-0 right-0 h-1" 
-                style={{ backgroundColor: FC_COLORS[selectedSegment.functionalClass] || "#cbd5e1" }}
+              <div
+                className="absolute top-0 left-0 right-0 h-1"
+                style={{
+                  backgroundColor:
+                    FC_COLORS[selectedSegment.functionalClass] || "#cbd5e1",
+                }}
               />
-              
+
               <div className="flex items-center justify-between border-b border-slate-800 pb-2.5">
                 <div className="space-y-0.5">
                   <span className="font-black text-xs text-white block truncate max-w-[170px]">
@@ -614,7 +685,9 @@ export default function SegmentsMap() {
                   </div>
                 </div>
                 <button
-                  onClick={() => handleZoomToCoordinates(selectedSegment.coords)}
+                  onClick={() =>
+                    handleZoomToCoordinates(selectedSegment.coords)
+                  }
                   className="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1 transition-all"
                 >
                   <MapPin className="size-3" />
@@ -625,21 +698,31 @@ export default function SegmentsMap() {
               {/* Readonly Specs */}
               <div className="grid grid-cols-3 gap-2 text-[11px] bg-slate-900/60 p-2.5 rounded-xl border border-slate-850">
                 <div>
-                  <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-wider mb-0.5">Rumbo</span>
+                  <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-wider mb-0.5">
+                    Rumbo
+                  </span>
                   <span className="font-bold text-indigo-400 flex items-center gap-1">
                     <Compass className="size-3" />
                     {selectedSegment.heading}°
                   </span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-wider mb-0.5">Sentido</span>
+                  <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-wider mb-0.5">
+                    Sentido
+                  </span>
                   <span className="font-bold text-slate-300">
-                    {selectedSegment.isBidirectional ? "↔ Doble" : "➔ 1 Sentido"}
+                    {selectedSegment.isBidirectional
+                      ? "↔ Doble"
+                      : "➔ 1 Sentido"}
                   </span>
                 </div>
                 <div>
-                  <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-wider mb-0.5">Geometría</span>
-                  <span className="font-bold text-slate-300">{selectedSegment.pointsCount} pts</span>
+                  <span className="text-[9px] text-slate-500 block uppercase font-bold tracking-wider mb-0.5">
+                    Geometría
+                  </span>
+                  <span className="font-bold text-slate-300">
+                    {selectedSegment.pointsCount} pts
+                  </span>
                 </div>
               </div>
 
@@ -657,7 +740,9 @@ export default function SegmentsMap() {
                     <input
                       type="number"
                       value={editSpeedLimit}
-                      onChange={(e) => setEditSpeedLimit(Number(e.target.value))}
+                      onChange={(e) =>
+                        setEditSpeedLimit(Number(e.target.value))
+                      }
                       className="input input-sm w-full bg-slate-900 border-slate-800 text-slate-100 font-bold rounded-lg text-xs"
                       min={10}
                       max={140}
@@ -684,12 +769,16 @@ export default function SegmentsMap() {
                 </div>
 
                 <div className="flex items-center justify-between bg-slate-900/80 p-2 rounded-lg border border-slate-800 text-xs">
-                  <span className="text-[10px] font-bold text-slate-300">¿Es Doble Sentido?</span>
+                  <span className="text-[10px] font-bold text-slate-300">
+                    ¿Es Doble Sentido?
+                  </span>
                   <button
                     type="button"
                     onClick={() => setEditBidi(!editBidi)}
                     className={`px-2.5 py-1 rounded text-[10px] font-bold transition-all ${
-                      editBidi ? "bg-emerald-600 text-white" : "bg-slate-800 text-slate-400"
+                      editBidi
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-800 text-slate-400"
                     }`}
                   >
                     {editBidi ? "↔ Doble Sentido" : "➔ Un Solo Sentido"}
@@ -709,25 +798,38 @@ export default function SegmentsMap() {
                   className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg flex items-center justify-center gap-1.5 transition-all"
                 >
                   <Save className="size-3.5" />
-                  {savingSegment ? "Guardando..." : "Guardar y Verificar Segmento"}
+                  {savingSegment
+                    ? "Guardando..."
+                    : "Guardar y Verificar Segmento"}
                 </button>
               </div>
             </div>
           ) : (
             <div className="bg-slate-950 border border-slate-800 border-dashed p-4 rounded-2xl text-center text-xs text-slate-500 py-6 space-y-1">
-              <p className="font-bold text-slate-400">Inspección de Segmentos</p>
-              <p className="text-[11px]">Haz clic en cualquier segmento en el mapa para entrenar su velocidad máxima o verificar su clase funcional.</p>
+              <p className="font-bold text-slate-400">
+                Inspección de Segmentos
+              </p>
+              <p className="text-[11px]">
+                Haz clic en cualquier segmento en el mapa para entrenar su
+                velocidad máxima o verificar su clase funcional.
+              </p>
             </div>
           )}
 
           {/* Bottom Stats */}
           <div className="bg-slate-950 p-4 rounded-2xl border border-slate-850 flex items-center justify-between text-xs">
             <div className="space-y-1">
-              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">Métricas de Carga</span>
+              <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">
+                Métricas de Carga
+              </span>
               <div className="text-slate-200 font-bold flex items-center gap-2">
-                <span className="text-white text-sm font-black">{stats.filtered}</span>
+                <span className="text-white text-sm font-black">
+                  {stats.filtered}
+                </span>
                 {selectedFc !== "all" && (
-                  <span className="text-[10px] text-slate-500">de {stats.total} total</span>
+                  <span className="text-[10px] text-slate-500">
+                    de {stats.total} total
+                  </span>
                 )}
               </div>
             </div>

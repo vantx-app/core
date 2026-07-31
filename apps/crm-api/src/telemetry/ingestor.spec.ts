@@ -24,7 +24,9 @@ jest.mock('@prisma/client', () => {
       deleteMany: mockDeleteMany,
     },
     telemetryLog: { createMany: mockCreateMany, updateMany: jest.fn() },
-    dailyTelemetryRollup: { deleteMany: jest.fn().mockResolvedValue({ count: 0 }) },
+    dailyTelemetryRollup: {
+      deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+    },
     vehicleLiveState: { upsert: mockUpsert },
     mapLink: { findMany: jest.fn().mockResolvedValue([]) },
     $queryRaw: jest.fn().mockResolvedValue([]),
@@ -128,8 +130,8 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     });
 
     it('debe decodificar un buffer binario Codec 12 (datos transparentes) sin parsear registros de telemetría', () => {
-      const payloadString = "Hola FMC650";
-      const payloadBuffer = Buffer.from(payloadString, "ascii");
+      const payloadString = 'Hola FMC650';
+      const payloadBuffer = Buffer.from(payloadString, 'ascii');
       const commandSize = payloadBuffer.length;
 
       const dataFieldLength = 1 + 1 + 1 + 4 + commandSize + 1; // Codec (1) + Qty1 (1) + Type (1) + Size (4) + Payload + Qty2 (1) = 19
@@ -157,7 +159,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
         commandQuantity1: 1,
         commandType: 6,
         commandSize: commandSize,
-        payloadHex: payloadBuffer.toString("hex"),
+        payloadHex: payloadBuffer.toString('hex'),
         payloadAscii: payloadString,
         commandQuantity2: 1,
       });
@@ -1300,7 +1302,11 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       });
       mockPrisma.trip.findMany.mockResolvedValueOnce([]);
       mockPrisma.trip.findMany.mockResolvedValueOnce([
-        { id: 'active-trip-to-close', startTime: new Date(1716570000000), endTime: null }
+        {
+          id: 'active-trip-to-close',
+          startTime: new Date(1716570000000),
+          endTime: null,
+        },
       ]);
 
       await processDataBatch(recordsReopen, mockImei);
@@ -1432,7 +1438,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe mantener los valores LKV de odómetro y combustible, aplicar suavizado y LKV del ángulo al estar detenido', async () => {
       const mockVehicleId = 'vehicle-uuid-lkv-test';
       const mockImei = 'imei-lkv-test';
-      
+
       // Simular estado previo en base de datos: odómetro=100.0, nivelCombustible=80.0, ángulo=45
       mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
@@ -1501,14 +1507,14 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
             lastOdometer: 100.0,
             lastFuelLevel: 80,
           }),
-        })
+        }),
       );
     });
 
     it('debe omitir el suavizado de combustible si ocurre un cambio > 10% estando detenido (robo o recarga)', async () => {
       const mockVehicleId = 'vehicle-uuid-lkv-theft-test';
       const mockImei = 'imei-lkv-theft-test';
-      
+
       mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
@@ -1550,14 +1556,14 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
           update: expect.objectContaining({
             lastFuelLevel: 50,
           }),
-        })
+        }),
       );
     });
 
     it('debe evitar almacenar viajes fantasmas eliminados en lastClosedTripCache y evitar reabrirlos', async () => {
       const mockVehicleId = 'vehicle-uuid-ghost-cache-prevention';
       const mockImei = 'imei-ghost-cache-prevention';
-      
+
       mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
@@ -1649,7 +1655,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
     it('debe evitar errores P2003 de clave foránea limpiando tripId si el viaje fue eliminado de la base de datos', async () => {
       const mockVehicleId = 'vehicle-uuid-p2003-prevention';
       const mockImei = 'imei-p2003-prevention';
-      
+
       mockPrisma.vehicle.findFirst.mockResolvedValue({
         id: mockVehicleId,
         orgId: 'org-uuid-999',
@@ -1696,7 +1702,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
               tripId: null,
             }),
           ]),
-        })
+        }),
       );
     });
 
@@ -1764,7 +1770,7 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
               tripId: null,
             }),
           ]),
-        })
+        }),
       );
     });
 
@@ -1856,10 +1862,10 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       // Debe haber creado dos viajes en total (uno de T0 a T0+2min, y otro que inicia a T0+4min)
       // No debe haber creado un viaje en el T0+3min intermedio.
       expect(mockPrisma.trip.create).toHaveBeenCalledTimes(2);
-      
+
       const firstCreate = mockPrisma.trip.create.mock.calls[0][0].data;
       const secondCreate = mockPrisma.trip.create.mock.calls[1][0].data;
-      
+
       expect(firstCreate.startTime).toEqual(records[0].timestamp);
       expect(firstCreate.endTime).toEqual(records[1].timestamp);
       expect(secondCreate.startTime).toEqual(records[3].timestamp);
@@ -1947,9 +1953,10 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       await processDataBatch(records, mockImei);
 
       expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
-      const logs = mockPrisma.telemetryLog.createMany.mock.calls[
-        mockPrisma.telemetryLog.createMany.mock.calls.length - 1
-      ][0].data;
+      const logs =
+        mockPrisma.telemetryLog.createMany.mock.calls[
+          mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+        ][0].data;
 
       expect(logs[0].status).toBe('IDLING');
       expect(logs[1].status).toBe('EXCESSIVE_IDLING');

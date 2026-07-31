@@ -112,7 +112,6 @@ export function OrganizationsTableDesktop({
       className: "text-right",
       render: (org) => (
         <div className="flex items-center justify-end gap-1.5">
-
           <Link
             href={`/admin?targetOrgId=${org.id}`}
             className="btn btn-xs btn-outline btn-primary font-bold flex items-center justify-center gap-1"

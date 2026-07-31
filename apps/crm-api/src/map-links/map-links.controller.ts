@@ -1,11 +1,20 @@
-import { Controller, Get, Patch, Param, Body, Query, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Param,
+  Body,
+  Query,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { ROLES } from 'src/common/enums/roles.enum';
 import { Roles } from 'src/common/decorators/roles.decorator';
 
 @Controller('map-links')
 export class MapLinksController {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   @Roles(ROLES.SUPER_ADMIN, ROLES.OWNER, ROLES.ADMIN)
   @Get()
@@ -25,8 +34,15 @@ export class MapLinksController {
       const nMinLng = parseFloat(minLng) - 0.005;
       const nMaxLng = parseFloat(maxLng) + 0.005;
 
-      if (isNaN(nMinLat) || isNaN(nMaxLat) || isNaN(nMinLng) || isNaN(nMaxLng)) {
-        throw new BadRequestException('Bounding box coordinates must be numbers');
+      if (
+        isNaN(nMinLat) ||
+        isNaN(nMaxLat) ||
+        isNaN(nMinLng) ||
+        isNaN(nMaxLng)
+      ) {
+        throw new BadRequestException(
+          'Bounding box coordinates must be numbers',
+        );
       }
 
       // Query segments inside bounding box using spatial GIST index ordered by latest updates
@@ -103,9 +119,17 @@ export class MapLinksController {
   @Patch(':linkId')
   async updateMapLink(
     @Param('linkId') linkId: string,
-    @Body() body: { speedLimit?: number; functionalClass?: number; isVerified?: boolean; isBidirectional?: boolean },
+    @Body()
+    body: {
+      speedLimit?: number;
+      functionalClass?: number;
+      isVerified?: boolean;
+      isBidirectional?: boolean;
+    },
   ) {
-    const existing = await this.prisma.mapLink.findUnique({ where: { linkId } });
+    const existing = await this.prisma.mapLink.findUnique({
+      where: { linkId },
+    });
     if (!existing) {
       throw new NotFoundException(`Segment link ${linkId} not found`);
     }
@@ -113,10 +137,20 @@ export class MapLinksController {
     const updated = await this.prisma.mapLink.update({
       where: { linkId },
       data: {
-        speedLimit: body.speedLimit !== undefined ? Number(body.speedLimit) : existing.speedLimit,
-        functionalClass: body.functionalClass !== undefined ? Number(body.functionalClass) : existing.functionalClass,
-        isVerified: body.isVerified !== undefined ? Boolean(body.isVerified) : true,
-        isBidirectional: body.isBidirectional !== undefined ? Boolean(body.isBidirectional) : existing.isBidirectional,
+        speedLimit:
+          body.speedLimit !== undefined
+            ? Number(body.speedLimit)
+            : existing.speedLimit,
+        functionalClass:
+          body.functionalClass !== undefined
+            ? Number(body.functionalClass)
+            : existing.functionalClass,
+        isVerified:
+          body.isVerified !== undefined ? Boolean(body.isVerified) : true,
+        isBidirectional:
+          body.isBidirectional !== undefined
+            ? Boolean(body.isBidirectional)
+            : existing.isBidirectional,
       },
     });
 

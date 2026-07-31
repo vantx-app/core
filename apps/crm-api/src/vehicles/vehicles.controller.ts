@@ -264,7 +264,9 @@ export class VehiclesController {
     const userLat = parseFloat(userLatStr);
     const userLng = parseFloat(userLngStr);
     if (!cleanLinkId || isNaN(userLat) || isNaN(userLng)) {
-      throw new BadRequestException('Parámetros de ruta o coordenadas inválidos.');
+      throw new BadRequestException(
+        'Parámetros de ruta o coordenadas inválidos.',
+      );
     }
     return this.vehiclesService.getPublicTrackingRoute(
       cleanLinkId,

@@ -57,7 +57,9 @@ export class RegisterOwnerWithOrgDto {
   @ApiProperty()
   phone: string;
 
-  @IsString({ message: 'El nombre de la organización debe ser una cadena de texto' })
+  @IsString({
+    message: 'El nombre de la organización debe ser una cadena de texto',
+  })
   @IsNotEmpty({ message: 'El nombre de la organización es obligatorio' })
   @ApiProperty()
   orgName: string;

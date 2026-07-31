@@ -1,5 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { ValhallaRoutesClientService, mapValhallaRoadClassToFC } from './valhalla-routes-client.service';
+import {
+  ValhallaRoutesClientService,
+  mapValhallaRoadClassToFC,
+} from './valhalla-routes-client.service';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { PrismaService } from '../prisma.service';
@@ -26,7 +29,9 @@ describe('ValhallaRoutesClientService', () => {
 
     prismaMock = {
       $queryRaw: jest.fn().mockResolvedValue([]),
-      $transaction: jest.fn().mockImplementation((promises) => Promise.all(promises)),
+      $transaction: jest
+        .fn()
+        .mockImplementation((promises) => Promise.all(promises)),
       mapLink: {
         findMany: jest.fn().mockResolvedValue([]),
         findUnique: jest.fn().mockResolvedValue(null),
@@ -44,7 +49,9 @@ describe('ValhallaRoutesClientService', () => {
       ],
     }).compile();
 
-    service = module.get<ValhallaRoutesClientService>(ValhallaRoutesClientService);
+    service = module.get<ValhallaRoutesClientService>(
+      ValhallaRoutesClientService,
+    );
   });
 
   it('debe estar definido', () => {
@@ -52,13 +59,41 @@ describe('ValhallaRoutesClientService', () => {
   });
 
   it('debe mapear correctamente clases de ruta de Valhalla a FC y límites de Panamá', () => {
-    expect(mapValhallaRoadClassToFC('motorway')).toEqual({ fc: 1, speedLimit: 110, isVerified: false });
-    expect(mapValhallaRoadClassToFC('motorway', 100)).toEqual({ fc: 1, speedLimit: 100, isVerified: true });
-    expect(mapValhallaRoadClassToFC('primary')).toEqual({ fc: 3, speedLimit: 60, isVerified: false });
-    expect(mapValhallaRoadClassToFC('tertiary')).toEqual({ fc: 3, speedLimit: 60, isVerified: false });
-    expect(mapValhallaRoadClassToFC('residential')).toEqual({ fc: 5, speedLimit: 40, isVerified: false });
-    expect(mapValhallaRoadClassToFC('primary', 80)).toEqual({ fc: 3, speedLimit: 80, isVerified: true });
-    expect(mapValhallaRoadClassToFC('motorway', 90)).toEqual({ fc: 1, speedLimit: 90, isVerified: true });
+    expect(mapValhallaRoadClassToFC('motorway')).toEqual({
+      fc: 1,
+      speedLimit: 110,
+      isVerified: false,
+    });
+    expect(mapValhallaRoadClassToFC('motorway', 100)).toEqual({
+      fc: 1,
+      speedLimit: 100,
+      isVerified: true,
+    });
+    expect(mapValhallaRoadClassToFC('primary')).toEqual({
+      fc: 3,
+      speedLimit: 60,
+      isVerified: false,
+    });
+    expect(mapValhallaRoadClassToFC('tertiary')).toEqual({
+      fc: 3,
+      speedLimit: 60,
+      isVerified: false,
+    });
+    expect(mapValhallaRoadClassToFC('residential')).toEqual({
+      fc: 5,
+      speedLimit: 40,
+      isVerified: false,
+    });
+    expect(mapValhallaRoadClassToFC('primary', 80)).toEqual({
+      fc: 3,
+      speedLimit: 80,
+      isVerified: true,
+    });
+    expect(mapValhallaRoadClassToFC('motorway', 90)).toEqual({
+      fc: 1,
+      speedLimit: 90,
+      isVerified: true,
+    });
   });
 
   it('debe suspender temporalmente las llamadas después de 5 errores consecutivos', async () => {
@@ -178,4 +213,3 @@ describe('ValhallaRoutesClientService', () => {
     expect(result!.matchedDistanceKm).toBe(3.8);
   });
 });
-

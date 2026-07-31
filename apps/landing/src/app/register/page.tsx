@@ -322,10 +322,15 @@ function RegisterStepper() {
                     placeholder="Ej. +507 6000-0000"
                     disabled={isLoading}
                     {...register("phone", {
-                      required: currentStep === "details" ? "El teléfono es requerido" : false,
+                      required:
+                        currentStep === "details"
+                          ? "El teléfono es requerido"
+                          : false,
                       pattern: {
-                        value: /^(\+?507)?[-\s]?(6\d{3}[-\s]?\d{4}|[235789]\d{2}[-\s]?\d{4})$/,
-                        message: "El formato de teléfono no es válido para Panamá",
+                        value:
+                          /^(\+?507)?[-\s]?(6\d{3}[-\s]?\d{4}|[235789]\d{2}[-\s]?\d{4})$/,
+                        message:
+                          "El formato de teléfono no es válido para Panamá",
                       },
                     })}
                   />

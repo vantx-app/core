@@ -14,7 +14,7 @@ export interface ResolvedSpeedingLog {
 
 @Injectable()
 export class OverspeedCalculationService {
-  constructor(private valhallaRoutesClient: ValhallaRoutesClientService) { }
+  constructor(private valhallaRoutesClient: ValhallaRoutesClientService) {}
 
   /**
    * Calcula el exceso de velocidad basándose en el límite fallback (110 km/h o configurado en el perfil)

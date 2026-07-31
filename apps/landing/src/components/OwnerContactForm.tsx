@@ -192,7 +192,8 @@ export function OwnerContactForm() {
               {...register("phone", {
                 required: "El teléfono es obligatorio",
                 pattern: {
-                  value: /^(\+?507)?[-\s]?(6\d{3}[-\s]?\d{4}|[235789]\d{2}[-\s]?\d{4})$/,
+                  value:
+                    /^(\+?507)?[-\s]?(6\d{3}[-\s]?\d{4}|[235789]\d{2}[-\s]?\d{4})$/,
                   message: "El formato de teléfono no es válido para Panamá",
                 },
               })}

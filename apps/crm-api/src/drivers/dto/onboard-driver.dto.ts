@@ -22,7 +22,9 @@ export class OnboardDriverDto {
   @ApiProperty()
   lastName: string;
 
-  @IsString({ message: 'El documento de identidad debe ser una cadena de texto' })
+  @IsString({
+    message: 'El documento de identidad debe ser una cadena de texto',
+  })
   @IsNotEmpty({ message: 'El documento de identidad es obligatorio' })
   @ApiProperty()
   nationalId: string;

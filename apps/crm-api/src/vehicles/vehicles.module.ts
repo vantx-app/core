@@ -19,4 +19,4 @@ import { HttpModule } from '@nestjs/axios';
     ValhallaRoutesClientService,
   ],
 })
-export class VehiclesModule { }
+export class VehiclesModule {}

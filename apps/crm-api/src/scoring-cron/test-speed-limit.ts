@@ -243,7 +243,8 @@ async function getRouteSpeedLimits(
       const isReverse =
         rawLinkIdStr.startsWith('-') ||
         rawLinkIdStr.includes('#-') ||
-        (rawLinkIdStr.includes('#') && rawLinkIdStr.split('#')[1].includes('-'));
+        (rawLinkIdStr.includes('#') &&
+          rawLinkIdStr.split('#')[1].includes('-'));
 
       // Extract canonical base ID by splitting on '#' and stripping leading +/- signs
       let linkId = rawLinkIdStr.split('#')[0];
@@ -753,9 +754,9 @@ async function run() {
         const fcStr = functionalClass !== null ? `, FC${functionalClass}` : '';
         console.log(
           `[LOG] Hora: ${log.timestamp} | Vel: ${log.speed} km/h | Límite: ${limitToUse} km/h (orig: ${originalLimit} km/h${fcStr}) | ` +
-          `DistRuta: ${(snapDist * 1000).toFixed(1)}m | ` +
-          `${log.speed > threshold ? (inDecelWindow ? '⏳ DECEL-SUSPEND' : '🚨 EXCESO') : 'OK'}` +
-          `${isOffRoute ? ' (OFF-ROUTE)' : ''}`,
+            `DistRuta: ${(snapDist * 1000).toFixed(1)}m | ` +
+            `${log.speed > threshold ? (inDecelWindow ? '⏳ DECEL-SUSPEND' : '🚨 EXCESO') : 'OK'}` +
+            `${isOffRoute ? ' (OFF-ROUTE)' : ''}`,
         );
       }
     }
@@ -812,7 +813,7 @@ async function run() {
         const offRouteStr = v.isOffRoute ? ' [Off-Route (Fallback)]' : '';
         console.log(
           `  ${idx + 1}. [${v.timestamp}] Vel: ${v.speed} km/h en zona de ${v.limit} km/h ` +
-          `(Exceso: +${v.excess} km/h) | Distancia a Ruta: ${v.distanceToRouteMeters.toFixed(1)}m${offRouteStr}`,
+            `(Exceso: +${v.excess} km/h) | Distancia a Ruta: ${v.distanceToRouteMeters.toFixed(1)}m${offRouteStr}`,
         );
       });
       if (violations.length > 15) {

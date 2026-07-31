@@ -73,9 +73,14 @@ export function VehicleDetailClient({
         lastLat: live.latitude ?? initialVehicle.liveState?.lastLat ?? 0,
         lastLng: live.longitude ?? initialVehicle.liveState?.lastLng ?? 0,
         lastSpeed: live.speed ?? initialVehicle.liveState?.lastSpeed ?? 0,
-        currentStatus: live.status ?? initialVehicle.liveState?.currentStatus ?? "STOPPED",
+        currentStatus:
+          live.status ?? initialVehicle.liveState?.currentStatus ?? "STOPPED",
         lastAngle: live.angle ?? initialVehicle.liveState?.lastAngle ?? 0,
-        lastUpdate: live.updatedAt && live.updatedAt !== "N/A" ? live.updatedAt : (initialVehicle.liveState?.lastUpdate ?? new Date().toISOString()),
+        lastUpdate:
+          live.updatedAt && live.updatedAt !== "N/A"
+            ? live.updatedAt
+            : (initialVehicle.liveState?.lastUpdate ??
+              new Date().toISOString()),
         lastIgnition:
           live.ignition ?? initialVehicle.liveState?.lastIgnition ?? false,
         lastOdometer:
@@ -223,8 +228,12 @@ export function VehicleDetailClient({
   const currentDriver = vehicle.assignments?.[0]?.driver;
 
   const capabilities = vehicle.capabilities || [];
-  const hasFuelLevel = capabilities.includes("fuelLevel") || vehicle.liveState?.lastFuelLevel != null;
-  const hasFuelRate = capabilities.includes("fuelRate") || capabilities.includes("fuelConsumption");
+  const hasFuelLevel =
+    capabilities.includes("fuelLevel") ||
+    vehicle.liveState?.lastFuelLevel != null;
+  const hasFuelRate =
+    capabilities.includes("fuelRate") ||
+    capabilities.includes("fuelConsumption");
 
   const activeCardsCount = [hasFuelLevel, hasFuelRate].filter(Boolean).length;
   const gridColsClass =
@@ -302,15 +311,15 @@ export function VehicleDetailClient({
         </div>
 
         {day.overspeedCount > 0 ||
-          totalHarsh > 0 ||
-          (!!day.deviceUnpluggedCount && day.deviceUnpluggedCount > 0) ||
-          day.activeFaultCodesCount > 0 ||
-          (day.highRpmCount ?? 0) > 0 ||
-          (day.coldEngineStrainCount ?? 0) > 0 ||
-          (day.coastingInNeutralCount ?? 0) > 0 ||
-          (day.engineLuggingCount ?? 0) > 0 ||
-          (day.highLoadStrainCount ?? 0) > 0 ||
-          (day.criticalOverheatingCount ?? 0) > 0 ? (
+        totalHarsh > 0 ||
+        (!!day.deviceUnpluggedCount && day.deviceUnpluggedCount > 0) ||
+        day.activeFaultCodesCount > 0 ||
+        (day.highRpmCount ?? 0) > 0 ||
+        (day.coldEngineStrainCount ?? 0) > 0 ||
+        (day.coastingInNeutralCount ?? 0) > 0 ||
+        (day.engineLuggingCount ?? 0) > 0 ||
+        (day.highLoadStrainCount ?? 0) > 0 ||
+        (day.criticalOverheatingCount ?? 0) > 0 ? (
           <div className="flex flex-wrap gap-2 pt-1">
             {day.overspeedCount > 0 && (
               <span className="inline-flex items-center justify-center px-2 py-1 rounded-lg bg-rose-500/10 text-rose-600 border border-rose-500/20 font-bold font-mono text-[10px] gap-1">
@@ -751,40 +760,44 @@ export function VehicleDetailClient({
       <div className="tabs tabs-boxed bg-base-200/50 p-1 rounded-xl w-full max-w-lg shrink-0 border border-base-200/60 backdrop-blur-md">
         <button
           onClick={() => setActiveTab("overview")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "overview"
-            ? "tab-active bg-base-100 shadow-sm text-primary"
-            : "text-base-content/60"
-            }`}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "overview"
+              ? "tab-active bg-base-100 shadow-sm text-primary"
+              : "text-base-content/60"
+          }`}
         >
           <Info className="size-3.5 mr-1.5" />
           Resumen
         </button>
         <button
           onClick={() => setActiveTab("scores")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "scores"
-            ? "tab-active bg-base-100 shadow-sm text-primary"
-            : "text-base-content/60"
-            }`}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "scores"
+              ? "tab-active bg-base-100 shadow-sm text-primary"
+              : "text-base-content/60"
+          }`}
         >
           <Eye className="size-3.5 mr-1.5" />
           Desempeño
         </button>
         <button
           onClick={() => setActiveTab("rollups")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "rollups"
-            ? "tab-active bg-base-100 shadow-sm text-primary"
-            : "text-base-content/60"
-            }`}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "rollups"
+              ? "tab-active bg-base-100 shadow-sm text-primary"
+              : "text-base-content/60"
+          }`}
         >
           <Activity className="size-3.5 mr-1.5" />
           Actividad Diaria
         </button>
         <button
           onClick={() => setActiveTab("fuel")}
-          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${activeTab === "fuel"
-            ? "tab-active bg-base-100 shadow-sm text-primary"
-            : "text-base-content/60"
-            }`}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "fuel"
+              ? "tab-active bg-base-100 shadow-sm text-primary"
+              : "text-base-content/60"
+          }`}
         >
           <Fuel className="size-3.5 mr-1.5" />
           Combustible
@@ -950,9 +963,10 @@ export function VehicleDetailClient({
                         <div
                           className="bg-primary h-1.5 rounded-full"
                           style={{
-                            width: vehicle.liveState?.lastFuelLevel != null
-                              ? `${Math.min(100, Math.max(0, Number(vehicle.liveState.lastFuelLevel)))}%`
-                              : "0%",
+                            width:
+                              vehicle.liveState?.lastFuelLevel != null
+                                ? `${Math.min(100, Math.max(0, Number(vehicle.liveState.lastFuelLevel)))}%`
+                                : "0%",
                           }}
                         ></div>
                       </div>
@@ -1210,7 +1224,7 @@ export function VehicleDetailClient({
                           {Math.round(
                             ((snap.maintenanceScore ?? 100) +
                               (snap.fuelEfficiency ?? 100)) /
-                            2,
+                              2,
                           )}{" "}
                           pts
                         </span>
@@ -1232,10 +1246,10 @@ export function VehicleDetailClient({
               ))}
               {(!vehicle.vehicleScoreSnapshots ||
                 vehicle.vehicleScoreSnapshots.length === 0) && (
-                  <div className="text-center text-base-content/40 py-8 bg-base-200/30 border border-base-200/60 rounded-2xl text-xs">
-                    No hay historial de puntajes semanales registrado aún.
-                  </div>
-                )}
+                <div className="text-center text-base-content/40 py-8 bg-base-200/30 border border-base-200/60 rounded-2xl text-xs">
+                  No hay historial de puntajes semanales registrado aún.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1278,27 +1292,27 @@ export function VehicleDetailClient({
           <div className="block md:hidden space-y-3">
             {showRollupGrouping
               ? monthKeys.map((monthKey) => (
-                <div
-                  key={monthKey}
-                  className="collapse bg-base-100/40 border border-base-200 shadow-md rounded-2xl overflow-hidden backdrop-blur-md"
-                >
-                  <input
-                    type="checkbox"
-                    defaultChecked={monthKey === firstMonthKey}
-                    className="peer"
-                    aria-label={`Mostrar logs de ${monthKey}`}
-                  />
-                  <div className="collapse-title text-sm font-bold flex items-center gap-2 pr-10 text-base-content bg-base-200/20 capitalize text-left">
-                    <span>{monthKey}</span>
-                    <span className="badge badge-neutral badge-sm ml-2 font-mono font-bold bg-base-300 border-none text-base-content/85">
-                      {groupedRollups[monthKey].length}
-                    </span>
+                  <div
+                    key={monthKey}
+                    className="collapse bg-base-100/40 border border-base-200 shadow-md rounded-2xl overflow-hidden backdrop-blur-md"
+                  >
+                    <input
+                      type="checkbox"
+                      defaultChecked={monthKey === firstMonthKey}
+                      className="peer"
+                      aria-label={`Mostrar logs de ${monthKey}`}
+                    />
+                    <div className="collapse-title text-sm font-bold flex items-center gap-2 pr-10 text-base-content bg-base-200/20 capitalize text-left">
+                      <span>{monthKey}</span>
+                      <span className="badge badge-neutral badge-sm ml-2 font-mono font-bold bg-base-300 border-none text-base-content/85">
+                        {groupedRollups[monthKey].length}
+                      </span>
+                    </div>
+                    <div className="collapse-content p-4 bg-base-100/10 space-y-3">
+                      {groupedRollups[monthKey].map(renderRollupCard)}
+                    </div>
                   </div>
-                  <div className="collapse-content p-4 bg-base-100/10 space-y-3">
-                    {groupedRollups[monthKey].map(renderRollupCard)}
-                  </div>
-                </div>
-              ))
+                ))
               : rollups.map(renderRollupCard)}
             {rollups.length === 0 && (
               <div className="text-center text-base-content/40 py-8 bg-base-200/30 border border-base-200/60 rounded-2xl text-xs">
@@ -1404,24 +1418,36 @@ export function VehicleDetailClient({
                 </div>
 
                 {/* Drained Card */}
-                <div className={`glass-card p-5 flex flex-col justify-between rounded-2xl hover:scale-[1.01] transition-all duration-300 ${
-                  fuelAnalysis.summary.totalDrained > 0
-                    ? "border-error/30 hover:border-error/50 bg-error/5"
-                    : "hover:border-error/20"
-                }`}>
+                <div
+                  className={`glass-card p-5 flex flex-col justify-between rounded-2xl hover:scale-[1.01] transition-all duration-300 ${
+                    fuelAnalysis.summary.totalDrained > 0
+                      ? "border-error/30 hover:border-error/50 bg-error/5"
+                      : "hover:border-error/20"
+                  }`}
+                >
                   <div>
                     <span className="text-[10px] uppercase font-bold tracking-wider text-base-content/40 block">
                       Drenados / Pérdidas
                     </span>
-                    <span className={`text-3xl font-black font-mono tracking-tight mt-1 block ${
-                      fuelAnalysis.summary.totalDrained > 0 ? "text-error" : "text-base-content/60"
-                    }`}>
-                      {fuelAnalysis.summary.totalDrained > 0 ? `-${fuelAnalysis.summary.totalDrained}%` : "0%"}
+                    <span
+                      className={`text-3xl font-black font-mono tracking-tight mt-1 block ${
+                        fuelAnalysis.summary.totalDrained > 0
+                          ? "text-error"
+                          : "text-base-content/60"
+                      }`}
+                    >
+                      {fuelAnalysis.summary.totalDrained > 0
+                        ? `-${fuelAnalysis.summary.totalDrained}%`
+                        : "0%"}
                     </span>
                   </div>
-                  <p className={`text-[10px] leading-relaxed mt-4 ${
-                    fuelAnalysis.summary.totalDrained > 0 ? "text-error/80 font-semibold" : "text-base-content/40 italic"
-                  }`}>
+                  <p
+                    className={`text-[10px] leading-relaxed mt-4 ${
+                      fuelAnalysis.summary.totalDrained > 0
+                        ? "text-error/80 font-semibold"
+                        : "text-base-content/40 italic"
+                    }`}
+                  >
                     {fuelAnalysis.summary.totalDrained > 0
                       ? "¡Alerta! Caídas bruscas detectadas con motor apagado."
                       : "No se detectaron pérdidas anormales de combustible."}
@@ -1450,10 +1476,11 @@ export function VehicleDetailClient({
                   <TrendingUp className="text-primary size-4" />
                   Tendencia del Nivel de Combustible
                 </h3>
-                
+
                 {fuelAnalysis.history.length === 0 ? (
                   <div className="flex items-center justify-center p-12 text-xs text-base-content/40">
-                    No hay suficientes datos de telemetría para mostrar la gráfica.
+                    No hay suficientes datos de telemetría para mostrar la
+                    gráfica.
                   </div>
                 ) : (
                   <div className="relative w-full overflow-hidden">
@@ -1465,9 +1492,23 @@ export function VehicleDetailClient({
                     >
                       {/* Gradients */}
                       <defs>
-                        <linearGradient id="fuelAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="oklch(var(--p))" stopOpacity="0.25" />
-                          <stop offset="100%" stopColor="oklch(var(--p))" stopOpacity="0.0" />
+                        <linearGradient
+                          id="fuelAreaGrad"
+                          x1="0"
+                          y1="0"
+                          x2="0"
+                          y2="1"
+                        >
+                          <stop
+                            offset="0%"
+                            stopColor="oklch(var(--p))"
+                            stopOpacity="0.25"
+                          />
+                          <stop
+                            offset="100%"
+                            stopColor="oklch(var(--p))"
+                            stopOpacity="0.0"
+                          />
                         </linearGradient>
                       </defs>
 
@@ -1495,10 +1536,7 @@ export function VehicleDetailClient({
 
                       {/* Line Area */}
                       {points.length > 0 && (
-                        <path
-                          d={areaD}
-                          fill="url(#fuelAreaGrad)"
-                        />
+                        <path d={areaD} fill="url(#fuelAreaGrad)" />
                       )}
 
                       {/* Trend Line */}
@@ -1586,27 +1624,35 @@ export function VehicleDetailClient({
                         style={{
                           left: `${Math.min(
                             360,
-                            Math.max(10, getX(hoveredPoint.xVal) - 60)
+                            Math.max(10, getX(hoveredPoint.xVal) - 60),
                           )}px`,
                           top: `${Math.max(5, getY(hoveredPoint.yVal) - 75)}px`,
                         }}
                       >
                         <p className="text-base-content/40 leading-none mb-1">
-                          {new Date(hoveredPoint.xVal).toLocaleDateString("es-ES", {
-                            day: "numeric",
-                            month: "short",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
+                          {new Date(hoveredPoint.xVal).toLocaleDateString(
+                            "es-ES",
+                            {
+                              day: "numeric",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}
                         </p>
                         <p className="text-primary font-black text-sm leading-none">
                           Tanque: {hoveredPoint.yVal.toFixed(1)}%
                         </p>
                         <p className="text-base-content/65 flex items-center gap-1 leading-none mt-1">
-                          <Power className={`size-3 ${
-                            hoveredPoint.raw.ignition ? "text-success animate-pulse" : "text-base-content/30"
-                          }`} />
-                          Motor: {hoveredPoint.raw.ignition ? "Marcha" : "Apagado"}
+                          <Power
+                            className={`size-3 ${
+                              hoveredPoint.raw.ignition
+                                ? "text-success animate-pulse"
+                                : "text-base-content/30"
+                            }`}
+                          />
+                          Motor:{" "}
+                          {hoveredPoint.raw.ignition ? "Marcha" : "Apagado"}
                         </p>
                       </div>
                     )}
@@ -1620,10 +1666,11 @@ export function VehicleDetailClient({
                   <FileText className="text-primary size-4" />
                   Registro de Eventos de Combustible
                 </h3>
-                
+
                 {fuelAnalysis.events.length === 0 ? (
                   <div className="text-center py-8 text-xs text-base-content/40 border border-base-200/40 rounded-xl">
-                    No se registraron anomalías (drenados) ni recargas en este período.
+                    No se registraron anomalías (drenados) ni recargas en este
+                    período.
                   </div>
                 ) : (
                   <div className="overflow-x-auto w-full border border-base-200/40 rounded-2xl">
@@ -1644,19 +1691,26 @@ export function VehicleDetailClient({
                           return (
                             <tr key={index} className="hover:bg-base-200/20">
                               <td className="font-bold">
-                                <span className={`badge badge-sm font-bold border-none ${
-                                  isRefuel ? "bg-success/15 text-success" : "bg-error/15 text-error"
-                                }`}>
+                                <span
+                                  className={`badge badge-sm font-bold border-none ${
+                                    isRefuel
+                                      ? "bg-success/15 text-success"
+                                      : "bg-error/15 text-error"
+                                  }`}
+                                >
                                   {isRefuel ? "Recarga" : "Drenado Manual"}
                                 </span>
                               </td>
                               <td className="text-base-content/60 font-medium">
-                                {new Date(evt.timestamp).toLocaleString("es-ES", {
-                                  day: "numeric",
-                                  month: "short",
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                })}
+                                {new Date(evt.timestamp).toLocaleString(
+                                  "es-ES",
+                                  {
+                                    day: "numeric",
+                                    month: "short",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  },
+                                )}
                               </td>
                               <td className="font-mono font-bold text-base-content/80">
                                 {evt.beforeLevel.toFixed(1)}%
@@ -1664,10 +1718,14 @@ export function VehicleDetailClient({
                               <td className="font-mono font-bold text-base-content/80">
                                 {evt.afterLevel.toFixed(1)}%
                               </td>
-                              <td className={`font-mono font-black ${
-                                isRefuel ? "text-success" : "text-error"
-                              }`}>
-                                {isRefuel ? `+${evt.delta.toFixed(1)}%` : `${evt.delta.toFixed(1)}%`}
+                              <td
+                                className={`font-mono font-black ${
+                                  isRefuel ? "text-success" : "text-error"
+                                }`}
+                              >
+                                {isRefuel
+                                  ? `+${evt.delta.toFixed(1)}%`
+                                  : `${evt.delta.toFixed(1)}%`}
                               </td>
                               <td>
                                 {evt.latitude && evt.longitude ? (
@@ -1681,7 +1739,9 @@ export function VehicleDetailClient({
                                     Ver Mapa
                                   </a>
                                 ) : (
-                                  <span className="text-base-content/30 italic">Sin GPS</span>
+                                  <span className="text-base-content/30 italic">
+                                    Sin GPS
+                                  </span>
                                 )}
                               </td>
                             </tr>

@@ -471,19 +471,26 @@ async function processDataBatchInternal(records: any[], imei: string) {
     latitude: vehicle.liveState?.lastLat ?? undefined,
     longitude: vehicle.liveState?.lastLng ?? undefined,
     timestamp: vehicle.liveState?.lastUpdate ?? undefined,
-    tripActive: vehicle.liveState?.currentStatus !== "STOPPED" && vehicle.liveState?.currentStatus !== "UNPLUGGED",
+    tripActive:
+      vehicle.liveState?.currentStatus !== "STOPPED" &&
+      vehicle.liveState?.currentStatus !== "UNPLUGGED",
   };
 
   let virtualState = fuelVirtualStateCache.get(vehicle.id);
   if (!virtualState) {
-    if (vehicle.liveState?.virtualState && typeof vehicle.liveState.virtualState === "object") {
-      virtualState = vehicle.liveState.virtualState as unknown as FuelVirtualState;
+    if (
+      vehicle.liveState?.virtualState &&
+      typeof vehicle.liveState.virtualState === "object"
+    ) {
+      virtualState = vehicle.liveState
+        .virtualState as unknown as FuelVirtualState;
     } else {
       const initialLevel = vehicle.liveState?.lastFuelLevel ?? null;
       virtualState = {
         currentDisplayPercent: initialLevel,
         lastValidAnchorPercent: initialLevel,
-        vehicleState: vehicle.liveState?.currentStatus === "MOVING" ? "MOVING" : "PARKED",
+        vehicleState:
+          vehicle.liveState?.currentStatus === "MOVING" ? "MOVING" : "PARKED",
         segmentReadings: [],
         distanceAccumulator: 0,
         timeAccumulator: 0,
@@ -518,36 +525,59 @@ async function processDataBatchInternal(records: any[], imei: string) {
     // LKV para ángulo: si el ángulo reportado es 0 (o nulo) y el estado es STOPPED,
     // y tenemos un ángulo previo que es distinto de 0, mantenemos el ángulo previo.
     const isStopped = parsed.status === "STOPPED";
-    if ((recordAngle === 0 || recordAngle === null || recordAngle === undefined) && isStopped && previousState.angle) {
+    if (
+      (recordAngle === 0 ||
+        recordAngle === null ||
+        recordAngle === undefined) &&
+      isStopped &&
+      previousState.angle
+    ) {
       recordAngle = previousState.angle;
     }
 
     let distanceDeltaMeters = 0;
     if (!isStopped) {
-      if (parsed.odometer !== null && previousState.odometer !== null && previousState.odometer !== undefined) {
-        distanceDeltaMeters = Math.max(0, (parsed.odometer - previousState.odometer) * 1000);
-      } else if (previousState.latitude !== undefined && previousState.longitude !== undefined) {
-        distanceDeltaMeters = haversineDistance(
-          previousState.latitude,
-          previousState.longitude,
-          rec.latitude,
-          rec.longitude
-        ) * 1000;
+      if (
+        parsed.odometer !== null &&
+        previousState.odometer !== null &&
+        previousState.odometer !== undefined
+      ) {
+        distanceDeltaMeters = Math.max(
+          0,
+          (parsed.odometer - previousState.odometer) * 1000,
+        );
+      } else if (
+        previousState.latitude !== undefined &&
+        previousState.longitude !== undefined
+      ) {
+        distanceDeltaMeters =
+          haversineDistance(
+            previousState.latitude,
+            previousState.longitude,
+            rec.latitude,
+            rec.longitude,
+          ) * 1000;
       }
     }
 
     let timeDeltaSeconds = 0;
     if (previousState.timestamp) {
-      timeDeltaSeconds = Math.max(0, ((rec.timestamp as Date).getTime() - previousState.timestamp.getTime()) / 1000);
+      timeDeltaSeconds = Math.max(
+        0,
+        ((rec.timestamp as Date).getTime() -
+          previousState.timestamp.getTime()) /
+          1000,
+      );
     }
 
     // Engine Hours Accumulator & Normalization
     let recordEngineHours: number | null = parsed.engineHours;
     if (recordEngineHours === null || recordEngineHours === undefined) {
-      const prevEH = previousState.engineHours ?? vehicle.liveState?.lastEngineHours ?? 0;
+      const prevEH =
+        previousState.engineHours ?? vehicle.liveState?.lastEngineHours ?? 0;
       if (parsed.trueIgnition) {
         const cappedSeconds = Math.min(timeDeltaSeconds, 120); // Cap gap at 120s to prevent disconnect spikes
-        recordEngineHours = prevEH + (cappedSeconds / 3600.0);
+        recordEngineHours = prevEH + cappedSeconds / 3600.0;
       } else {
         recordEngineHours = prevEH;
       }
@@ -559,8 +589,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
     // Odometer Fallback Accumulator
     let recordOdometer: number | null = parsed.odometer;
     if (recordOdometer === null || recordOdometer === undefined) {
-      const prevOdo = previousState.odometer ?? vehicle.liveState?.lastOdometer ?? 0;
-      recordOdometer = prevOdo + (distanceDeltaMeters / 1000.0);
+      const prevOdo =
+        previousState.odometer ?? vehicle.liveState?.lastOdometer ?? 0;
+      recordOdometer = prevOdo + distanceDeltaMeters / 1000.0;
     }
     if (recordOdometer !== null) {
       parsed.odometer = Math.round(recordOdometer * 100) / 100;
@@ -575,12 +606,14 @@ async function processDataBatchInternal(records: any[], imei: string) {
       }
 
       // 1. Ignition-On Anchor Observation Window
-      const isTransitionIgnition = parsed.trueIgnition && !previousState.ignition;
+      const isTransitionIgnition =
+        parsed.trueIgnition && !previousState.ignition;
       if (isTransitionIgnition) {
         virtualState.ignitionOnTime = (rec.timestamp as Date).getTime();
         virtualState.ignitionOnReadings = [rawFuelPercent];
       } else if (virtualState.ignitionOnTime !== null) {
-        const elapsedMs = (rec.timestamp as Date).getTime() - virtualState.ignitionOnTime;
+        const elapsedMs =
+          (rec.timestamp as Date).getTime() - virtualState.ignitionOnTime;
         if (elapsedMs <= 60000) {
           if (parsed.speedToUse <= 5) {
             virtualState.ignitionOnReadings.push(rawFuelPercent);
@@ -588,7 +621,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
         } else {
           // Observation window finished
           if (virtualState.ignitionOnReadings.length > 0) {
-            const calibratedAnchor = calculateMedian(virtualState.ignitionOnReadings);
+            const calibratedAnchor = calculateMedian(
+              virtualState.ignitionOnReadings,
+            );
             virtualState.currentDisplayPercent = calibratedAnchor;
             virtualState.lastValidAnchorPercent = calibratedAnchor;
           }
@@ -631,13 +666,15 @@ async function processDataBatchInternal(records: any[], imei: string) {
         if (isDistanceLimit || isTimeLimit) {
           if (virtualState.segmentReadings.length > 0) {
             const currentMedian = calculateMedian(virtualState.segmentReadings);
-            const fuelDelta = virtualState.currentDisplayPercent! - currentMedian;
+            const fuelDelta =
+              virtualState.currentDisplayPercent! - currentMedian;
 
             // Strictly enforce down-only consumption during movement
             if (fuelDelta > 0) {
               const alpha = mapping.movingFuelAlpha ?? 0.02;
-              virtualState.currentDisplayPercent = (alpha * currentMedian) + 
-                                                   ((1 - alpha) * virtualState.currentDisplayPercent!);
+              virtualState.currentDisplayPercent =
+                alpha * currentMedian +
+                (1 - alpha) * virtualState.currentDisplayPercent!;
             }
           }
           virtualState.distanceAccumulator = 0;
@@ -652,7 +689,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
         }
 
         const stableMedian = calculateMedian(virtualState.segmentReadings);
-        const currentAnchor = virtualState.lastValidAnchorPercent ?? stableMedian;
+        const currentAnchor =
+          virtualState.lastValidAnchorPercent ?? stableMedian;
 
         // Evaluate starting a session when no active session exists
         if (!virtualState.session || virtualState.session.type === "NONE") {
@@ -831,27 +869,52 @@ async function processDataBatchInternal(records: any[], imei: string) {
       const firstLog = tripLogs[0];
       const lastLog = tripLogs[tripLogs.length - 1];
 
-      const dist = Math.max(0, (lastLog.odometer ?? 0) - (firstLog.odometer ?? 0));
-      const eh = Math.max(0, (lastLog.engineHours ?? 0) - (firstLog.engineHours ?? 0));
+      const dist = Math.max(
+        0,
+        (lastLog.odometer ?? 0) - (firstLog.odometer ?? 0),
+      );
+      const eh = Math.max(
+        0,
+        (lastLog.engineHours ?? 0) - (firstLog.engineHours ?? 0),
+      );
       const startFuel = firstLog.fuelLevel;
       const endFuel = lastLog.fuelLevel;
       const capacity = vehicle.tankCapacity ?? 60;
 
       let consumedLiters: number | null = null;
-      if (lastLog.fuelConsumption !== null && firstLog.fuelConsumption !== null && firstLog.fuelConsumption !== undefined && lastLog.fuelConsumption !== undefined) {
-        consumedLiters = Math.max(0, lastLog.fuelConsumption - firstLog.fuelConsumption);
-      } else if (startFuel !== null && endFuel !== null && startFuel !== undefined && endFuel !== undefined) {
-        consumedLiters = Math.max(0, ((startFuel - endFuel) / 100.0) * capacity);
+      if (
+        lastLog.fuelConsumption !== null &&
+        firstLog.fuelConsumption !== null &&
+        firstLog.fuelConsumption !== undefined &&
+        lastLog.fuelConsumption !== undefined
+      ) {
+        consumedLiters = Math.max(
+          0,
+          lastLog.fuelConsumption - firstLog.fuelConsumption,
+        );
+      } else if (
+        startFuel !== null &&
+        endFuel !== null &&
+        startFuel !== undefined &&
+        endFuel !== undefined
+      ) {
+        consumedLiters = Math.max(
+          0,
+          ((startFuel - endFuel) / 100.0) * capacity,
+        );
       }
 
-      const efficiency = consumedLiters && consumedLiters > 0 ? dist / consumedLiters : null;
+      const efficiency =
+        consumedLiters && consumedLiters > 0 ? dist / consumedLiters : null;
 
       tripObj.distanceKm = Math.round(dist * 100) / 100;
       tripObj.engineHours = Math.round(eh * 100) / 100;
       tripObj.startFuelLevel = startFuel;
       tripObj.endFuelLevel = endFuel;
-      tripObj.fuelConsumedLiters = consumedLiters !== null ? Math.round(consumedLiters * 100) / 100 : null;
-      tripObj.fuelEfficiencyKmL = efficiency !== null ? Math.round(efficiency * 100) / 100 : null;
+      tripObj.fuelConsumedLiters =
+        consumedLiters !== null ? Math.round(consumedLiters * 100) / 100 : null;
+      tripObj.fuelEfficiencyKmL =
+        efficiency !== null ? Math.round(efficiency * 100) / 100 : null;
     }
   }
 
@@ -946,8 +1009,8 @@ async function ensureReferencedTripsExist({
     new Set(
       telemetryLogs
         .map((log: any) => log.tripId)
-        .filter((id): id is string => !!id && !tripsToCreate.has(id))
-    )
+        .filter((id): id is string => !!id && !tripsToCreate.has(id)),
+    ),
   );
 
   if (referencedTripIds.length === 0) return;

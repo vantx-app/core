@@ -15,7 +15,10 @@ describe('OverspeedCalculationService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OverspeedCalculationService,
-        { provide: ValhallaRoutesClientService, useValue: valhallaRoutesClientMock },
+        {
+          provide: ValhallaRoutesClientService,
+          useValue: valhallaRoutesClientMock,
+        },
       ],
     }).compile();
 

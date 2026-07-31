@@ -19,17 +19,21 @@ export async function processTelemetry(
     }
 
     if ((decodedBatch as any).isCodec12) {
-      const { commandType, commandSize, payloadHex, payloadAscii } = (decodedBatch as any).codec12Data;
-      
+      const { commandType, commandSize, payloadHex, payloadAscii } = (
+        decodedBatch as any
+      ).codec12Data;
+
       logger.log(
-        `[Codec 12] Paquete detectado para IMEI: ${imei} | Tipo: 0x${commandType.toString(16).padStart(2, "0")} | Tamaño: ${commandSize} bytes | Payload (HEX): ${payloadHex} | Payload (ASCII): ${payloadAscii}`
+        `[Codec 12] Paquete detectado para IMEI: ${imei} | Tipo: 0x${commandType.toString(16).padStart(2, "0")} | Tamaño: ${commandSize} bytes | Payload (HEX): ${payloadHex} | Payload (ASCII): ${payloadAscii}`,
       );
 
       const ackResponse = Buffer.alloc(4);
       ackResponse.writeInt32BE(decodedBatch.totalInBatch, 0);
       socket.write(ackResponse);
 
-      logger.log(`✅ ACK Codec 12 (${decodedBatch.totalInBatch} comandos) para IMEI: ${imei}`);
+      logger.log(
+        `✅ ACK Codec 12 (${decodedBatch.totalInBatch} comandos) para IMEI: ${imei}`,
+      );
       return;
     }
 

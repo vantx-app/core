@@ -1140,8 +1140,6 @@ export default function OrganizationsPage() {
         </>
       )}
 
-
-
       {/* Creation/Edit Org Modal */}
       <Modal
         isOpen={isModalOpen}
@@ -1170,8 +1168,6 @@ export default function OrganizationsPage() {
             placeholder="Ej. Cooperativa de Vehiculos Chiriquí"
             disabled={isSubmitting}
           />
-
-
 
           {!editingOrg && (
             <>

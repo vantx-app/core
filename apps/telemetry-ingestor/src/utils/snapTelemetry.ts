@@ -68,10 +68,14 @@ export async function snapTelemetryRecords(
           // Evitar snapping si la ignición del vehículo está apagada (vehículo apagado)
           const rawRpm = getAvlValue(rec.ioData, mapping.rpm) ?? 0;
           const rawVoltage = getAvlValue(rec.ioData, mapping.voltage) ?? 0;
-          const rawIgnitionPin = getAvlValue(rec.ioData, mapping.ignition) === 1;
-          
+          const rawIgnitionPin =
+            getAvlValue(rec.ioData, mapping.ignition) === 1;
+
           let isHardwareExcessiveIdling = false;
-          const mappedExcessiveIdling = getAvlValue(rec.ioData, mapping.excessiveIdling);
+          const mappedExcessiveIdling = getAvlValue(
+            rec.ioData,
+            mapping.excessiveIdling,
+          );
           if (mappedExcessiveIdling !== null) {
             isHardwareExcessiveIdling = mappedExcessiveIdling === 1;
           }

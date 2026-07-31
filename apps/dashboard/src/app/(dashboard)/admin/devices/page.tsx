@@ -28,7 +28,8 @@ function DevicesPageContent() {
             </h2>
             <p className="text-base-content/60 text-sm max-w-md mx-auto">
               No tienes los permisos necesarios para ver esta sección. Solo los
-              super administradores del sistema pueden gestionar los dispositivos de hardware.
+              super administradores del sistema pueden gestionar los
+              dispositivos de hardware.
             </p>
           </div>
         </div>
@@ -42,19 +43,25 @@ function DevicesPageContent() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-base-100/50 backdrop-blur-md p-6 rounded-2xl border border-base-200">
         <div>
           <div className="text-xs text-base-content/50 flex items-center gap-1.5 mb-1">
-            <Link href={backLink} className="hover:text-primary transition-colors flex items-center gap-1">
+            <Link
+              href={backLink}
+              className="hover:text-primary transition-colors flex items-center gap-1"
+            >
               <Settings className="size-3" />
               Administración
             </Link>
             <span>/</span>
-            <span className="text-base-content/85 font-semibold">Dispositivos</span>
+            <span className="text-base-content/85 font-semibold">
+              Dispositivos
+            </span>
           </div>
           <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2">
             <Cpu className="text-primary size-7" />
             Dispositivos GPS
           </h1>
           <p className="text-base-content/60 text-sm mt-0.5">
-            Gestiona la asignación física de trackers Teltonika, asócialos con tarjetas SIM y vincula dispositivos con los vehículos.
+            Gestiona la asignación física de trackers Teltonika, asócialos con
+            tarjetas SIM y vincula dispositivos con los vehículos.
           </p>
         </div>
         <div>

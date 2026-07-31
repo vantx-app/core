@@ -21,15 +21,15 @@ export function parseTeltonikaData(buffer: Buffer) {
       const commandQuantity1 = buffer.readUInt8(9);
       const commandType = buffer.readUInt8(10);
       const commandSize = buffer.readUInt32BE(11);
-      
+
       if (buffer.length < 15 + commandSize + 1) {
         logger.warn("Paquete Codec 12 descartado: Payload incompleto.");
         return null;
       }
-      
+
       const payload = buffer.subarray(15, 15 + commandSize);
       const commandQuantity2 = buffer.readUInt8(15 + commandSize);
-      
+
       return {
         totalInBatch: commandQuantity1,
         records: [],
@@ -41,7 +41,7 @@ export function parseTeltonikaData(buffer: Buffer) {
           payloadHex: payload.toString("hex"),
           payloadAscii: payload.toString("ascii").replace(/\0/g, "").trim(),
           commandQuantity2,
-        }
+        },
       };
     }
 

@@ -510,7 +510,7 @@ describe('VehiclesService', () => {
         afterLevel: 80.0,
         delta: -5.0,
       });
-      
+
       expect(result.history).toHaveLength(4); // Todos incluidos por downsampling / eventos
     });
 

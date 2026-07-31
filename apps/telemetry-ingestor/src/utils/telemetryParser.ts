@@ -61,23 +61,28 @@ export interface ParsedTelemetry {
 // Función auxiliar para obtener el valor de un AVL ID aplicando su multiplicador si existe
 export function getAvlValue(
   ioData: Record<number | string, number>,
-  config: number | { id: number; multiplier?: number; signed?: boolean } | undefined,
+  config:
+    | number
+    | { id: number; multiplier?: number; signed?: boolean }
+    | undefined,
 ): number | null {
   if (config === undefined || config === null) return null;
-  
+
   if (typeof config === "number") {
     return ioData[config] ?? null;
   }
-  
+
   let rawValue = ioData[config.id];
   if (rawValue === undefined || rawValue === null) return null;
-  
+
   // Si está marcado como signed, decodificar el valor de 16 bits complementado a dos
   if (config.signed) {
     rawValue = rawValue & 0x8000 ? rawValue - 0x10000 : rawValue;
   }
-  
-  return config.multiplier !== undefined ? rawValue * config.multiplier : rawValue;
+
+  return config.multiplier !== undefined
+    ? rawValue * config.multiplier
+    : rawValue;
 }
 
 /**
@@ -113,7 +118,10 @@ export function parseTelemetryRecord(
   const speedToUse = obdSpeed ?? rec.gpsSpeed;
 
   let isHardwareExcessiveIdling = false;
-  const mappedExcessiveIdling = getAvlValue(rec.ioData, mapping.excessiveIdling);
+  const mappedExcessiveIdling = getAvlValue(
+    rec.ioData,
+    mapping.excessiveIdling,
+  );
   if (mappedExcessiveIdling !== null) {
     isHardwareExcessiveIdling = mappedExcessiveIdling === 1;
   } else if (previous?.excessiveIdling !== undefined) {
@@ -141,7 +149,8 @@ export function parseTelemetryRecord(
   if (mappedVin !== null) {
     vin = String(mappedVin);
   } else {
-    const fallbackVin = rec.ioData[256] ?? rec.ioData[325] ?? rec.ioData[528] ?? null;
+    const fallbackVin =
+      rec.ioData[256] ?? rec.ioData[325] ?? rec.ioData[528] ?? null;
     if (fallbackVin !== null) {
       vin = String(fallbackVin);
     }
@@ -166,11 +175,17 @@ export function parseTelemetryRecord(
   const detectedFuelType = mapObdFuelType(rawFuelType);
 
   // Conducción Ecológica (Eco Driving)
-  const ecoDrivingType = getAvlValue(rec.ioData, mapping.ecoDrivingType) ?? undefined;
-  const rawSeverity = getAvlValue(rec.ioData, mapping.ecoDrivingValueMax) ?? undefined;
+  const ecoDrivingType =
+    getAvlValue(rec.ioData, mapping.ecoDrivingType) ?? undefined;
+  const rawSeverity =
+    getAvlValue(rec.ioData, mapping.ecoDrivingValueMax) ?? undefined;
   const ecoDrivingSeverity = parseEcoAxesValue(rawSeverity) ?? 10;
-  const ecoDrivingDuration = getAvlValue(rec.ioData, mapping.ecoDrivingDuration);
-  const rawAverage = getAvlValue(rec.ioData, mapping.ecoDrivingAverage) ?? undefined;
+  const ecoDrivingDuration = getAvlValue(
+    rec.ioData,
+    mapping.ecoDrivingDuration,
+  );
+  const rawAverage =
+    getAvlValue(rec.ioData, mapping.ecoDrivingAverage) ?? undefined;
   const ecoDrivingAverage = parseEcoAxesValue(rawAverage);
 
   let harshAcceleration = 0;

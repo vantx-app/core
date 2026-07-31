@@ -92,7 +92,10 @@ export const useFleetSocket = (
               longitude: data.longitude ?? currentVehicle.longitude ?? 0,
               ignition: data.ignition ?? currentVehicle.ignition ?? false,
               odometer: data.odometer ?? currentVehicle.odometer ?? 0,
-              fuelLevel: data.fuelLevel !== undefined ? data.fuelLevel : (currentVehicle.fuelLevel ?? null),
+              fuelLevel:
+                data.fuelLevel !== undefined
+                  ? data.fuelLevel
+                  : (currentVehicle.fuelLevel ?? null),
               // Sincronizar el timestamp de última actualización en vivo
               updatedAt: data.updatedAt ?? new Date().toISOString(),
               isFromSocket: true,

@@ -29,19 +29,20 @@ export function mapValhallaRoadClassToFC(
   speedLimitValhalla?: number,
   use?: string,
 ): { fc: number; speedLimit: number; isVerified: boolean } {
-  const rc = String(roadClass || '').toLowerCase().trim();
-  const u = String(use || '').toLowerCase().trim();
-  const speed = speedLimitValhalla && speedLimitValhalla > 0 ? speedLimitValhalla : 0;
+  const rc = String(roadClass || '')
+    .toLowerCase()
+    .trim();
+  const u = String(use || '')
+    .toLowerCase()
+    .trim();
+  const speed =
+    speedLimitValhalla && speedLimitValhalla > 0 ? speedLimitValhalla : 0;
 
   let fc = 3;
   let defaultSpeed = 60;
 
   // 1. Base Classification from Valhalla road_class (Text or Numeric Enum)
-  if (
-    rc === 'motorway' ||
-    rc === 'freeway' ||
-    rc === '0'
-  ) {
+  if (rc === 'motorway' || rc === 'freeway' || rc === '0') {
     fc = 1;
     defaultSpeed = 110; // Motorways default to 110 km/h when untagged in OSM
   } else if (rc === 'trunk' || rc === '1') {
@@ -101,13 +102,16 @@ export class ValhallaRoutesClientService {
     private readonly configService: ConfigService,
     private readonly httpService: HttpService,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   /**
    * Obtiene la URL de Valhalla desde las variables de entorno (default: http://localhost:8002)
    */
   public getValhallaUrl(): string {
-    const url = this.configService.get<string>('VALHALLA_URL') || process.env.VALHALLA_URL || 'http://localhost:8005';
+    const url =
+      this.configService.get<string>('VALHALLA_URL') ||
+      process.env.VALHALLA_URL ||
+      'http://localhost:8005';
     return url.replace(/\/$/, '');
   }
 
@@ -127,7 +131,9 @@ export class ValhallaRoutesClientService {
   ): Promise<CalculatedRouteResult | null> {
     if (this.isSuspended) {
       if (this.suspendedUntil && Date.now() > this.suspendedUntil) {
-        this.logger.log('Restableciendo suspensión de Valhalla tras el periodo de espera.');
+        this.logger.log(
+          'Restableciendo suspensión de Valhalla tras el periodo de espera.',
+        );
         this.resetSuspension();
       } else {
         this.logger.warn(
@@ -221,7 +227,8 @@ export class ValhallaRoutesClientService {
             0.035,
           );
           const polylineStr = encodePolyline6(hybridPts);
-          const matchedDistanceKm = calculatePolylineDistanceKm(snappedGeometry);
+          const matchedDistanceKm =
+            calculatePolylineDistanceKm(snappedGeometry);
           return {
             spans,
             geometry: snappedGeometry,
@@ -293,13 +300,17 @@ export class ValhallaRoutesClientService {
       const shapePolyline6 = data?.shape;
 
       if (!edges.length && !shapePolyline6) {
-        throw new Error('Valhalla no retornó bordes ni geometría en la respuesta.');
+        throw new Error(
+          'Valhalla no retornó bordes ni geometría en la respuesta.',
+        );
       }
 
       // Decodificar la polilínea general de la ruta obtenida de Valhalla (6 decimales)
       // NOTA CRÍTICA: decodePolyline6 entrega [lat, lon].
       // Para GeoJSON, Mapbox y almacenamiento en DB se deben invertir a [lng, lat].
-      const decodedLatLng = shapePolyline6 ? decodePolyline6(shapePolyline6) : [];
+      const decodedLatLng = shapePolyline6
+        ? decodePolyline6(shapePolyline6)
+        : [];
       const decodedGeoJSON = flipCoordinatesToGeoJSON(decodedLatLng); // [lng, lat][]
 
       const linksToSave: {
@@ -339,9 +350,11 @@ export class ValhallaRoutesClientService {
           edge.end_shape_index !== undefined
             ? edge.end_shape_index
             : Math.min(
-              Math.ceil(((i + 1) / edges.length) * (decodedGeoJSON.length - 1)),
-              decodedGeoJSON.length - 1,
-            );
+                Math.ceil(
+                  ((i + 1) / edges.length) * (decodedGeoJSON.length - 1),
+                ),
+                decodedGeoJSON.length - 1,
+              );
 
         if (currentGroup && currentGroup.wayId === wayId) {
           currentGroup.endIdx = Math.max(currentGroup.endIdx, eIdx);
@@ -370,15 +383,25 @@ export class ValhallaRoutesClientService {
           group.use,
         );
 
-        const trav = String(group.traversability || '').toLowerCase().trim();
-        const isRampOrTurn = group.use === 'ramp' || group.use === 'turn_channel';
-        const isMotorway = group.roadClass === 'motorway' || group.roadClass === '0';
+        const trav = String(group.traversability || '')
+          .toLowerCase()
+          .trim();
+        const isRampOrTurn =
+          group.use === 'ramp' || group.use === 'turn_channel';
+        const isMotorway =
+          group.roadClass === 'motorway' || group.roadClass === '0';
         const isBidirectional = trav === 'both' && !isRampOrTurn && !isMotorway;
 
         let edgePtsLngLat: [number, number][] = [];
         if (decodedGeoJSON.length > 0) {
-          const safeBegin = Math.max(0, Math.min(group.beginIdx, decodedGeoJSON.length - 1));
-          const safeEnd = Math.max(safeBegin, Math.min(group.endIdx, decodedGeoJSON.length - 1));
+          const safeBegin = Math.max(
+            0,
+            Math.min(group.beginIdx, decodedGeoJSON.length - 1),
+          );
+          const safeEnd = Math.max(
+            safeBegin,
+            Math.min(group.endIdx, decodedGeoJSON.length - 1),
+          );
           edgePtsLngLat = decodedGeoJSON.slice(safeBegin, safeEnd + 1);
         }
 
@@ -410,7 +433,7 @@ export class ValhallaRoutesClientService {
       }
 
       // Deduplicate in memory by linkId
-      const uniqueLinksMap = new Map<string, typeof linksToSave[0]>();
+      const uniqueLinksMap = new Map<string, (typeof linksToSave)[0]>();
       for (const link of linksToSave) {
         uniqueLinksMap.set(link.linkId, link);
       }
@@ -636,11 +659,15 @@ export class ValhallaRoutesClientService {
       if (!trip || !trip.legs || trip.legs.length === 0) return null;
 
       const summary = trip.summary || {};
-      const distanceKm = summary.length ? parseFloat(summary.length.toFixed(2)) : 0;
+      const distanceKm = summary.length
+        ? parseFloat(summary.length.toFixed(2))
+        : 0;
       const durationMinutes = summary.time ? Math.round(summary.time / 60) : 0;
 
       const shapePolyline6 = trip.legs[0].shape;
-      const decodedLatLng = shapePolyline6 ? decodePolyline6(shapePolyline6) : [];
+      const decodedLatLng = shapePolyline6
+        ? decodePolyline6(shapePolyline6)
+        : [];
       const coordinates = flipCoordinatesToGeoJSON(decodedLatLng);
 
       return {
