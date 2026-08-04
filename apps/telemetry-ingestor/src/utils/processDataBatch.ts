@@ -692,17 +692,19 @@ async function processDataBatchInternal(records: any[], imei: string) {
         const currentAnchor =
           virtualState.lastValidAnchorPercent ?? stableMedian;
 
-        // Evaluate starting a session when no active session exists
+        // Evaluate starting a session when no active session exists (requiring at least 3 settled readings)
         if (!virtualState.session || virtualState.session.type === "NONE") {
           const parkedDelta = stableMedian - currentAnchor;
-          if (parkedDelta > 3.0) {
+          const isSettled = virtualState.segmentReadings.length >= 3;
+
+          if (isSettled && parkedDelta >= 4.0) {
             virtualState.session = {
               type: "REFUEL",
               startAnchor: currentAnchor,
               stableCounter: 0,
               lastMedian: stableMedian,
             };
-          } else if (parkedDelta < -4.0) {
+          } else if (isSettled && parkedDelta <= -4.0) {
             virtualState.session = {
               type: "DRAIN",
               startAnchor: currentAnchor,

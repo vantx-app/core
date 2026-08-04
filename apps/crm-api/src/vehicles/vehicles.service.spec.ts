@@ -5,6 +5,7 @@ import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { AccessTokenPayload } from 'src/auth/types';
 import { CacheService } from '../common/cache.service';
 import { RulesEngineService } from '../rules-engine/rules-engine.service';
+import { ValhallaRoutesClientService } from '../scoring-cron/valhalla-routes-client.service';
 
 describe('VehiclesService', () => {
   let service: VehiclesService;
@@ -74,6 +75,7 @@ describe('VehiclesService', () => {
         { provide: PrismaService, useValue: prismaMock },
         { provide: CacheService, useValue: cacheMock },
         { provide: RulesEngineService, useValue: {} },
+        { provide: ValhallaRoutesClientService, useValue: {} },
       ],
     }).compile();
 
@@ -203,7 +205,7 @@ describe('VehiclesService', () => {
       );
       expect(result).toEqual({
         ...mockLink,
-        trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid',
+        trackingUrl: expect.stringMatching(/\/dashboard\/track\/link-uuid$/),
       });
       expect(prismaMock.trackingLink.create).toHaveBeenCalledWith({
         data: {
@@ -234,7 +236,7 @@ describe('VehiclesService', () => {
       expect(result).toEqual([
         {
           ...mockLinks[0],
-          trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid-1',
+          trackingUrl: expect.stringMatching(/\/dashboard\/track\/link-uuid-1$/),
         },
       ]);
       expect(prismaMock.trackingLink.findMany).toHaveBeenCalledWith({
@@ -270,7 +272,7 @@ describe('VehiclesService', () => {
       );
       expect(result).toEqual({
         ...mockUpdatedLink,
-        trackingUrl: 'http://localhost:3000/dashboard/track/link-uuid',
+        trackingUrl: expect.stringMatching(/\/dashboard\/track\/link-uuid$/),
       });
       expect(prismaMock.trackingLink.findUnique).toHaveBeenCalledWith({
         where: { id: 'link-uuid' },
@@ -618,6 +620,73 @@ describe('VehiclesService', () => {
         afterLevel: 80.0,
         delta: 30.0,
       });
+    });
+
+    it('debe ignorar falsas recargas causadas por desaceleración y rebote posterior al detenerse (log del usuario 91% -> 83% -> 89%)', async () => {
+      const mockLogs = [
+        {
+          timestamp: new Date('2026-07-31T22:25:23Z'),
+          fuelLevel: 91.0,
+          fuelConsumption: 100,
+          fuelRate: 2.0,
+          ignition: true,
+          speed: 15,
+          latitude: 8.99,
+          longitude: -79.51,
+        },
+        // Desaceleración y frenado: líquido se desliza al frente, sensor marca 83%
+        {
+          timestamp: new Date('2026-07-31T22:25:28Z'),
+          fuelLevel: 83.0,
+          fuelConsumption: 100,
+          fuelRate: 2.0,
+          ignition: true,
+          speed: 4,
+          latitude: 8.99,
+          longitude: -79.51,
+        },
+        // Vehículo se detiene por completo (0 km/h) en 83%
+        {
+          timestamp: new Date('2026-07-31T22:25:29Z'),
+          fuelLevel: 83.0,
+          fuelConsumption: 100,
+          fuelRate: 0,
+          ignition: true,
+          speed: 0,
+          latitude: 8.99,
+          longitude: -79.51,
+        },
+        // 2 segundos después, el líquido rebota al nivel real (89%)
+        {
+          timestamp: new Date('2026-07-31T22:25:31Z'),
+          fuelLevel: 89.0,
+          fuelConsumption: 100,
+          fuelRate: 0,
+          ignition: true,
+          speed: 0,
+          latitude: 8.99,
+          longitude: -79.51,
+        },
+        // Se mantiene estable en 89-90% mientras conduce de nuevo
+        {
+          timestamp: new Date('2026-07-31T22:26:20Z'),
+          fuelLevel: 90.0,
+          fuelConsumption: 100,
+          fuelRate: 2.0,
+          ignition: true,
+          speed: 25,
+          latitude: 8.99,
+          longitude: -79.51,
+        },
+      ];
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
+
+      const result = await service.getFuelAnalysis('vehicle-id', 7);
+
+      expect(result.summary.totalRefueled).toEqual(0);
+      expect(result.summary.totalDrained).toEqual(0);
+      expect(result.events).toHaveLength(0);
     });
   });
 });

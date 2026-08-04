@@ -1099,6 +1099,7 @@ export class VehiclesService {
     };
 
     let lastStableLevel = startLevel;
+    let preBrakingLevel = startLevel;
     let peakLevel = lastStableLevel;
     let eventInProgress: {
       type: 'REFUEL' | 'DRAIN';
@@ -1109,6 +1110,8 @@ export class VehiclesService {
     } | null = null;
     let wasMoving = false;
     let maxObservedLevel = startLevel;
+    let stopTimestamp: number | null = null;
+    const movingFuelBuffer: number[] = [startLevel];
 
     for (let i = 1; i < logs.length; i++) {
       const prev = logs[i - 1];
@@ -1116,10 +1119,9 @@ export class VehiclesService {
 
       if (prev.fuelLevel === null || curr.fuelLevel === null) continue;
 
-      let totalDiff = curr.fuelLevel - lastStableLevel;
       const stepDiff = curr.fuelLevel - prev.fuelLevel;
-      // Se considera en movimiento si tiene velocidad superior a 2 km/h
-      const isMoving = (curr.speed ?? 0) > 2 || (prev.speed ?? 0) > 2;
+      // Se considera en movimiento si la velocidad actual es superior a 2 km/h
+      const isMoving = (curr.speed ?? 0) > 2;
 
       if (isMoving) {
         // Si había un evento en progreso, lo finalizamos inmediatamente al iniciar movimiento
@@ -1134,26 +1136,43 @@ export class VehiclesService {
         }
         maxObservedLevel = Math.max(maxObservedLevel, curr.fuelLevel);
 
+        movingFuelBuffer.push(curr.fuelLevel);
+        if (movingFuelBuffer.length > 7) {
+          movingFuelBuffer.shift();
+        }
+
+        // Calcular mediana de los niveles en movimiento para preBrakingLevel
+        const sortedBuf = [...movingFuelBuffer].sort((a, b) => a - b);
+        preBrakingLevel = sortedBuf[Math.floor(sortedBuf.length / 2)];
+
         lastStableLevel = curr.fuelLevel;
         peakLevel = curr.fuelLevel; // Restablecer nivel de pico durante movimiento
         wasMoving = true;
+        stopTimestamp = null;
         continue;
       }
 
+      // Si el vehículo se detiene, limpiamos el búfer de movimiento
+      movingFuelBuffer.length = 0;
+
       // Si el vehículo está detenido, actualizamos maxObservedLevel sin ajustar startLevel directamente
-      // (los aumentos detenidos se manejan a través de la máquina de estados o finalizeEvent)
       if (curr.fuelLevel > maxObservedLevel) {
         maxObservedLevel = curr.fuelLevel;
       }
 
-      // Si el vehículo se detiene, reseteamos el nivel de referencia al nivel actual detenido
-      // para evitar comparar con el nivel inestable o ruidoso del movimiento.
+      // Transición de MOVIMIENTO a DETENIDO
       if (wasMoving) {
-        lastStableLevel = curr.fuelLevel;
-        peakLevel = curr.fuelLevel; // Restablecer nivel de pico al detenerse
-        totalDiff = 0; // Recalculamos la diferencia con la nueva referencia estable
+        stopTimestamp = curr.timestamp.getTime();
         wasMoving = false;
+        // Mantenemos preBrakingLevel como referencia baseline para evitar que el dip de frenado (slosh)
+        // se guarde como un baseline falsamente bajo que provoque un falso refuel al rebotar.
+        lastStableLevel = Math.max(lastStableLevel, preBrakingLevel);
+        peakLevel = lastStableLevel;
       }
+
+      const isPostStopSettling =
+        stopTimestamp !== null &&
+        curr.timestamp.getTime() - stopTimestamp < 45000; // Ventana de estabilización de 45s post-detención
 
       // Lógica de estado estacionario
       if (eventInProgress) {
@@ -1167,19 +1186,26 @@ export class VehiclesService {
           finalizeEvent(eventInProgress, prev.fuelLevel, prev.timestamp);
           eventInProgress = null;
           lastStableLevel = prev.fuelLevel;
-          peakLevel = prev.fuelLevel; // Restablecer nivel de pico al nivel finalizado
-          totalDiff = curr.fuelLevel - lastStableLevel; // Recalcular totalDiff con la nueva referencia
+          peakLevel = prev.fuelLevel;
         }
       }
 
+      // Evaluamos totalDiff respecto a la referencia baseline estable
+      const baselineAnchor = Math.max(lastStableLevel, preBrakingLevel);
+      const totalDiff = curr.fuelLevel - baselineAnchor;
+
       // Si no hay evento en progreso, evaluamos iniciar uno nuevo
       if (!eventInProgress) {
-        if (totalDiff >= 3.0 && curr.fuelLevel - peakLevel >= 2.0) {
-          // Inicio de recarga (umbral 3.0% de máquina virtual y subida respecto al pico)
+        // Durante la ventana de 45s post-frenado, no iniciamos recargas a menos que el aumento supere el nivel previo al frenado por >= 4.0%
+        const canStartRefuel =
+          !isPostStopSettling || curr.fuelLevel - preBrakingLevel >= 4.0;
+
+        if (totalDiff >= 3.0 && curr.fuelLevel - peakLevel >= 2.0 && canStartRefuel) {
+          // Inicio de recarga (umbral >= 3.0% o >= 4.0% post-stop y subida respecto al pico)
           eventInProgress = {
             type: 'REFUEL',
             startTime: prev.timestamp,
-            startLevel: lastStableLevel,
+            startLevel: baselineAnchor,
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
           };
@@ -1189,18 +1215,19 @@ export class VehiclesService {
           eventInProgress = {
             type: 'DRAIN',
             startTime: prev.timestamp,
-            startLevel: lastStableLevel,
+            startLevel: baselineAnchor,
             lat: curr.latitude ?? 0,
             lng: curr.longitude ?? 0,
           };
           peakLevel = curr.fuelLevel;
         } else {
-          // Pequeñas fluctuaciones o consumo normal, actualizamos nivel de referencia
-          lastStableLevel = curr.fuelLevel;
+          // Si ya pasó la ventana de estabilización, actualizamos el nivel de referencia al nivel actual
+          if (!isPostStopSettling) {
+            lastStableLevel = curr.fuelLevel;
+          }
 
           // Registrar el nivel de pico cuando no hay evento en progreso
           if (stepDiff < 0 && stepDiff >= -0.5) {
-            // Descenso lento (consumo normal), el pico acompaña al nivel
             peakLevel = curr.fuelLevel;
           } else {
             peakLevel = Math.max(peakLevel, curr.fuelLevel);
@@ -1283,24 +1310,24 @@ export class VehiclesService {
       }
     }
 
-    // Suavizar el historial para la gráfica aplicando una media móvil (window size = 5)
-    // para atenuar los picos de sloshing en la visualización del usuario
+    // Suavizar el historial para la gráfica aplicando un filtro de mediana móvil (window size = 5)
+    // para atenuar los picos de sloshing y ruido de sensor sin distorsionar los bordes
     const smoothedHistory = history.map((item, index) => {
-      let sum = 0;
-      let count = 0;
+      const windowLevels: number[] = [];
       const windowSize = 5;
       const half = Math.floor(windowSize / 2);
       for (let w = -half; w <= half; w++) {
         const neighbor = history[index + w];
         if (neighbor && neighbor.fuelLevel !== null) {
-          sum += neighbor.fuelLevel;
-          count++;
+          windowLevels.push(neighbor.fuelLevel);
         }
       }
+      if (windowLevels.length === 0) return item;
+      windowLevels.sort((a, b) => a - b);
+      const median = windowLevels[Math.floor(windowLevels.length / 2)];
       return {
         ...item,
-        fuelLevel:
-          count > 0 ? Math.round((sum / count) * 10) / 10 : item.fuelLevel,
+        fuelLevel: Math.round(median * 10) / 10,
       };
     });
 
