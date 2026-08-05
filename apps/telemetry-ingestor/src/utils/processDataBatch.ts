@@ -866,15 +866,59 @@ async function processDataBatchInternal(records: any[], imei: string) {
   }
 
   for (const [tripId, tripObj] of allTripsToFinalize) {
-    const tripLogs = telemetryLogs.filter((l: any) => l.tripId === tripId);
+    const batchLogs = telemetryLogs.filter((l: any) => l.tripId === tripId);
+    let dbLogs: any[] = [];
+    try {
+      dbLogs = await prisma.telemetryLog.findMany({
+        where: { tripId },
+        select: {
+          latitude: true,
+          longitude: true,
+          odometer: true,
+          engineHours: true,
+          fuelLevel: true,
+          fuelConsumption: true,
+        },
+        orderBy: { timestamp: "asc" },
+      });
+    } catch (err: any) {
+      // In case of query error, fall back to batch logs
+    }
+
+    const tripLogs = dbLogs.length > 0 ? [...dbLogs, ...batchLogs] : batchLogs;
     if (tripLogs.length > 0) {
       const firstLog = tripLogs[0];
       const lastLog = tripLogs[tripLogs.length - 1];
 
-      const dist = Math.max(
+      let dist = Math.max(
         0,
         (lastLog.odometer ?? 0) - (firstLog.odometer ?? 0),
       );
+
+      // Fallback: If odometer delta is 0 or null, calculate total polyline Haversine distance
+      if (dist === 0 && tripLogs.length > 1) {
+        let totalHaversineMeters = 0;
+        for (let i = 0; i < tripLogs.length - 1; i++) {
+          const p1 = tripLogs[i];
+          const p2 = tripLogs[i + 1];
+          if (
+            p1.latitude != null &&
+            p1.longitude != null &&
+            p2.latitude != null &&
+            p2.longitude != null
+          ) {
+            totalHaversineMeters +=
+              haversineDistance(
+                p1.latitude,
+                p1.longitude,
+                p2.latitude,
+                p2.longitude,
+              ) * 1000;
+          }
+        }
+        dist = totalHaversineMeters / 1000.0;
+      }
+
       const eh = Math.max(
         0,
         (lastLog.engineHours ?? 0) - (firstLog.engineHours ?? 0),

@@ -42,12 +42,11 @@ export class ScoringCronService {
     );
     this.valhallaRoutesClient.resetSuspension();
 
-    // Obtener rollups del día para viajes con conductor
+    // Obtener rollups del día para todos los viajes procesados
     const rollups = await this.prisma.dailyTelemetryRollup.findMany({
       where: {
         date: new Date(dateStr),
         tripId: { not: null },
-        driverId: { not: null },
       },
       select: {
         id: true,
@@ -59,7 +58,7 @@ export class ScoringCronService {
 
     if (rollups.length === 0) {
       this.logger.log(
-        'No se encontraron viajes con conductor asignado para post-procesar.',
+        'No se encontraron viajes para post-procesar.',
       );
       return;
     }
