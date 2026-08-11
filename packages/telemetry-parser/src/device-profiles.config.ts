@@ -145,14 +145,13 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     fuelRate: { id: 18, multiplier: 0.1 }, // CAN Adapters Fuel Rate (deciliters/h)
   },
   TELTONIKA_FMC650_FMS: {
-    rpm: 85, // FMS Engine RPM
+    rpm: 88, // FMS Engine Speed RPM (ej. 900 - 1847 RPM)
     voltage: 66,
     ignition: 239,
     movement: 240,
-    obdSpeed: 81, // FMS Speed
-    odometer: 192, // Tachograph Odometer (m)
-    engineLoad: 31,
-    coolantTemp: { id: 115, multiplier: 0.1 }, // FMS Engine Temp (1/10 °C)
+    obdSpeed: 24, // FMS / CAN Speed (km/h)
+    engineLoad: 85, // FMS Engine Load % (ej. 26% - 78%)
+    coolantTemp: 127, // FMS Coolant Temp °C (ej. 35°C - 77°C)
     dtcCount: 30,
     faultCodes: 281,
     vin: 528,
@@ -165,8 +164,7 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     crashTrace: 257,
     unplugged: 252,
     fuelType: 759,
-    engineHours: { id: 88, multiplier: 0.05 }, // FMS Total Engine Hours (0.05 h resolution)
-    fuelLevel: 87, // FMS Fuel Level %
+    fuelLevel: 87, // FMS Fuel Level % (ej. 64% - 96%)
     fuelConsumption: 86, // FMS Total Fuel Consumed (L)
     fuelRate: { id: 110, multiplier: 0.1 }, // FMS Fuel Rate (deciliters/h)
   },
