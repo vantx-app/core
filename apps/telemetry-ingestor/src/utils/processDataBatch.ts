@@ -1039,14 +1039,25 @@ async function ensureReferencedTripsExist({
 }: ValidateTripsParams) {
   // 1. Limpiar o reasignar en memoria los registros que apunten a viajes eliminados físicamente o fusionados en este lote
   for (const log of telemetryLogs) {
-    if (log.tripId && tripsToDelete.has(log.tripId)) {
-      const primaryTripId = tripsToMerge.get(log.tripId);
-      if (primaryTripId) {
-        // Si el viaje duplicado se fusionó, reasignar al viaje principal
-        log.tripId = primaryTripId;
-      } else {
-        // Si el viaje fantasma simplemente se eliminó, limpiar la relación
+    if (log.tripId) {
+      let currentTripId: string | undefined = log.tripId;
+      const visited = new Set<string>();
+
+      // Resolver cadenas de fusión recursivamente (evitando bucles infinitos)
+      while (
+        currentTripId &&
+        tripsToMerge.has(currentTripId) &&
+        !visited.has(currentTripId)
+      ) {
+        visited.add(currentTripId);
+        currentTripId = tripsToMerge.get(currentTripId);
+      }
+
+      // Si el viaje destino final está programado para ser eliminado (viaje fantasma), no podemos usarlo
+      if (currentTripId && tripsToDelete.has(currentTripId)) {
         log.tripId = null;
+      } else {
+        log.tripId = currentTripId ?? null;
       }
     }
   }
@@ -1067,12 +1078,12 @@ async function ensureReferencedTripsExist({
   });
   const existingTripIds = new Set(existingTrips.map((t) => t.id));
 
-  // Limpiar tripId en los logs que apunten a viajes inexistentes en la base de datos
+  // Limpiar tripId en los logs que apunten a viajes inexistentes en la base de datos o en tripsToDelete
   for (const log of telemetryLogs) {
     if (
       log.tripId &&
       !tripsToCreate.has(log.tripId) &&
-      !existingTripIds.has(log.tripId)
+      (!existingTripIds.has(log.tripId) || tripsToDelete.has(log.tripId))
     ) {
       log.tripId = null;
     }
