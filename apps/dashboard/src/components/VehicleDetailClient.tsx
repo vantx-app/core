@@ -1385,18 +1385,26 @@ export function VehicleDetailClient({
                       Nivel Actual
                     </span>
                     <span className="text-3xl font-black font-mono tracking-tight text-primary mt-1 block">
-                      {fuelAnalysis.summary.currentLevel != null
-                        ? `${fuelAnalysis.summary.currentLevel}%`
-                        : "N/A"}
+                      {fuelAnalysis.summary.currentLiters != null
+                        ? `${fuelAnalysis.summary.currentLiters} L`
+                        : fuelAnalysis.summary.currentLevel != null
+                          ? `${fuelAnalysis.summary.currentLevel}%`
+                          : "N/A"}
                     </span>
                   </div>
-                  <div className="w-full bg-base-200/50 rounded-full h-1.5 mt-4">
-                    <div
-                      className="bg-primary h-1.5 rounded-full"
-                      style={{
-                        width: `${fuelAnalysis.summary.currentLevel ?? 0}%`,
-                      }}
-                    ></div>
+                  <div className="space-y-1.5 mt-3">
+                    <div className="w-full bg-base-200/50 rounded-full h-1.5">
+                      <div
+                        className="bg-primary h-1.5 rounded-full transition-all duration-500"
+                        style={{
+                          width: `${fuelAnalysis.summary.currentLevel ?? 0}%`,
+                        }}
+                      ></div>
+                    </div>
+                    <div className="flex justify-between text-[9px] font-mono text-base-content/40">
+                      <span>{fuelAnalysis.summary.currentLevel ?? 0}%</span>
+                      <span>Capacidad: {fuelAnalysis.summary.tankCapacity ?? 60} L</span>
+                    </div>
                   </div>
                 </div>
 
@@ -1407,13 +1415,13 @@ export function VehicleDetailClient({
                       Consumo Total
                     </span>
                     <span className="text-3xl font-black font-mono tracking-tight text-success mt-1 block">
-                      {fuelAnalysis.summary.totalConsumed > 0
-                        ? `-${fuelAnalysis.summary.totalConsumed}%`
-                        : `${fuelAnalysis.summary.totalConsumed}%`}
+                      {fuelAnalysis.summary.consumedLiters > 0
+                        ? `-${fuelAnalysis.summary.consumedLiters} L`
+                        : `${fuelAnalysis.summary.consumedLiters ?? 0} L`}
                     </span>
                   </div>
                   <p className="text-[10px] text-base-content/40 italic leading-relaxed mt-4">
-                    Puntos porcentuales gastados por el motor encendido.
+                    Equivalente a {fuelAnalysis.summary.totalConsumed}% de la capacidad activa.
                   </p>
                 </div>
 
@@ -1513,26 +1521,32 @@ export function VehicleDetailClient({
                       </defs>
 
                       {/* Grid Lines */}
-                      {gridLevels.map((lvl) => (
-                        <g key={lvl}>
-                          <line
-                            x1={paddingLeft}
-                            y1={getY(lvl)}
-                            x2={svgWidth - paddingRight}
-                            y2={getY(lvl)}
-                            className="stroke-base-content/5"
-                            strokeWidth="1"
-                          />
-                          <text
-                            x={paddingLeft - 8}
-                            y={getY(lvl) + 3}
-                            className="text-[9px] font-mono fill-base-content/30"
-                            textAnchor="end"
-                          >
-                            {lvl}%
-                          </text>
-                        </g>
-                      ))}
+                      {gridLevels.map((lvl) => {
+                        const cap = fuelAnalysis.summary.tankCapacity ?? 60;
+                        const lvlLiters =
+                          Math.round((cap * 0.05 + (lvl / 100) * (cap * 0.9)) * 10) /
+                          10;
+                        return (
+                          <g key={lvl}>
+                            <line
+                              x1={paddingLeft}
+                              y1={getY(lvl)}
+                              x2={svgWidth - paddingRight}
+                              y2={getY(lvl)}
+                              className="stroke-base-content/5"
+                              strokeWidth="1"
+                            />
+                            <text
+                              x={paddingLeft - 6}
+                              y={getY(lvl) + 3}
+                              className="text-[8px] font-mono fill-base-content/30"
+                              textAnchor="end"
+                            >
+                              {lvlLiters}L
+                            </text>
+                          </g>
+                        );
+                      })}
 
                       {/* Line Area */}
                       {points.length > 0 && (
@@ -1641,7 +1655,9 @@ export function VehicleDetailClient({
                           )}
                         </p>
                         <p className="text-primary font-black text-sm leading-none">
-                          Tanque: {hoveredPoint.yVal.toFixed(1)}%
+                          {hoveredPoint.raw.fuelLiters != null
+                            ? `${hoveredPoint.raw.fuelLiters.toFixed(1)} L (${hoveredPoint.yVal.toFixed(1)}%)`
+                            : `Tanque: ${hoveredPoint.yVal.toFixed(1)}%`}
                         </p>
                         <p className="text-base-content/65 flex items-center gap-1 leading-none mt-1">
                           <Power

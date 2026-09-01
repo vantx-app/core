@@ -95,6 +95,11 @@ export class CreateVehicleDto {
   fuelType?: FuelType;
 
   @IsOptional()
+  @IsNumber()
+  @ApiPropertyOptional({ description: 'Capacidad del tanque en litros', default: 60 })
+  tankCapacity?: number;
+
+  @IsOptional()
   @IsBoolean()
   @ApiPropertyOptional()
   isListed?: boolean;

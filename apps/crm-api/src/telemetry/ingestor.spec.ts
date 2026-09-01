@@ -1546,11 +1546,52 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
             48: 50, // Baja bruscamente a 50% (cambio del 30% > 10% estando detenido -> ROBO)
           },
         },
+        {
+          timestamp: new Date(1716570000000 + 10000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 1,
+          ioData: {
+            239: 0,
+            48: 50,
+          },
+        },
+        {
+          timestamp: new Date(1716570000000 + 20000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 1,
+          ioData: {
+            239: 0,
+            48: 50,
+          },
+        },
       ];
 
       await processDataBatch(records, mockImei);
 
-      // Debe registrar el 50% directamente sin suavizar
+      // Debe registrar el 50% en telemetryLog (valor crudo)
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.arrayContaining([
+            expect.objectContaining({
+              fuelLevel: 50,
+            }),
+          ]),
+        }),
+      );
+
+      // Debe registrar el 50% en liveState tras asentarse la lectura estacionaria
       expect(mockPrisma.vehicleLiveState.upsert).toHaveBeenLastCalledWith(
         expect.objectContaining({
           update: expect.objectContaining({

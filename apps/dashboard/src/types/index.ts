@@ -1225,6 +1225,7 @@ export interface VehicleFormValues {
   currentOdometer?: string;
   odometerSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
   fuelType?: string;
+  tankCapacity?: number | string;
 }
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

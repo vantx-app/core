@@ -79,6 +79,7 @@ export default function VehicleForm({
       currentOdometer: "",
       odometerSource: "AUTO",
       fuelType: "",
+      tankCapacity: "60",
     },
   });
 
@@ -172,6 +173,7 @@ export default function VehicleForm({
             currentOdometer: displayOdo,
             odometerSource: data.odometerSource || "AUTO",
             fuelType: data.fuelType || "",
+            tankCapacity: data.tankCapacity != null ? String(data.tankCapacity) : "60",
           });
         }
       } catch (err) {
@@ -196,6 +198,7 @@ export default function VehicleForm({
         model: data.model || undefined,
         year: data.year ? Number(data.year) : undefined,
         fuelType: data.fuelType || null,
+        tankCapacity: data.tankCapacity ? Number(data.tankCapacity) : 60,
       };
 
       if (!vehicleId) {
@@ -507,6 +510,17 @@ export default function VehicleForm({
               <option value="HYBRID">Híbrido</option>
             </select>
           </div>
+
+          <Input
+            label="Capacidad del Tanque (Litros)"
+            type="number"
+            step="any"
+            min="1"
+            placeholder="60"
+            disabled={isSubmitting}
+            helperText="Capacidad nominal del tanque para calcular el combustible en litros."
+            {...register("tankCapacity")}
+          />
         </div>
 
         <div className="flex gap-2 pt-4 border-t border-base-200 justify-end">

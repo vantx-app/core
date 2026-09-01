@@ -3,7 +3,17 @@
 const { API_HOST, API_PORT, INGESTOR_SECRET } = process.env;
 const API_WEBHOOK_URL = `http://${API_HOST}:${API_PORT}/api/internal/telemetry`;
 
-export async function notifyApi(vehicle: any, latestRecord: any) {
+export async function notifyApi(
+  vehicle: any,
+  latestRecord: any,
+  virtualState?: any,
+) {
+  const displayFuelLevel =
+    virtualState?.currentDisplayPercent !== undefined &&
+    virtualState?.currentDisplayPercent !== null
+      ? virtualState.currentDisplayPercent
+      : latestRecord.fuelLevel;
+
   const payload = {
     vehicleId: vehicle.id,
     vehicleAlias: vehicle.alias,
@@ -16,7 +26,7 @@ export async function notifyApi(vehicle: any, latestRecord: any) {
     status: latestRecord.status,
     angle: latestRecord.angle,
     odometer: latestRecord.odometer,
-    fuelLevel: latestRecord.fuelLevel,
+    fuelLevel: displayFuelLevel,
   };
 
   await fetch(API_WEBHOOK_URL, {

@@ -425,23 +425,28 @@ describe('VehiclesService', () => {
 
   describe('getFuelAnalysis', () => {
     it('debe retornar resumen vacío si no existen registros de telemetría', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
       prismaMock.telemetryLog.findMany.mockResolvedValue([]);
 
       const result = await service.getFuelAnalysis('vehicle-id', 7);
 
       expect(result).toEqual({
         summary: {
+          tankCapacity: 60,
           totalConsumed: 0,
+          consumedLiters: 0,
           totalDrained: 0,
           totalRefueled: 0,
           currentLevel: null,
+          currentLiters: null,
         },
         events: [],
         history: [],
       });
     });
 
-    it('debe detectar correctamente recargas, drenajes y consumo normal', async () => {
+    it('debe calcular consumo directo usando contador acumulado OBD/CAN', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
       const mockLogs = [
         {
           timestamp: new Date('2026-07-04T10:00:00Z'),
@@ -453,7 +458,6 @@ describe('VehiclesService', () => {
           latitude: 10,
           longitude: 20,
         },
-        // Recarga de 50% a 85% (+35%)
         {
           timestamp: new Date('2026-07-04T10:10:00Z'),
           fuelLevel: 85.0,
@@ -464,7 +468,6 @@ describe('VehiclesService', () => {
           latitude: 10,
           longitude: 20,
         },
-        // Drenado de 85% a 80% (-5%) con ignición apagada
         {
           timestamp: new Date('2026-07-04T10:20:00Z'),
           fuelLevel: 80.0,
@@ -475,11 +478,10 @@ describe('VehiclesService', () => {
           latitude: 10,
           longitude: 20,
         },
-        // Consumo normal de 80% a 74% (-6%) con ignición encendida
         {
           timestamp: new Date('2026-07-04T10:30:00Z'),
           fuelLevel: 74.0,
-          fuelConsumption: 102,
+          fuelConsumption: 106,
           fuelRate: 12.0,
           ignition: true,
           speed: 50,
@@ -492,117 +494,39 @@ describe('VehiclesService', () => {
 
       const result = await service.getFuelAnalysis('vehicle-id', 7);
 
-      expect(result.summary).toEqual({
-        totalConsumed: 6.0,
-        totalDrained: 5.0,
-        totalRefueled: 35.0,
+      expect(result.summary).toMatchObject({
+        tankCapacity: 60,
+        consumedLiters: 6.0,
+        totalDrained: 0,
+        totalRefueled: 0,
         currentLevel: 74.0,
       });
 
-      expect(result.events).toHaveLength(2);
-      expect(result.events[0]).toMatchObject({
-        type: 'REFUEL',
-        beforeLevel: 50.0,
-        afterLevel: 85.0,
-        delta: 35.0,
-      });
-      expect(result.events[1]).toMatchObject({
-        type: 'DRAIN',
-        beforeLevel: 85.0,
-        afterLevel: 80.0,
-        delta: -5.0,
-      });
-
-      expect(result.history).toHaveLength(4); // Todos incluidos por downsampling / eventos
+      expect(result.events).toHaveLength(0);
+      expect(result.history).toHaveLength(4);
+      expect(result.history[0]).toHaveProperty('fuelLiters');
     });
 
-    it('debe ignorar eventos de recarga falsos causados por sloshing (caída y recuperación rápida al mismo nivel)', async () => {
+    it('debe calcular consumo directo basado en niveles cuando no hay contador OBD', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
       const mockLogs = [
         {
           timestamp: new Date('2026-07-04T09:40:00Z'),
-          fuelLevel: 75.6,
-          fuelConsumption: 100,
+          fuelLevel: 80.0,
+          fuelConsumption: null,
           fuelRate: 2.0,
           ignition: true,
           speed: 0,
           latitude: 10,
           longitude: 20,
         },
-        // Sloshing: caída repentina a 59.3%
         {
-          timestamp: new Date('2026-07-04T09:41:00Z'),
-          fuelLevel: 59.3,
-          fuelConsumption: 100,
-          fuelRate: 2.0,
-          ignition: true,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
-        },
-        // Recuperación rápida a 75.3% (cerca de los 75.6% iniciales)
-        {
-          timestamp: new Date('2026-07-04T09:42:00Z'),
-          fuelLevel: 75.3,
-          fuelConsumption: 100,
-          fuelRate: 2.0,
-          ignition: true,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
-        },
-      ];
-
-      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
-
-      const result = await service.getFuelAnalysis('vehicle-id', 7);
-
-      // No debe detectar ninguna recarga ni drenado falso
-      expect(result.summary.totalRefueled).toEqual(0);
-      expect(result.summary.totalDrained).toEqual(0);
-      expect(result.events).toHaveLength(0);
-    });
-
-    it('debe detectar correctamente una recarga real mientras el vehículo está en ralentí (ignición encendida, velocidad 0)', async () => {
-      const mockLogs = [
-        {
-          timestamp: new Date('2026-07-04T14:00:00Z'),
-          fuelLevel: 50.0,
-          fuelConsumption: 100,
-          fuelRate: 1.0,
-          ignition: true,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
-        },
-        // Comienza a subir el combustible (ralentí en la estación)
-        {
-          timestamp: new Date('2026-07-04T14:01:00Z'),
+          timestamp: new Date('2026-07-04T09:50:00Z'),
           fuelLevel: 65.0,
-          fuelConsumption: 100,
-          fuelRate: 1.0,
+          fuelConsumption: null,
+          fuelRate: 2.0,
           ignition: true,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
-        },
-        {
-          timestamp: new Date('2026-07-04T14:02:00Z'),
-          fuelLevel: 80.0,
-          fuelConsumption: 100,
-          fuelRate: 1.0,
-          ignition: true,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
-        },
-        // Se mantiene estable en el nuevo nivel alto
-        {
-          timestamp: new Date('2026-07-04T14:03:00Z'),
-          fuelLevel: 80.0,
-          fuelConsumption: 100,
-          fuelRate: 1.0,
-          ignition: true,
-          speed: 0,
+          speed: 30,
           latitude: 10,
           longitude: 20,
         },
@@ -612,21 +536,25 @@ describe('VehiclesService', () => {
 
       const result = await service.getFuelAnalysis('vehicle-id', 7);
 
-      expect(result.summary.totalRefueled).toEqual(30.0);
-      expect(result.events).toHaveLength(1);
-      expect(result.events[0]).toMatchObject({
-        type: 'REFUEL',
-        beforeLevel: 50.0,
-        afterLevel: 80.0,
-        delta: 30.0,
+      expect(result.summary).toEqual({
+        tankCapacity: 60,
+        totalConsumed: 15.0,
+        consumedLiters: 8.1,
+        totalRefueled: 0,
+        totalDrained: 0,
+        currentLevel: 65.0,
+        currentLiters: 38.1,
       });
+      expect(result.events).toHaveLength(0);
+      expect(result.history).toHaveLength(2);
     });
 
-    it('debe ignorar falsas recargas causadas por desaceleración y rebote posterior al detenerse (log del usuario 91% -> 83% -> 89%)', async () => {
+    it('debe suavizar picos de sloshing en la historia para la gráfica', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
       const mockLogs = [
         {
           timestamp: new Date('2026-07-31T22:25:23Z'),
-          fuelLevel: 91.0,
+          fuelLevel: 90.0,
           fuelConsumption: 100,
           fuelRate: 2.0,
           ignition: true,
@@ -634,10 +562,9 @@ describe('VehiclesService', () => {
           latitude: 8.99,
           longitude: -79.51,
         },
-        // Desaceleración y frenado: líquido se desliza al frente, sensor marca 83%
         {
           timestamp: new Date('2026-07-31T22:25:28Z'),
-          fuelLevel: 83.0,
+          fuelLevel: 40.0,
           fuelConsumption: 100,
           fuelRate: 2.0,
           ignition: true,
@@ -645,36 +572,13 @@ describe('VehiclesService', () => {
           latitude: 8.99,
           longitude: -79.51,
         },
-        // Vehículo se detiene por completo (0 km/h) en 83%
         {
           timestamp: new Date('2026-07-31T22:25:29Z'),
-          fuelLevel: 83.0,
-          fuelConsumption: 100,
-          fuelRate: 0,
-          ignition: true,
-          speed: 0,
-          latitude: 8.99,
-          longitude: -79.51,
-        },
-        // 2 segundos después, el líquido rebota al nivel real (89%)
-        {
-          timestamp: new Date('2026-07-31T22:25:31Z'),
-          fuelLevel: 89.0,
-          fuelConsumption: 100,
-          fuelRate: 0,
-          ignition: true,
-          speed: 0,
-          latitude: 8.99,
-          longitude: -79.51,
-        },
-        // Se mantiene estable en 89-90% mientras conduce de nuevo
-        {
-          timestamp: new Date('2026-07-31T22:26:20Z'),
           fuelLevel: 90.0,
           fuelConsumption: 100,
-          fuelRate: 2.0,
+          fuelRate: 0,
           ignition: true,
-          speed: 25,
+          speed: 0,
           latitude: 8.99,
           longitude: -79.51,
         },
@@ -687,6 +591,7 @@ describe('VehiclesService', () => {
       expect(result.summary.totalRefueled).toEqual(0);
       expect(result.summary.totalDrained).toEqual(0);
       expect(result.events).toHaveLength(0);
+      expect(result.history[1].fuelLevel).toEqual(90.0);
     });
   });
 });

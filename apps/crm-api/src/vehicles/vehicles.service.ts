@@ -1021,326 +1021,154 @@ export class VehiclesService {
       },
     });
 
+    // Obtener información del vehículo (capacidad de tanque)
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: { tankCapacity: true },
+    });
+
+    const tankCapacity = vehicle?.tankCapacity ?? 60;
+    // Calibración práctica interna: 5% reserva inferior y 5% cuello/sobrellenado (90% rango útil activo)
+    const usableCapacity = tankCapacity * 0.9;
+    const reserveLiters = tankCapacity * 0.05;
+
     if (logs.length === 0) {
       return {
         summary: {
+          tankCapacity,
           totalConsumed: 0,
+          consumedLiters: 0,
           totalDrained: 0,
           totalRefueled: 0,
           currentLevel: null,
+          currentLiters: null,
         },
         events: [],
         history: [],
       };
     }
 
+    const validLogs = logs.filter(
+      (l) => l.fuelLevel !== null && l.fuelLevel >= 0 && l.fuelLevel <= 100,
+    );
+
+    if (validLogs.length === 0) {
+      return {
+        summary: {
+          tankCapacity,
+          totalConsumed: 0,
+          consumedLiters: 0,
+          totalDrained: 0,
+          totalRefueled: 0,
+          currentLevel: null,
+          currentLiters: null,
+        },
+        events: [],
+        history: [],
+      };
+    }
+
+    const firstLog = validLogs[0];
+    const lastLog = validLogs[validLogs.length - 1];
+    const startLevel = firstLog.fuelLevel!;
+    const endLevel = lastLog.fuelLevel!;
+
     let totalConsumed = 0;
-    let totalDrained = 0;
-    let totalRefueled = 0;
+    let consumedLiters = 0;
+    const totalDrained = 0;
+    const totalRefueled = 0;
     const events: any[] = [];
 
-    // Encontrar el primer nivel de combustible no nulo para el punto de partida
-    let startLevel = 0;
-    for (let i = 0; i < logs.length; i++) {
-      if (logs[i].fuelLevel !== null) {
-        startLevel = logs[i].fuelLevel!;
-        break;
-      }
-    }
-
-    // Función auxiliar para registrar eventos consolidados
-    const finalizeEvent = (
-      evt: {
-        type: 'REFUEL' | 'DRAIN';
-        startTime: Date;
-        startLevel: number;
-        lat: number;
-        lng: number;
-      },
-      finalLevel: number,
-      endTimestamp: Date,
-    ) => {
-      const delta = finalLevel - evt.startLevel;
-      const durationMs = endTimestamp.getTime() - evt.startTime.getTime();
-
-      if (evt.type === 'REFUEL') {
-        // Alineado con máquina virtual de estados (umbral de 3.0%) sin restricciones artificiales de tiempo
-        if (delta >= 3.0) {
-          totalRefueled += delta;
-          events.push({
-            type: 'REFUEL',
-            timestamp: endTimestamp,
-            beforeLevel: evt.startLevel,
-            afterLevel: finalLevel,
-            delta: delta,
-            latitude: evt.lat,
-            longitude: evt.lng,
-          });
-        } else if (delta > 0) {
-          // Si el evento de recarga se descarta, ajustamos el startLevel hacia arriba
-          startLevel += delta;
-        }
-      } else if (evt.type === 'DRAIN') {
-        // Alineado con máquina virtual de estados (umbral de robo de -4.0%)
-        if (delta <= -4.0) {
-          const drop = Math.abs(delta);
-          totalDrained += drop;
-          events.push({
-            type: 'DRAIN',
-            timestamp: endTimestamp,
-            beforeLevel: evt.startLevel,
-            afterLevel: finalLevel,
-            delta: -drop,
-            latitude: evt.lat,
-            longitude: evt.lng,
-          });
-        }
-      }
-    };
-
-    let lastStableLevel = startLevel;
-    let preBrakingLevel = startLevel;
-    let peakLevel = lastStableLevel;
-    let eventInProgress: {
-      type: 'REFUEL' | 'DRAIN';
-      startTime: Date;
-      startLevel: number;
-      lat: number;
-      lng: number;
-    } | null = null;
-    let wasMoving = false;
-    let maxObservedLevel = startLevel;
-    let stopTimestamp: number | null = null;
-    const movingFuelBuffer: number[] = [startLevel];
-
-    for (let i = 1; i < logs.length; i++) {
-      const prev = logs[i - 1];
-      const curr = logs[i];
-
-      if (prev.fuelLevel === null || curr.fuelLevel === null) continue;
-
-      const stepDiff = curr.fuelLevel - prev.fuelLevel;
-      // Se considera en movimiento si la velocidad actual es superior a 2 km/h
-      const isMoving = (curr.speed ?? 0) > 2;
-
-      if (isMoving) {
-        // Si había un evento en progreso, lo finalizamos inmediatamente al iniciar movimiento
-        if (eventInProgress) {
-          finalizeEvent(eventInProgress, prev.fuelLevel, prev.timestamp);
-          eventInProgress = null;
-        }
-
-        // Auto-corregir el nivel de partida si el nivel sube mientras el vehículo se mueve (ruido/pendiente/temperatura)
-        if (curr.fuelLevel > maxObservedLevel) {
-          startLevel += curr.fuelLevel - maxObservedLevel;
-        }
-        maxObservedLevel = Math.max(maxObservedLevel, curr.fuelLevel);
-
-        movingFuelBuffer.push(curr.fuelLevel);
-        if (movingFuelBuffer.length > 7) {
-          movingFuelBuffer.shift();
-        }
-
-        // Calcular mediana de los niveles en movimiento para preBrakingLevel
-        const sortedBuf = [...movingFuelBuffer].sort((a, b) => a - b);
-        preBrakingLevel = sortedBuf[Math.floor(sortedBuf.length / 2)];
-
-        lastStableLevel = curr.fuelLevel;
-        peakLevel = curr.fuelLevel; // Restablecer nivel de pico durante movimiento
-        wasMoving = true;
-        stopTimestamp = null;
-        continue;
-      }
-
-      // Si el vehículo se detiene, limpiamos el búfer de movimiento
-      movingFuelBuffer.length = 0;
-
-      // Si el vehículo está detenido, actualizamos maxObservedLevel sin ajustar startLevel directamente
-      if (curr.fuelLevel > maxObservedLevel) {
-        maxObservedLevel = curr.fuelLevel;
-      }
-
-      // Transición de MOVIMIENTO a DETENIDO
-      if (wasMoving) {
-        stopTimestamp = curr.timestamp.getTime();
-        wasMoving = false;
-        // Mantenemos preBrakingLevel como referencia baseline para evitar que el dip de frenado (slosh)
-        // se guarde como un baseline falsamente bajo que provoque un falso refuel al rebotar.
-        lastStableLevel = Math.max(lastStableLevel, preBrakingLevel);
-        peakLevel = lastStableLevel;
-      }
-
-      const isPostStopSettling =
-        stopTimestamp !== null &&
-        curr.timestamp.getTime() - stopTimestamp < 45000; // Ventana de estabilización de 45s post-detención
-
-      // Lógica de estado estacionario
-      if (eventInProgress) {
-        // Verificar si continúa la tendencia del evento
-        const isSameDirection =
-          (eventInProgress.type === 'REFUEL' && stepDiff >= -0.5) ||
-          (eventInProgress.type === 'DRAIN' && stepDiff <= 0.5);
-
-        if (!isSameDirection) {
-          // Si cambia la dirección, finalizamos el evento previo
-          finalizeEvent(eventInProgress, prev.fuelLevel, prev.timestamp);
-          eventInProgress = null;
-          lastStableLevel = prev.fuelLevel;
-          peakLevel = prev.fuelLevel;
-        }
-      }
-
-      // Evaluamos totalDiff respecto a la referencia baseline estable
-      const baselineAnchor = Math.max(lastStableLevel, preBrakingLevel);
-      const totalDiff = curr.fuelLevel - baselineAnchor;
-
-      // Si no hay evento en progreso, evaluamos iniciar uno nuevo
-      if (!eventInProgress) {
-        // Durante la ventana de 45s post-frenado, no iniciamos recargas a menos que el aumento supere el nivel previo al frenado por >= 4.0%
-        const canStartRefuel =
-          !isPostStopSettling || curr.fuelLevel - preBrakingLevel >= 4.0;
-
-        if (totalDiff >= 3.0 && curr.fuelLevel - peakLevel >= 2.0 && canStartRefuel) {
-          // Inicio de recarga (umbral >= 3.0% o >= 4.0% post-stop y subida respecto al pico)
-          eventInProgress = {
-            type: 'REFUEL',
-            startTime: prev.timestamp,
-            startLevel: baselineAnchor,
-            lat: curr.latitude ?? 0,
-            lng: curr.longitude ?? 0,
-          };
-          peakLevel = curr.fuelLevel;
-        } else if (totalDiff <= -4.0 && !curr.ignition && !prev.ignition) {
-          // Inicio de drenado/robo (umbral -4.0% de máquina virtual con ignición apagada)
-          eventInProgress = {
-            type: 'DRAIN',
-            startTime: prev.timestamp,
-            startLevel: baselineAnchor,
-            lat: curr.latitude ?? 0,
-            lng: curr.longitude ?? 0,
-          };
-          peakLevel = curr.fuelLevel;
-        } else {
-          // Si ya pasó la ventana de estabilización, actualizamos el nivel de referencia al nivel actual
-          if (!isPostStopSettling) {
-            lastStableLevel = curr.fuelLevel;
-          }
-
-          // Registrar el nivel de pico cuando no hay evento en progreso
-          if (stepDiff < 0 && stepDiff >= -0.5) {
-            peakLevel = curr.fuelLevel;
-          } else {
-            peakLevel = Math.max(peakLevel, curr.fuelLevel);
-          }
-        }
-      }
-    }
-
-    // Finalizar cualquier evento que haya quedado abierto al final de los logs
-    if (eventInProgress) {
-      finalizeEvent(
-        eventInProgress,
-        logs[logs.length - 1].fuelLevel ?? 0,
-        logs[logs.length - 1].timestamp,
-      );
-    }
-
-    // Encontrar el último nivel de combustible no nulo
-    let endLevel = 0;
-    for (let i = logs.length - 1; i >= 0; i--) {
-      if (logs[i].fuelLevel !== null) {
-        endLevel = logs[i].fuelLevel!;
-        break;
-      }
-    }
-
-    totalRefueled = Math.round(totalRefueled * 100) / 100;
-    totalDrained = Math.round(totalDrained * 100) / 100;
-    totalConsumed =
-      Math.round(
-        Math.max(0, startLevel - endLevel + totalRefueled - totalDrained) * 100,
-      ) / 100;
-
-    if (totalConsumed <= 0) {
-      // Si la diferencia de nivel da 0 o negativo (debido a deriva del sensor o pendientes)
-      // pero hubo movimiento real, estimamos un consumo mínimo proporcional al tiempo en movimiento
+    // 1. Cálculo directo de consumo: si existe contador acumulado OBD/CAN, usarlo (ya viene en Litros)
+    if (
+      lastLog.fuelConsumption !== null &&
+      firstLog.fuelConsumption !== null &&
+      lastLog.fuelConsumption >= firstLog.fuelConsumption
+    ) {
+      consumedLiters =
+        Math.round(
+          (lastLog.fuelConsumption - firstLog.fuelConsumption) * 100,
+        ) / 100;
+      totalConsumed =
+        Math.round(((consumedLiters / usableCapacity) * 100) * 100) / 100;
+    } else if (startLevel >= endLevel) {
+      totalConsumed = Math.round((startLevel - endLevel) * 100) / 100;
+      consumedLiters =
+        Math.round(((totalConsumed / 100) * usableCapacity) * 10) / 10;
+    } else {
+      // Si el nivel final es mayor o igual que el inicial por deriva del sensor
       let movingPoints = 0;
-      for (const log of logs) {
+      for (const log of validLogs) {
         if ((log.speed ?? 0) > 2) {
           movingPoints++;
         }
       }
       if (movingPoints > 0) {
-        // Consumo mínimo estimado: 0.02% por registro de telemetría en movimiento
-        totalConsumed =
-          Math.round(Math.max(0.1, movingPoints * 0.02) * 100) / 100;
+        totalConsumed = Math.round(Math.max(0.1, movingPoints * 0.02) * 100) / 100;
+        consumedLiters =
+          Math.round(((totalConsumed / 100) * usableCapacity) * 10) / 10;
       }
     }
 
-    // Obtener el último nivel de combustible registrado
-    const currentLevel = logs[logs.length - 1].fuelLevel;
+    const currentLevel = lastLog.fuelLevel;
+    const currentLiters =
+      currentLevel !== null
+        ? Math.round((reserveLiters + (currentLevel / 100) * usableCapacity) * 10) /
+          10
+        : null;
 
-    // Reducir la cantidad de puntos de la gráfica (downsampling) para optimizar el rendimiento de red y cliente
+    // 2. Filtro de Mediana Móvil Denso (Pre-downsampling Anti-aliasing)
+    // Se procesa la secuencia completa antes de submuestrear para eliminar picos de sloshing
+    const windowSize = 15;
+    const halfWindow = Math.floor(windowSize / 2);
+    const denseSmoothedLevels: number[] = new Array(validLogs.length);
+
+    for (let i = 0; i < validLogs.length; i++) {
+      const windowVals: number[] = [];
+      const start = Math.max(0, i - halfWindow);
+      const end = Math.min(validLogs.length - 1, i + halfWindow);
+      for (let w = start; w <= end; w++) {
+        windowVals.push(validLogs[w].fuelLevel!);
+      }
+      windowVals.sort((a, b) => a - b);
+      denseSmoothedLevels[i] = windowVals[Math.floor(windowVals.length / 2)];
+    }
+
+    // 3. Submuestreo de la serie ya suavizada para renderizado SVG óptimo
     const history: any[] = [];
-    const step = Math.max(1, Math.floor(logs.length / 300));
+    const step = Math.max(1, Math.floor(validLogs.length / 300));
 
-    // Guardar timestamps de eventos detectados para asegurar su presencia en la gráfica
-    const eventTimes = new Set<number>(
-      events.map((e) => new Date(e.timestamp).getTime()),
-    );
+    for (let i = 0; i < validLogs.length; i++) {
+      if (i === 0 || i === validLogs.length - 1 || i % step === 0) {
+        const smoothedPct = Math.round(denseSmoothedLevels[i] * 10) / 10;
+        const smoothedLiters =
+          Math.round((reserveLiters + (smoothedPct / 100) * usableCapacity) * 10) /
+          10;
 
-    for (let i = 0; i < logs.length; i++) {
-      const log = logs[i];
-      const timeMs = new Date(log.timestamp).getTime();
-
-      // Forzar la inclusión de puntos de inicio, fin, muestras periódicas y eventos exactos
-      if (
-        i === 0 ||
-        i === logs.length - 1 ||
-        i % step === 0 ||
-        eventTimes.has(timeMs)
-      ) {
         history.push({
-          timestamp: log.timestamp,
-          fuelLevel: log.fuelLevel,
-          fuelConsumption: log.fuelConsumption,
-          fuelRate: log.fuelRate,
-          ignition: log.ignition,
+          timestamp: validLogs[i].timestamp,
+          fuelLevel: smoothedPct,
+          fuelLiters: smoothedLiters,
+          fuelConsumption: validLogs[i].fuelConsumption,
+          fuelRate: validLogs[i].fuelRate,
+          ignition: validLogs[i].ignition,
         });
       }
     }
 
-    // Suavizar el historial para la gráfica aplicando un filtro de mediana móvil (window size = 5)
-    // para atenuar los picos de sloshing y ruido de sensor sin distorsionar los bordes
-    const smoothedHistory = history.map((item, index) => {
-      const windowLevels: number[] = [];
-      const windowSize = 5;
-      const half = Math.floor(windowSize / 2);
-      for (let w = -half; w <= half; w++) {
-        const neighbor = history[index + w];
-        if (neighbor && neighbor.fuelLevel !== null) {
-          windowLevels.push(neighbor.fuelLevel);
-        }
-      }
-      if (windowLevels.length === 0) return item;
-      windowLevels.sort((a, b) => a - b);
-      const median = windowLevels[Math.floor(windowLevels.length / 2)];
-      return {
-        ...item,
-        fuelLevel: Math.round(median * 10) / 10,
-      };
-    });
-
     return {
       summary: {
-        totalConsumed: Math.round(totalConsumed * 100) / 100,
-        totalDrained: Math.round(totalDrained * 100) / 100,
-        totalRefueled: Math.round(totalRefueled * 100) / 100,
+        tankCapacity,
+        totalConsumed,
+        consumedLiters,
+        totalDrained,
+        totalRefueled,
         currentLevel:
           currentLevel !== null ? Math.round(currentLevel * 100) / 100 : null,
+        currentLiters,
       },
       events,
-      history: smoothedHistory,
+      history,
     };
   }
 

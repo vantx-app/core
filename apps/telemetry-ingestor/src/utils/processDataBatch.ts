@@ -740,9 +740,6 @@ async function processDataBatchInternal(records: any[], imei: string) {
       }
     }
 
-    // Set parsed.fuelLevel to our state machine display value
-    parsed.fuelLevel = virtualState.currentDisplayPercent;
-
     previousState = {
       ignition: parsed.trueIgnition,
       unplugged: parsed.isUnplugged,
@@ -750,7 +747,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       excessiveIdling: parsed.isHardwareExcessiveIdling,
       odometer: parsed.odometer,
       engineHours: parsed.engineHours,
-      fuelLevel: parsed.fuelLevel,
+      fuelLevel: virtualState.currentDisplayPercent ?? parsed.fuelLevel,
       angle: recordAngle,
       latitude: rec.latitude,
       longitude: rec.longitude,
@@ -926,6 +923,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       const startFuel = firstLog.fuelLevel;
       const endFuel = lastLog.fuelLevel;
       const capacity = vehicle.tankCapacity ?? 60;
+      const usableCapacity = capacity * 0.9;
 
       let consumedLiters: number | null = null;
       if (
@@ -946,7 +944,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
       ) {
         consumedLiters = Math.max(
           0,
-          ((startFuel - endFuel) / 100.0) * capacity,
+          ((startFuel - endFuel) / 100.0) * usableCapacity,
         );
       }
 
@@ -986,6 +984,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
     tripsToUpdate,
     tripsToDelete,
     tripsToMerge,
+    virtualState,
     newVinDetected,
     newFuelTypeDetected,
   });
@@ -1007,7 +1006,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
     }
   }
 
-  notifyApi(vehicle, lastRecord).catch((err) =>
+  notifyApi(vehicle, lastRecord, virtualState).catch((err) =>
     logger.error(`[Webhook] Error: ${err.message}`),
   );
 }

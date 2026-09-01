@@ -162,6 +162,12 @@ export async function saveTelemetryBatchData({
   );
 
   // 6. Update vehicle live state
+  const liveFuelLevel =
+    virtualState?.currentDisplayPercent !== undefined &&
+    virtualState?.currentDisplayPercent !== null
+      ? virtualState.currentDisplayPercent
+      : lastRecord.fuelLevel;
+
   transactionPromises.push(
     prisma.vehicleLiveState.upsert({
       where: { vehicleId: vehicle.id },
@@ -174,7 +180,7 @@ export async function saveTelemetryBatchData({
         unplugged: lastRecord.unplugged,
         currentStatus: lastRecord.status,
         lastOdometer: lastRecord.odometer,
-        lastFuelLevel: lastRecord.fuelLevel,
+        lastFuelLevel: liveFuelLevel,
         lastEngineHours: lastRecord.engineHours,
         virtualState: virtualState ? virtualState : undefined,
         lastUpdate: lastRecord.timestamp,
@@ -189,7 +195,7 @@ export async function saveTelemetryBatchData({
         unplugged: lastRecord.unplugged,
         currentStatus: lastRecord.status,
         lastOdometer: lastRecord.odometer,
-        lastFuelLevel: lastRecord.fuelLevel,
+        lastFuelLevel: liveFuelLevel,
         lastEngineHours: lastRecord.engineHours,
         virtualState: virtualState ? virtualState : undefined,
         lastUpdate: lastRecord.timestamp,
