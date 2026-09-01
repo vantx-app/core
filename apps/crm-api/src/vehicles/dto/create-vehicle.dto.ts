@@ -80,6 +80,21 @@ export class CreateVehicleDto {
   @ApiPropertyOptional()
   isOdometerAbsolute?: boolean;
 
+  @IsNumber()
+  @IsOptional()
+  @ApiPropertyOptional()
+  initialEngineHours?: number;
+
+  @IsOptional()
+  @IsEnum(OdometerSource, { message: 'Origen de horómetro no válido.' })
+  @ApiPropertyOptional({ enum: OdometerSource })
+  engineHoursSource?: OdometerSource;
+
+  @IsOptional()
+  @IsBoolean()
+  @ApiPropertyOptional()
+  isEngineHoursAbsolute?: boolean;
+
   @IsOptional()
   @ApiPropertyOptional({ enum: SubscriptionTier })
   subscriptionTier?: SubscriptionTier;

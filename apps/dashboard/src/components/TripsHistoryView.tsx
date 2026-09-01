@@ -877,6 +877,10 @@ export default function TripsHistoryView({
               coordinates={routeCoordinates}
               isOngoing={!selectedTrip?.endTime}
               isFullscreen={isFullscreen}
+              isMachinery={
+                selectedTrip?.vehicle?.category === "MACHINERY" ||
+                vehicleContext?.category === "MACHINERY"
+              }
             />
           </div>
 

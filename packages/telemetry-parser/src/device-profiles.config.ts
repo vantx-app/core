@@ -164,6 +164,7 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     crashTrace: 257,
     unplugged: 252,
     fuelType: 759,
+    engineHours: { id: 102, multiplier: 0.0002777777777777778 }, // seconds to hours
     fuelLevel: 87, // FMS Fuel Level % (ej. 64% - 96%)
     fuelConsumption: 86, // FMS Total Fuel Consumed (L)
     fuelRate: { id: 110, multiplier: 0.1 }, // FMS Fuel Rate (deciliters/h)

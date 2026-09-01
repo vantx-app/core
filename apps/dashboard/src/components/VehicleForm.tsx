@@ -41,6 +41,8 @@ export default function VehicleForm({
 
   const [originalOdometer, setOriginalOdometer] = useState<string>("");
   const [fetchedLastOdometer, setFetchedLastOdometer] = useState<number>(0);
+  const [originalEngineHours, setOriginalEngineHours] = useState<string>("");
+  const [fetchedLastEngineHours, setFetchedLastEngineHours] = useState<number>(0);
   const [originalImei, setOriginalImei] = useState<string | null>(null);
   const [originalDeviceId, setOriginalDeviceId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState("");
@@ -76,13 +78,17 @@ export default function VehicleForm({
       make: "",
       model: "",
       year: "",
+      category: "PASSENGER",
       currentOdometer: "",
       odometerSource: "AUTO",
+      currentEngineHours: "",
+      engineHoursSource: "AUTO",
       fuelType: "",
       tankCapacity: "60",
     },
   });
 
+  const watchedCategory = watch("category");
   const watchedDeviceId = watch("deviceId");
   const selectedDevice = devices.find((d) => d.id === watchedDeviceId);
   const watchedImei = selectedDevice?.imei || "";
@@ -152,6 +158,17 @@ export default function VehicleForm({
           );
           setOriginalOdometer(displayOdo);
 
+          const lastEH = data.liveState?.lastEngineHours ?? 0;
+          const initialEH = data.initialEngineHours ?? 0;
+          const isAbsoluteEH =
+            data.engineHoursSource === "ABSOLUTE" ||
+            (data.engineHoursSource === "AUTO" && data.isEngineHoursAbsolute);
+          setFetchedLastEngineHours(lastEH);
+          const displayEH = String(
+            Math.round((isAbsoluteEH ? lastEH : initialEH + lastEH) * 10) / 10,
+          );
+          setOriginalEngineHours(displayEH);
+
           const dev = data.device;
           setOriginalImei(dev?.imei || null);
           setOriginalDeviceId(dev?.id || null);
@@ -170,8 +187,11 @@ export default function VehicleForm({
             make: data.make || "",
             model: data.model || "",
             year: data.year ? Number(data.year) : "",
+            category: data.category || "PASSENGER",
             currentOdometer: displayOdo,
             odometerSource: data.odometerSource || "AUTO",
+            currentEngineHours: displayEH,
+            engineHoursSource: data.engineHoursSource || "AUTO",
             fuelType: data.fuelType || "",
             tankCapacity: data.tankCapacity != null ? String(data.tankCapacity) : "60",
           });
@@ -197,6 +217,7 @@ export default function VehicleForm({
         make: data.make || undefined,
         model: data.model || undefined,
         year: data.year ? Number(data.year) : undefined,
+        category: data.category || "PASSENGER",
         fuelType: data.fuelType || null,
         tankCapacity: data.tankCapacity ? Number(data.tankCapacity) : 60,
       };
@@ -208,6 +229,10 @@ export default function VehicleForm({
           ? Number(data.currentOdometer)
           : 0;
         payload.odometerSource = data.odometerSource || "AUTO";
+        payload.initialEngineHours = data.currentEngineHours
+          ? Number(data.currentEngineHours)
+          : 0;
+        payload.engineHoursSource = data.engineHoursSource || "AUTO";
 
         if (isSuperAdmin) {
           if (!data.orgId) {
@@ -233,6 +258,13 @@ export default function VehicleForm({
             : 0;
         }
         payload.odometerSource = data.odometerSource || "AUTO";
+
+        if (data.currentEngineHours !== originalEngineHours) {
+          payload.initialEngineHours = data.currentEngineHours
+            ? Number(data.currentEngineHours) - fetchedLastEngineHours
+            : 0;
+        }
+        payload.engineHoursSource = data.engineHoursSource || "AUTO";
 
         const isDeviceChanged = data.deviceId !== originalDeviceId;
 
@@ -450,47 +482,116 @@ export default function VehicleForm({
             {...register("year")}
           />
 
-          <Input
-            type="number"
-            label={
-              !vehicleId
-                ? "Kilometraje inicial (km)"
-                : "Kilometraje actual (km)"
-            }
-            placeholder="Ej. 120000"
-            disabled={isSubmitting}
-            helperText={
-              !vehicleId
-                ? "Kilometraje base del vehículo al momento de registrarlo."
-                : "Kilometraje real actual del vehículo."
-            }
-            {...register("currentOdometer")}
-          />
-
           <div className="form-control">
             <label className="label py-1">
               <span className="label-text font-bold text-xs text-base-content/85">
-                Origen del Odómetro
+                Categoría del Vehículo
               </span>
             </label>
             <select
               className="select select-bordered w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
               disabled={isSubmitting}
-              {...register("odometerSource")}
+              {...register("category")}
             >
-              <option value="AUTO">Autodetectar (Recomendado)</option>
-              <option value="ABSOLUTE">
-                Kilometraje real del tablero (OBD/CAN)
-              </option>
-              <option value="RELATIVE">
-                Kilometraje estimado por GPS (Suma al inicial)
-              </option>
+              <option value="PASSENGER">Particular (Automóvil / SUV / Sedán)</option>
+              <option value="LIGHT_COMMERCIAL">Comercial Ligero (Van / Pickup / Panel)</option>
+              <option value="HEAVY_DUTY">Carga Pesada (Tractocamión / Camión / Volquete)</option>
+              <option value="MACHINERY">Maquinaria Amarilla (Excavadora / Cargador / Retro / Grúa)</option>
             </select>
             <span className="text-[10px] text-base-content/50 mt-1 pl-1">
-              Decide si el odómetro del dispositivo es real o debe sumarse al
-              valor inicial.
+              Define el tipo de métricas operativas primarias (Odómetro en km vs Horómetro en horas).
             </span>
           </div>
+
+          {watchedCategory === "MACHINERY" ? (
+            <>
+              <Input
+                type="number"
+                step="0.1"
+                label={
+                  !vehicleId
+                    ? "Horómetro inicial (horas)"
+                    : "Horómetro actual (horas)"
+                }
+                placeholder="Ej. 2450.5"
+                disabled={isSubmitting}
+                helperText={
+                  !vehicleId
+                    ? "Lectura del horómetro del tablero de la máquina al registrarla."
+                    : "Horómetro real actual de la máquina."
+                }
+                {...register("currentEngineHours")}
+              />
+
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-bold text-xs text-base-content/85">
+                    Origen del Horómetro
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                  disabled={isSubmitting}
+                  {...register("engineHoursSource")}
+                >
+                  <option value="AUTO">Autodetectar (Recomendado)</option>
+                  <option value="ABSOLUTE">
+                    Horas reales de la computadora (CAN Bus / FMS J1939)
+                  </option>
+                  <option value="RELATIVE">
+                    Horas estimadas por GPS / Ignición (Suma al inicial)
+                  </option>
+                </select>
+                <span className="text-[10px] text-base-content/50 mt-1 pl-1">
+                  Decide si las horas del dispositivo se leen directamente de la ECU o se suman al horómetro base inicial.
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <Input
+                type="number"
+                label={
+                  !vehicleId
+                    ? "Kilometraje inicial (km)"
+                    : "Kilometraje actual (km)"
+                }
+                placeholder="Ej. 120000"
+                disabled={isSubmitting}
+                helperText={
+                  !vehicleId
+                    ? "Kilometraje base del vehículo al momento de registrarlo."
+                    : "Kilometraje real actual del vehículo."
+                }
+                {...register("currentOdometer")}
+              />
+
+              <div className="form-control">
+                <label className="label py-1">
+                  <span className="label-text font-bold text-xs text-base-content/85">
+                    Origen del Odómetro
+                  </span>
+                </label>
+                <select
+                  className="select select-bordered w-full focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all duration-200"
+                  disabled={isSubmitting}
+                  {...register("odometerSource")}
+                >
+                  <option value="AUTO">Autodetectar (Recomendado)</option>
+                  <option value="ABSOLUTE">
+                    Kilometraje real del tablero (OBD/CAN)
+                  </option>
+                  <option value="RELATIVE">
+                    Kilometraje estimado por GPS (Suma al inicial)
+                  </option>
+                </select>
+                <span className="text-[10px] text-base-content/50 mt-1 pl-1">
+                  Decide si el odómetro del dispositivo es real o debe sumarse al
+                  valor inicial.
+                </span>
+              </div>
+            </>
+          )}
 
           <div className="form-control">
             <label className="label py-1">

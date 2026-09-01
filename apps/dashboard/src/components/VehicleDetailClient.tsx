@@ -85,11 +85,15 @@ export function VehicleDetailClient({
           live.ignition ?? initialVehicle.liveState?.lastIgnition ?? false,
         lastOdometer:
           live.odometer ?? initialVehicle.liveState?.lastOdometer ?? 0,
+        lastEngineHours:
+          (live as any).engineHours ?? initialVehicle.liveState?.lastEngineHours ?? 0,
         lastFuelLevel:
           live.fuelLevel ?? initialVehicle.liveState?.lastFuelLevel ?? null,
       },
     } as VehicleDetail;
   }, [initialVehicle, fleet]);
+
+  const isMachinery = vehicle.category === "MACHINERY";
 
   const isAbsoluteOdometer =
     vehicle.odometerSource === "ABSOLUTE" ||
@@ -98,6 +102,14 @@ export function VehicleDetailClient({
   const displayOdometer = isAbsoluteOdometer
     ? (vehicle.liveState?.lastOdometer ?? 0)
     : (vehicle.initialOdometer ?? 0) + (vehicle.liveState?.lastOdometer ?? 0);
+
+  const isAbsoluteEngineHours =
+    vehicle.engineHoursSource === "ABSOLUTE" ||
+    (vehicle.engineHoursSource === "AUTO" && !!vehicle.isEngineHoursAbsolute);
+
+  const displayEngineHours = isAbsoluteEngineHours
+    ? (vehicle.liveState?.lastEngineHours ?? 0)
+    : (vehicle.initialEngineHours ?? 0) + (vehicle.liveState?.lastEngineHours ?? 0);
 
   const [activeTab, setActiveTab] = useState<
     "overview" | "scores" | "rollups" | "fuel"
@@ -853,42 +865,85 @@ export function VehicleDetailClient({
                   }
                 />
 
-                <MiniStatCard
-                  label="Odómetro"
-                  value={
-                    <div className="flex flex-col w-full min-w-0">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-xl font-black font-mono tracking-tight">
-                          {Math.round(displayOdometer).toLocaleString()}
-                        </span>
-                        <span className="text-[10px] font-semibold text-base-content/50">
-                          km
-                        </span>
+                {isMachinery ? (
+                  <MiniStatCard
+                    label="Horómetro"
+                    value={
+                      <div className="flex flex-col w-full min-w-0">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xl font-black font-mono tracking-tight">
+                            {displayEngineHours.toLocaleString(undefined, {
+                              minimumFractionDigits: 1,
+                              maximumFractionDigits: 1,
+                            })}
+                          </span>
+                          <span className="text-[10px] font-semibold text-base-content/50">
+                            hrs
+                          </span>
+                        </div>
+                        {isAbsoluteEngineHours ? (
+                          <span
+                            className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
+                            title="El horómetro es la lectura real de horas de motor reportada por la computadora de la máquina (CAN/FMS J1939)."
+                          >
+                            <span className="size-1 bg-green-500 rounded-full shrink-0 animate-pulse" />
+                            Lectura real (CAN/FMS)
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
+                            title="El horómetro es la suma de las horas base iniciales más el tiempo de ignición acumulado por el dispositivo."
+                          >
+                            <span className="size-1 bg-amber-500 rounded-full shrink-0 animate-pulse" />
+                            Estimado (Base:{" "}
+                            {(vehicle.initialEngineHours ?? 0).toLocaleString(
+                              undefined,
+                              { minimumFractionDigits: 1, maximumFractionDigits: 1 },
+                            )}{" "}
+                            + GPS)
+                          </span>
+                        )}
                       </div>
-                      {isAbsoluteOdometer ? (
-                        <span
-                          className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
-                          title="El odómetro es la lectura real reportada por el dispositivo desde la computadora del vehículo (ECU)."
-                        >
-                          <span className="size-1 bg-green-500 rounded-full shrink-0 animate-pulse" />
-                          Lectura real (OBD/CAN)
-                        </span>
-                      ) : (
-                        <span
-                          className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
-                          title="El odómetro es una estimación basada en la distancia calculada por GPS más el kilometraje base inicial."
-                        >
-                          <span className="size-1 bg-amber-500 rounded-full shrink-0 animate-pulse" />
-                          Estimado (Base:{" "}
-                          {Math.round(
-                            vehicle.initialOdometer ?? 0,
-                          ).toLocaleString()}{" "}
-                          + GPS)
-                        </span>
-                      )}
-                    </div>
-                  }
-                />
+                    }
+                  />
+                ) : (
+                  <MiniStatCard
+                    label="Odómetro"
+                    value={
+                      <div className="flex flex-col w-full min-w-0">
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xl font-black font-mono tracking-tight">
+                            {Math.round(displayOdometer).toLocaleString()}
+                          </span>
+                          <span className="text-[10px] font-semibold text-base-content/50">
+                            km
+                          </span>
+                        </div>
+                        {isAbsoluteOdometer ? (
+                          <span
+                            className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
+                            title="El odómetro es la lectura real reportada por el dispositivo desde la computadora del vehículo (ECU)."
+                          >
+                            <span className="size-1 bg-green-500 rounded-full shrink-0 animate-pulse" />
+                            Lectura real (OBD/CAN)
+                          </span>
+                        ) : (
+                          <span
+                            className="text-[9px] text-base-content/40 mt-1 leading-normal font-medium flex items-center gap-1"
+                            title="El odómetro es una estimación basada en la distancia calculada por GPS más el kilometraje base inicial."
+                          >
+                            <span className="size-1 bg-amber-500 rounded-full shrink-0 animate-pulse" />
+                            Estimado (Base:{" "}
+                            {Math.round(
+                              vehicle.initialOdometer ?? 0,
+                            ).toLocaleString()}{" "}
+                            + GPS)
+                          </span>
+                        )}
+                      </div>
+                    }
+                  />
+                )}
 
                 <MiniStatCard
                   label="Rumbo"

@@ -241,9 +241,13 @@ export interface VehicleDetail {
   model: string | null;
   year: number | null;
   status: string;
+  category?: "PASSENGER" | "LIGHT_COMMERCIAL" | "HEAVY_DUTY" | "MACHINERY";
   initialOdometer?: number;
   odometerSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
   isOdometerAbsolute?: boolean;
+  initialEngineHours?: number;
+  engineHoursSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
+  isEngineHoursAbsolute?: boolean;
   deviceModel?: string;
   liveState?: {
     lastLat: number;
@@ -254,6 +258,7 @@ export interface VehicleDetail {
     unplugged: boolean;
     currentStatus: string;
     lastOdometer: number | null;
+    lastEngineHours?: number | null;
     lastFuelLevel?: number | null;
     lastUpdate: string;
   } | null;
@@ -935,6 +940,7 @@ export interface VehicleTripsVehicle {
   model: string | null;
   year: number | null;
   vin: string | null;
+  category?: "PASSENGER" | "LIGHT_COMMERCIAL" | "HEAVY_DUTY" | "MACHINERY" | null;
 }
 
 export interface VehicleTripsTrip {
@@ -1086,6 +1092,8 @@ export interface TripMapProps {
   coordinates: Coordinate[];
   isOngoing?: boolean;
   isFullscreen?: boolean;
+  isMachinery?: boolean;
+  defaultMode?: "route" | "heatmap";
 }
 
 export interface VehicleTableDesktopProps {
@@ -1222,8 +1230,11 @@ export interface VehicleFormValues {
   make?: string;
   model?: string;
   year?: number | "";
+  category?: "PASSENGER" | "LIGHT_COMMERCIAL" | "HEAVY_DUTY" | "MACHINERY" | "";
   currentOdometer?: string;
   odometerSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
+  currentEngineHours?: string;
+  engineHoursSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
   fuelType?: string;
   tankCapacity?: number | string;
 }

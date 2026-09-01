@@ -26,6 +26,9 @@ model Vehicle {
   initialOdometer       Float                  @default(0)
   odometerSource        OdometerSource         @default(AUTO)
   isOdometerAbsolute    Boolean                @default(false)
+  initialEngineHours    Float                  @default(0)
+  engineHoursSource     OdometerSource         @default(AUTO)
+  isEngineHoursAbsolute Boolean                @default(false)
   assignments           Assignment[]
   DailyTelemetryRollup  DailyTelemetryRollup[]
   telemetryLogs         TelemetryLog[]
