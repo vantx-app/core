@@ -291,11 +291,11 @@ export default function TripMap({
     }
 
     // B. Actualizar fuente de mapa de calor
-    const pointFeatures: GeoJSON.Feature<GeoJSON.Point>[] = coords.map((c) => ({
-      type: "Feature",
+    const pointFeatures = coords.map((c) => ({
+      type: "Feature" as const,
       properties: {},
       geometry: {
-        type: "Point",
+        type: "Point" as const,
         coordinates: [c.longitude, c.latitude],
       },
     }));
