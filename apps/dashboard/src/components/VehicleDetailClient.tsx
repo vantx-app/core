@@ -1593,8 +1593,8 @@ export function VehicleDetailClient({
                       }`}
                     >
                       {fuelAnalysis.summary.totalDrained > 0
-                        ? `-${fuelAnalysis.summary.totalDrained}%`
-                        : "0%"}
+                        ? `-${fuelAnalysis.summary.totalDrained} L`
+                        : "0 L"}
                     </span>
                   </div>
                   <p
@@ -1617,7 +1617,7 @@ export function VehicleDetailClient({
                       Total Recargas
                     </span>
                     <span className="text-3xl font-black font-mono tracking-tight text-info mt-1 block">
-                      +{fuelAnalysis.summary.totalRefueled}%
+                      +{fuelAnalysis.summary.totalRefueled} L
                     </span>
                   </div>
                   <p className="text-[10px] text-base-content/40 italic leading-relaxed mt-4">
@@ -1741,6 +1741,11 @@ export function VehicleDetailClient({
 
                         return (
                           <g key={idx} className="group cursor-pointer">
+                            <title>{`${isRefuel ? "Recarga" : "Drenado"}: ${
+                              isRefuel ? "+" : "-"
+                            }${evt.liters} L (${evt.beforeLevel}% → ${
+                              evt.afterLevel
+                            }%) - ${new Date(evt.timestamp).toLocaleString("es-ES")}`}</title>
                             <circle
                               cx={cx}
                               cy={cy}
