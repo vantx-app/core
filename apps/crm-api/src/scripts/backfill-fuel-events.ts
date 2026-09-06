@@ -35,6 +35,15 @@ loadEnv();
 
 const prisma = new PrismaClient();
 
+// Detección basada en ESTADO Y ASENTAMIENTO (Waiting & Settling) anti-rebote:
+// En lugar de umbrales rígidos elevados (que ignoran robos reales de 3L a 5L),
+// la detección automotriz real monitorea el ESTADO del tanque y ESPERA la estabilización.
+// Un evento genuino (robo o recarga) es un cambio PERMANENTE de estado que se asienta y NO rebota.
+// Las pendientes, rampas y frenadas rebotan en minutos hacia el nivel previo.
+const MIN_NOISE_FLOOR_PERCENT = 2.5; // Ruido eléctrico del convertidor analógico-digital (ADC)
+const MIN_NOISE_FLOOR_LITERS = 1.0;   // Mínimo 1.0 L para ignorar micro-oscilaciones
+const CONFIRM_WINDOW_MS = 8 * 60 * 1000; // Ventana de 8 minutos para verificar persistencia del nuevo estado
+
 function calculateMedian(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
@@ -44,21 +53,22 @@ function calculateMedian(values: number[]): number {
     : (sorted[half - 1] + sorted[half]) / 2;
 }
 
-interface FuelVirtualState {
-  currentDisplayPercent: number | null;
-  lastValidAnchorPercent: number | null;
-  vehicleState: 'PARKED' | 'MOVING';
-  segmentReadings: number[];
-  distanceAccumulator: number;
-  timeAccumulator: number;
-  ignitionOnTime: number | null;
-  ignitionOnReadings: number[];
-  session: {
-    type: 'REFUEL' | 'DRAIN' | 'NONE';
-    startAnchor: number | null;
-    stableCounter: number;
-    lastMedian: number | null;
-  };
+// Ventana de verificación hacia adelante: confirma que el salto o caída se mantenga y no sea rebote por pendiente/rampa
+function getForwardMedian(
+  logs: any[],
+  startIndex: number,
+  windowMs: number = CONFIRM_WINDOW_MS,
+): number | null {
+  const baseTime = logs[startIndex].timestamp.getTime();
+  const samples: number[] = [];
+  for (let i = startIndex + 1; i < logs.length; i++) {
+    const elapsed = logs[i].timestamp.getTime() - baseTime;
+    if (elapsed > windowMs) break;
+    samples.push(logs[i].fuelLevel);
+    if (samples.length >= 60) break;
+  }
+  if (samples.length === 0) return null;
+  return calculateMedian(samples);
 }
 
 async function processVehicleFuelHistory(vehicleId: string) {
@@ -78,7 +88,7 @@ async function processVehicleFuelHistory(vehicleId: string) {
   }
 
   const capacity = vehicle.tankCapacity ?? 60;
-  const usableCapacity = capacity * 0.9;
+  const effectiveCapacity = capacity;
 
   console.log(
     `\n================================================================================`,
@@ -87,7 +97,7 @@ async function processVehicleFuelHistory(vehicleId: string) {
     `[INFO] Procesando historial para: ${vehicle.alias || vehicle.plateNumber || vehicle.id}`,
   );
   console.log(
-    `[INFO] Capacidad de tanque: ${capacity} L (Útil calculada: ${usableCapacity.toFixed(1)} L)`,
+    `[INFO] Capacidad de tanque: ${capacity} L`,
   );
 
   // 1. Limpiar eventos existentes generados previamente para evitar duplicados
@@ -112,8 +122,6 @@ async function processVehicleFuelHistory(vehicleId: string) {
       ignition: true,
       latitude: true,
       longitude: true,
-      accelX: true,
-      accelY: true,
       odometer: true,
     },
   });
@@ -123,25 +131,7 @@ async function processVehicleFuelHistory(vehicleId: string) {
   );
   if (logs.length === 0) return;
 
-  // 3. Inicializar la máquina de estados cinemática de combustible
-  const initialLevel = logs[0].fuelLevel!;
-  const virtualState: FuelVirtualState = {
-    currentDisplayPercent: initialLevel,
-    lastValidAnchorPercent: initialLevel,
-    vehicleState: 'PARKED',
-    segmentReadings: [],
-    distanceAccumulator: 0,
-    timeAccumulator: 0,
-    ignitionOnTime: null,
-    ignitionOnReadings: [],
-    session: {
-      type: 'NONE',
-      startAnchor: null,
-      stableCounter: 0,
-      lastMedian: null,
-    },
-  };
-
+  // 3. Procesar eventos con filtrado cinemático estricto y confirmación de persistencia
   const fuelEventsToInsert: Array<{
     id: string;
     vehicleId: string;
@@ -156,280 +146,134 @@ async function processVehicleFuelHistory(vehicleId: string) {
     timestamp: Date;
   }> = [];
 
-  let previousIgnition = false;
-  let previousTimestamp = logs[0].timestamp.getTime();
+  const initialSample = logs.slice(0, Math.min(10, logs.length)).map((l) => l.fuelLevel!);
+  let lastConfirmedAnchor = calculateMedian(initialSample);
+  let stationaryReadings: number[] = [];
 
-  for (const log of logs) {
+  for (let i = 0; i < logs.length; i++) {
+    const log = logs[i];
     const rawFuel = log.fuelLevel!;
-    const logTimeMs = log.timestamp.getTime();
-    const timeDeltaSeconds = Math.max(0, (logTimeMs - previousTimestamp) / 1000);
-    previousTimestamp = logTimeMs;
+    const isMoving = (log.speed ?? 0) > 3;
+    const isInTrip = log.tripId !== null;
 
-    // 3.1 Ventana de observación al encender ignición (60s)
-    const isTransitionIgnition = log.ignition && !previousIgnition;
-    previousIgnition = log.ignition ?? false;
+    if (isMoving || isInTrip) {
+      // VEHÍCULO EN MOVIMIENTO O VIAJE ACTIVO:
+      // Cualquier descenso es consumo normal de combustible, NUNCA un robo/drenado.
+      stationaryReadings = [];
+      // Seguir suavemente el consumo hacia abajo durante conducción
+      if (rawFuel < lastConfirmedAnchor) {
+        lastConfirmedAnchor = 0.02 * rawFuel + 0.98 * lastConfirmedAnchor;
+      }
+      continue;
+    }
 
-    if (isTransitionIgnition) {
-      virtualState.ignitionOnTime = logTimeMs;
-      virtualState.ignitionOnReadings = [rawFuel];
-    } else if (virtualState.ignitionOnTime !== null) {
-      const elapsedMs = logTimeMs - virtualState.ignitionOnTime;
-      if (elapsedMs <= 60000) {
-        if ((log.speed ?? 0) <= 5) {
-          virtualState.ignitionOnReadings.push(rawFuel);
-        }
-      } else {
-        // Ventana de observación finalizada
-        if (virtualState.ignitionOnReadings.length > 0) {
-          const calibratedAnchor = calculateMedian(
-            virtualState.ignitionOnReadings,
-          );
-          const anchorDiff =
-            calibratedAnchor -
-            (virtualState.lastValidAnchorPercent ?? calibratedAnchor);
+    // VEHÍCULO ESTACIONADO / DETENIDO:
+    stationaryReadings.push(rawFuel);
+    if (stationaryReadings.length > 30) {
+      stationaryReadings.shift();
+    }
 
-          if (anchorDiff >= 4.0) {
-            const liters =
-              Math.round(((anchorDiff / 100.0) * usableCapacity) * 100) / 100;
+    // Requiere al menos 6 lecturas consecutivas detenido para asentar el oleaje inicial de frenado
+    if (stationaryReadings.length < 6) continue;
+
+    const currentMed = calculateMedian(stationaryReadings);
+    const delta = currentMed - lastConfirmedAnchor;
+
+    // A. REGLA DE RECARGA (REFUEL):
+    // Nivel sube más que el ruido de sensor (>= 2.5% y >= 1.0 L)
+    if (delta >= MIN_NOISE_FLOOR_PERCENT) {
+      const liters = Math.round(((delta / 100.0) * effectiveCapacity) * 100) / 100;
+      if (liters >= MIN_NOISE_FLOOR_LITERS) {
+        // Confirmación de persistencia: esperar y verificar que el nuevo nivel se asiente y NO sea rebote por pendiente/rampa
+        const forwardMed = getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
+        // Si el nivel futuro regresa hacia el ancla anterior, fue un rebote/inclinación transitoria
+        const isPersistent =
+          forwardMed === null || forwardMed >= lastConfirmedAnchor + delta * 0.6;
+
+        if (isPersistent) {
+          const lastEvent =
+            fuelEventsToInsert.length > 0
+              ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
+              : null;
+          const timeSinceLastEventMs = lastEvent
+            ? log.timestamp.getTime() - lastEvent.timestamp.getTime()
+            : Infinity;
+
+          // Si ocurrió otra recarga en los últimos 15 min en la misma parada (ej. bomba despacha en etapas), consolidar
+          if (
+            lastEvent &&
+            lastEvent.type === FuelEventType.REFUEL &&
+            timeSinceLastEventMs <= 15 * 60 * 1000
+          ) {
+            const consolidatedDelta = currentMed - lastEvent.startLevel;
+            const consolidatedLiters =
+              Math.round(((consolidatedDelta / 100.0) * effectiveCapacity) * 100) / 100;
+            lastEvent.endLevel = Math.round(currentMed * 10) / 10;
+            lastEvent.percentageDelta = Math.round(consolidatedDelta * 10) / 10;
+            lastEvent.liters = consolidatedLiters;
+            lastEvent.timestamp = log.timestamp;
+            lastEvent.latitude = log.latitude ?? lastEvent.latitude;
+            lastEvent.longitude = log.longitude ?? lastEvent.longitude;
+          } else {
             fuelEventsToInsert.push({
               id: uuidv7(),
               vehicleId: vehicle.id,
               tripId: log.tripId ?? null,
               type: FuelEventType.REFUEL,
               liters,
-              percentageDelta: Math.round(anchorDiff * 100) / 100,
-              startLevel:
-                Math.round(
-                  (virtualState.lastValidAnchorPercent ?? calibratedAnchor) *
-                    100,
-                ) / 100,
-              endLevel: Math.round(calibratedAnchor * 100) / 100,
-              latitude: log.latitude,
-              longitude: log.longitude,
-              timestamp: log.timestamp,
-            });
-          } else if (anchorDiff <= -4.0) {
-            const liters =
-              Math.round(
-                ((Math.abs(anchorDiff) / 100.0) * usableCapacity) * 100,
-              ) / 100;
-            fuelEventsToInsert.push({
-              id: uuidv7(),
-              vehicleId: vehicle.id,
-              tripId: log.tripId ?? null,
-              type: FuelEventType.DRAIN,
-              liters,
-              percentageDelta: Math.round(anchorDiff * 100) / 100,
-              startLevel:
-                Math.round(
-                  (virtualState.lastValidAnchorPercent ?? calibratedAnchor) *
-                    100,
-                ) / 100,
-              endLevel: Math.round(calibratedAnchor * 100) / 100,
+              percentageDelta: Math.round(delta * 10) / 10,
+              startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
+              endLevel: Math.round(currentMed * 10) / 10,
               latitude: log.latitude,
               longitude: log.longitude,
               timestamp: log.timestamp,
             });
           }
-
-          virtualState.currentDisplayPercent = calibratedAnchor;
-          virtualState.lastValidAnchorPercent = calibratedAnchor;
+          lastConfirmedAnchor = currentMed;
+          stationaryReadings = [currentMed];
         }
-        virtualState.ignitionOnTime = null;
-        virtualState.ignitionOnReadings = [];
       }
     }
+    // B. REGLA DE DRENADO / ROBO (DRAIN):
+    // Nivel baja mientras está estacionado con ignición apagada (o detenido sin moverse)
+    else if (
+      delta <= -MIN_NOISE_FLOOR_PERCENT &&
+      !isInTrip &&
+      (!log.ignition || (log.speed ?? 0) === 0)
+    ) {
+      const liters =
+        Math.round(((Math.abs(delta) / 100.0) * effectiveCapacity) * 100) / 100;
+      if (liters >= MIN_NOISE_FLOOR_LITERS) {
+        // Confirmación de persistencia: esperar y verificar que el nivel permanezca abajo y no sea una rampa transitoria
+        const forwardMed = getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
+        // Si el nivel futuro sube de vuelta cerca del ancla original, fue una inclinación temporal (rebote)
+        const isPersistent =
+          forwardMed === null ||
+          forwardMed <= lastConfirmedAnchor - Math.abs(delta) * 0.6;
 
-    // 3.2 Filtro cinemático de aceleración lateral y longitudinal (sloshing)
-    const accelX_G = log.accelX !== null ? Math.abs(log.accelX) : 0;
-    const accelY_G = log.accelY !== null ? Math.abs(log.accelY) : 0;
-    const isSloshing = accelX_G > 0.15 || accelY_G > 0.15;
-
-    // 3.3 Transiciones de movimiento
-    const isMoving = (log.speed ?? 0) > 5;
-    if (isMoving && virtualState.vehicleState === 'PARKED') {
-      if (
-        virtualState.session &&
-        virtualState.session.type !== 'NONE' &&
-        virtualState.segmentReadings.length >= 3
-      ) {
-        const currentMed = calculateMedian(virtualState.segmentReadings);
-        const startAnchor =
-          virtualState.session.startAnchor ??
-          virtualState.lastValidAnchorPercent ??
-          currentMed;
-        const delta = currentMed - startAnchor;
-        if (virtualState.session.type === 'REFUEL' && delta >= 4.0) {
-          const liters =
-            Math.round(((delta / 100.0) * usableCapacity) * 100) / 100;
+        if (isPersistent) {
           fuelEventsToInsert.push({
             id: uuidv7(),
             vehicleId: vehicle.id,
-            tripId: log.tripId ?? null,
-            type: FuelEventType.REFUEL,
-            liters,
-            percentageDelta: Math.round(delta * 100) / 100,
-            startLevel: Math.round(startAnchor * 100) / 100,
-            endLevel: Math.round(currentMed * 100) / 100,
-            latitude: log.latitude,
-            longitude: log.longitude,
-            timestamp: log.timestamp,
-          });
-          virtualState.lastValidAnchorPercent = currentMed;
-          virtualState.currentDisplayPercent = currentMed;
-        } else if (virtualState.session.type === 'DRAIN' && delta <= -4.0) {
-          const liters =
-            Math.round(((Math.abs(delta) / 100.0) * usableCapacity) * 100) / 100;
-          fuelEventsToInsert.push({
-            id: uuidv7(),
-            vehicleId: vehicle.id,
-            tripId: log.tripId ?? null,
+            tripId: null,
             type: FuelEventType.DRAIN,
             liters,
-            percentageDelta: Math.round(delta * 100) / 100,
-            startLevel: Math.round(startAnchor * 100) / 100,
-            endLevel: Math.round(currentMed * 100) / 100,
+            percentageDelta: Math.round(delta * 10) / 10,
+            startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
+            endLevel: Math.round(currentMed * 10) / 10,
             latitude: log.latitude,
             longitude: log.longitude,
             timestamp: log.timestamp,
           });
-          virtualState.lastValidAnchorPercent = currentMed;
-          virtualState.currentDisplayPercent = currentMed;
+          lastConfirmedAnchor = currentMed;
+          stationaryReadings = [currentMed];
         }
-        virtualState.session = {
-          type: 'NONE',
-          startAnchor: null,
-          stableCounter: 0,
-          lastMedian: null,
-        };
       }
-
-      virtualState.vehicleState = 'MOVING';
-      virtualState.distanceAccumulator = 0;
-      virtualState.timeAccumulator = 0;
-      virtualState.segmentReadings = [];
-    } else if (!isMoving && virtualState.vehicleState === 'MOVING') {
-      virtualState.vehicleState = 'PARKED';
-      virtualState.segmentReadings = [];
-      virtualState.distanceAccumulator = 0;
-      virtualState.timeAccumulator = 0;
     }
-
-    // 3.4 Lógica de operación según estado
-    if (virtualState.vehicleState === 'MOVING') {
-      if (!isSloshing) {
-        virtualState.segmentReadings.push(rawFuel);
-      }
-      virtualState.timeAccumulator += timeDeltaSeconds;
-
-      if (virtualState.timeAccumulator >= 300) {
-        // Cada 5 minutos en movimiento
-        if (virtualState.segmentReadings.length > 0) {
-          const currentMedian = calculateMedian(virtualState.segmentReadings);
-          const fuelDelta = virtualState.currentDisplayPercent! - currentMedian;
-          // Estrictamente monótono descendente durante conducción
-          if (fuelDelta > 0) {
-            const alpha = 0.05;
-            virtualState.currentDisplayPercent =
-              alpha * currentMedian +
-              (1 - alpha) * virtualState.currentDisplayPercent!;
-          }
-        }
-        virtualState.timeAccumulator = 0;
-        virtualState.segmentReadings = [];
-      }
-    } else {
-      // Estacionado: buffer rodante de 20 lecturas
-      virtualState.segmentReadings.push(rawFuel);
-      if (virtualState.segmentReadings.length > 20) {
-        virtualState.segmentReadings.shift();
-      }
-
-      const stableMedian = calculateMedian(virtualState.segmentReadings);
-      const currentAnchor = virtualState.lastValidAnchorPercent ?? stableMedian;
-
-      if (!virtualState.session || virtualState.session.type === 'NONE') {
-        const parkedDelta = stableMedian - currentAnchor;
-        const isSettled = virtualState.segmentReadings.length >= 3;
-
-        if (isSettled && parkedDelta >= 4.0) {
-          virtualState.session = {
-            type: 'REFUEL',
-            startAnchor: currentAnchor,
-            stableCounter: 0,
-            lastMedian: stableMedian,
-          };
-        } else if (isSettled && parkedDelta <= -4.0) {
-          virtualState.session = {
-            type: 'DRAIN',
-            startAnchor: currentAnchor,
-            stableCounter: 0,
-            lastMedian: stableMedian,
-          };
-        }
-      }
-
-      if (virtualState.session && virtualState.session.type !== 'NONE') {
-        virtualState.currentDisplayPercent = stableMedian;
-        const prevMed = virtualState.session.lastMedian ?? stableMedian;
-        if (Math.abs(stableMedian - prevMed) <= 0.5) {
-          virtualState.session.stableCounter++;
-        } else {
-          virtualState.session.stableCounter = 0;
-        }
-        virtualState.session.lastMedian = stableMedian;
-
-        if (virtualState.session.stableCounter >= 3) {
-          const sessionType = virtualState.session.type;
-          const startAnchor =
-            virtualState.session.startAnchor ??
-            virtualState.lastValidAnchorPercent ??
-            stableMedian;
-          const delta = stableMedian - startAnchor;
-
-          if (sessionType === 'REFUEL' && delta >= 4.0) {
-            const liters =
-              Math.round(((delta / 100.0) * usableCapacity) * 100) / 100;
-            fuelEventsToInsert.push({
-              id: uuidv7(),
-              vehicleId: vehicle.id,
-              tripId: log.tripId ?? null,
-              type: FuelEventType.REFUEL,
-              liters,
-              percentageDelta: Math.round(delta * 100) / 100,
-              startLevel: Math.round(startAnchor * 100) / 100,
-              endLevel: Math.round(stableMedian * 100) / 100,
-              latitude: log.latitude,
-              longitude: log.longitude,
-              timestamp: log.timestamp,
-            });
-          } else if (sessionType === 'DRAIN' && delta <= -4.0) {
-            const liters =
-              Math.round(((Math.abs(delta) / 100.0) * usableCapacity) * 100) /
-              100;
-            fuelEventsToInsert.push({
-              id: uuidv7(),
-              vehicleId: vehicle.id,
-              tripId: log.tripId ?? null,
-              type: FuelEventType.DRAIN,
-              liters,
-              percentageDelta: Math.round(delta * 100) / 100,
-              startLevel: Math.round(startAnchor * 100) / 100,
-              endLevel: Math.round(stableMedian * 100) / 100,
-              latitude: log.latitude,
-              longitude: log.longitude,
-              timestamp: log.timestamp,
-            });
-          }
-
-          virtualState.lastValidAnchorPercent = stableMedian;
-          virtualState.session = {
-            type: 'NONE',
-            startAnchor: null,
-            stableCounter: 0,
-            lastMedian: null,
-          };
-        }
+    // C. VARIACIONES MÍNIMAS: Absorber suavemente micro-deriva de reposo (< 2.5%)
+    else {
+      if (Math.abs(delta) < MIN_NOISE_FLOOR_PERCENT) {
+        lastConfirmedAnchor = 0.05 * currentMed + 0.95 * lastConfirmedAnchor;
       }
     }
   }
@@ -443,8 +287,9 @@ async function processVehicleFuelHistory(vehicleId: string) {
       `[SUCCESS] Creados ${fuelEventsToInsert.length} eventos de combustible en la base de datos:`,
     );
     fuelEventsToInsert.forEach((e) => {
+      const sign = e.type === FuelEventType.REFUEL ? '+' : '-';
       console.log(
-        `  -> [${e.type}] ${e.timestamp.toISOString().substring(0, 19)}: +${e.liters}L (${e.percentageDelta}%) de ${e.startLevel}% a ${e.endLevel}%`,
+        `  -> [${e.type}] ${e.timestamp.toISOString().substring(0, 19)}: ${sign}${e.liters}L (${sign}${Math.abs(e.percentageDelta)}%) de ${e.startLevel}% a ${e.endLevel}%`,
       );
     });
   } else {
@@ -475,8 +320,15 @@ async function processVehicleFuelHistory(vehicleId: string) {
 
     if (tripLogs.length === 0) continue;
 
-    const startFuel = tripLogs[0].fuelLevel!;
-    const endFuel = tripLogs[tripLogs.length - 1].fuelLevel!;
+    // Mediana inicial y final sobre muestras para eliminar ruido puntual de boya en arranque/parada
+    const startSample = tripLogs
+      .slice(0, Math.min(10, tripLogs.length))
+      .map((l) => l.fuelLevel!);
+    const endSample = tripLogs
+      .slice(-Math.min(10, tripLogs.length))
+      .map((l) => l.fuelLevel!);
+    const startFuel = calculateMedian(startSample);
+    const endFuel = calculateMedian(endSample);
 
     // Buscar eventos de recarga dentro de este viaje
     const tripRefuelEvents = fuelEventsToInsert.filter(
@@ -487,7 +339,7 @@ async function processVehicleFuelHistory(vehicleId: string) {
       0,
     );
 
-    const netLiters = ((startFuel - endFuel) / 100.0) * usableCapacity + midTripRefuels;
+    const netLiters = ((startFuel - endFuel) / 100.0) * effectiveCapacity + midTripRefuels;
     const consumedLiters = Math.max(0, Math.round(netLiters * 100) / 100);
     const efficiency =
       consumedLiters > 0 && trip.distanceKm && trip.distanceKm > 0
@@ -508,27 +360,34 @@ async function processVehicleFuelHistory(vehicleId: string) {
 
   console.log(`[SUCCESS] ${updatedTrips} viajes actualizados correctamente.`);
 
-  // 6. Actualizar VehicleLiveState con el virtualState final
-  if (virtualState.currentDisplayPercent !== null) {
-    await prisma.vehicleLiveState.upsert({
-      where: { vehicleId: vehicle.id },
-      update: {
-        lastFuelLevel: Math.round(virtualState.currentDisplayPercent * 100) / 100,
-        virtualState: virtualState as any,
-      },
-      create: {
-        vehicleId: vehicle.id,
-        lastLat: logs[logs.length - 1].latitude ?? 0,
-        lastLng: logs[logs.length - 1].longitude ?? 0,
-        lastFuelLevel: Math.round(virtualState.currentDisplayPercent * 100) / 100,
-        virtualState: virtualState as any,
-        lastUpdate: new Date(),
-      },
-    });
-    console.log(
-      `[SUCCESS] VehicleLiveState actualizado con nivel virtual: ${virtualState.currentDisplayPercent.toFixed(1)}%`,
-    );
-  }
+  // 6. Actualizar VehicleLiveState con el nivel final verificado
+  const lastLog = logs[logs.length - 1];
+  await prisma.vehicleLiveState.upsert({
+    where: { vehicleId: vehicle.id },
+    update: {
+      lastFuelLevel: Math.round(lastConfirmedAnchor * 100) / 100,
+      virtualState: {
+        currentDisplayPercent: lastConfirmedAnchor,
+        lastValidAnchorPercent: lastConfirmedAnchor,
+        vehicleState: 'PARKED',
+      } as any,
+    },
+    create: {
+      vehicleId: vehicle.id,
+      lastLat: lastLog.latitude ?? 0,
+      lastLng: lastLog.longitude ?? 0,
+      lastFuelLevel: Math.round(lastConfirmedAnchor * 100) / 100,
+      virtualState: {
+        currentDisplayPercent: lastConfirmedAnchor,
+        lastValidAnchorPercent: lastConfirmedAnchor,
+        vehicleState: 'PARKED',
+      } as any,
+      lastUpdate: new Date(),
+    },
+  });
+  console.log(
+    `[SUCCESS] VehicleLiveState actualizado con nivel verificado: ${lastConfirmedAnchor.toFixed(1)}%`,
+  );
 }
 
 async function main() {
