@@ -15,6 +15,7 @@
     "test": "turbo run test",
     "test:speed-limit": "npm --workspace=@vantx/crm-api run test:speed-limit",
     "backfill:maplinks": "npm --workspace=@vantx/crm-api run backfill:maplinks",
+    "backfill:fuel": "npm --workspace=@vantx/crm-api run backfill:fuel",
     "lint": "turbo run lint"
   },
   "devDependencies": {

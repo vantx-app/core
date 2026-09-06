@@ -20,6 +20,7 @@ model Vehicle {
   hasOptionToBuy        Boolean                @default(false)
   capabilities          Json?
   tankCapacity          Float?                 @default(60)
+  isCapacityCalibrated  Boolean                @default(false)
 
   createdAt             DateTime               @default(now())
   device                Device?
@@ -34,6 +35,7 @@ model Vehicle {
   telemetryLogs         TelemetryLog[]
   TrackingLink          TrackingLink[]
   trips                 Trip[]
+  fuelEvents            FuelEvent[]
   organization          Organization           @relation(fields: [orgId], references: [id], onDelete: Cascade)
   scoringProfile        ScoringProfile?        @relation(fields: [scoringProfileId], references: [id])
   VehicleGlobalStats    VehicleGlobalStats?

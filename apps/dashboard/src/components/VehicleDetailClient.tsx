@@ -31,6 +31,8 @@ import {
   MapPin,
   Calendar,
   AlertTriangle,
+  Sliders,
+  CheckCircle2,
 } from "lucide-react";
 import {
   DailyTelemetryRollup,
@@ -55,6 +57,9 @@ import { MiniStatCard } from "@/components/ui/MiniStatCard";
 import { DtcBadge } from "@/components/ui/DtcBadge";
 import { DriverAvatar } from "@/components/ui/DriverAvatar";
 import { Table } from "@/components/ui/Table";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { useFleet } from "@/context/FleetContext";
 import api from "@/utils/client/api-client";
 
@@ -119,9 +124,66 @@ export function VehicleDetailClient({
   const [fuelDays, setFuelDays] = useState<number>(7);
   const [fuelLoading, setFuelLoading] = useState<boolean>(false);
   const [fuelError, setFuelError] = useState<string | null>(null);
+  const [fuelEventsPage, setFuelEventsPage] = useState<number>(1);
 
   // Hover interactivo para la gráfica de combustible
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
+
+  // Estados para la calibración del tanque con recibo
+  const [calibrateModalOpen, setCalibrateModalOpen] = useState(false);
+  const [selectedEventForCalibration, setSelectedEventForCalibration] = useState<any>(null);
+  const [pumpedLitersInput, setPumpedLitersInput] = useState<string>("");
+  const [calibrating, setCalibrating] = useState(false);
+  const [calibrateError, setCalibrateError] = useState<string | null>(null);
+  const [calibrateSuccess, setCalibrateSuccess] = useState<string | null>(null);
+
+  const parsedPumpedLiters = parseFloat(pumpedLitersInput);
+  const selectedEventDelta = selectedEventForCalibration
+    ? (selectedEventForCalibration.delta ?? selectedEventForCalibration.percentageDelta ?? 0)
+    : 0;
+  const previewCapacity =
+    !isNaN(parsedPumpedLiters) && parsedPumpedLiters > 0 && selectedEventDelta > 0
+      ? Math.round(((parsedPumpedLiters / selectedEventDelta) * 100) * 10) / 10
+      : null;
+
+  const handleCalibrateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedEventForCalibration || !previewCapacity) return;
+
+    setCalibrating(true);
+    setCalibrateError(null);
+    setCalibrateSuccess(null);
+
+    try {
+      const res = await api.post(`/vehicles/${initialVehicle.id}/calibrate-tank`, {
+        pumpedLiters: parsedPumpedLiters,
+        eventId: selectedEventForCalibration.id,
+        percentageDelta: selectedEventDelta,
+      });
+
+      setCalibrateSuccess(
+        res.data?.message ||
+          `Tanque calibrado a ${res.data?.tankCapacity ?? previewCapacity} L con éxito.`,
+      );
+
+      // Refrescar análisis de combustible con la nueva capacidad recalculada
+      const updatedFuel = await api.get(
+        `/vehicles/${initialVehicle.id}/fuel-analysis?days=${fuelDays}`,
+      );
+      setFuelAnalysis(updatedFuel.data);
+
+      setTimeout(() => {
+        setCalibrateModalOpen(false);
+        setCalibrateSuccess(null);
+      }, 1800);
+    } catch (err: any) {
+      setCalibrateError(
+        err.response?.data?.message || "Error al calibrar el tanque del vehículo",
+      );
+    } finally {
+      setCalibrating(false);
+    }
+  };
 
   useEffect(() => {
     if (activeTab !== "fuel") return;
@@ -130,6 +192,7 @@ export function VehicleDetailClient({
     const fetchFuel = async () => {
       setFuelLoading(true);
       setFuelError(null);
+      setFuelEventsPage(1);
       try {
         const res = await api.get(
           `/vehicles/${initialVehicle.id}/fuel-analysis?days=${fuelDays}`,
@@ -156,6 +219,24 @@ export function VehicleDetailClient({
       active = false;
     };
   }, [activeTab, initialVehicle.id, fuelDays]);
+
+  const sortedFuelEvents = useMemo(() => {
+    if (!fuelAnalysis?.events) return [];
+    return [...fuelAnalysis.events].sort(
+      (a: any, b: any) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+    );
+  }, [fuelAnalysis?.events]);
+
+  const FUEL_EVENTS_PER_PAGE = 10;
+  const totalFuelEventPages = Math.max(
+    1,
+    Math.ceil(sortedFuelEvents.length / FUEL_EVENTS_PER_PAGE),
+  );
+  const paginatedFuelEvents = useMemo(() => {
+    const start = (fuelEventsPage - 1) * FUEL_EVENTS_PER_PAGE;
+    return sortedFuelEvents.slice(start, start + FUEL_EVENTS_PER_PAGE);
+  }, [sortedFuelEvents, fuelEventsPage]);
 
   // Preparar puntos de la gráfica SVG
   const points = useMemo(() => {
@@ -1456,9 +1537,23 @@ export function VehicleDetailClient({
                         }}
                       ></div>
                     </div>
-                    <div className="flex justify-between text-[9px] font-mono text-base-content/40">
+                    <div className="flex justify-between items-center text-[9px] font-mono text-base-content/40">
                       <span>{fuelAnalysis.summary.currentLevel ?? 0}%</span>
-                      <span>Capacidad: {fuelAnalysis.summary.tankCapacity ?? 60} L</span>
+                      <span className="flex items-center gap-1.5">
+                        Capacidad: {fuelAnalysis.summary.tankCapacity ?? 60} L
+                        {fuelAnalysis.summary.isCapacityCalibrated ? (
+                          <span className="badge badge-xs badge-success text-[8px] font-bold text-white px-1 py-0.2">
+                            Calibrado
+                          </span>
+                        ) : (
+                          <span
+                            className="badge badge-xs badge-warning text-[8px] font-bold px-1 py-0.2"
+                            title="Capacidad estimada por defecto. Calibre usando un recibo de recarga en la tabla inferior."
+                          >
+                            Por Defecto
+                          </span>
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1470,9 +1565,7 @@ export function VehicleDetailClient({
                       Consumo Total
                     </span>
                     <span className="text-3xl font-black font-mono tracking-tight text-success mt-1 block">
-                      {fuelAnalysis.summary.consumedLiters > 0
-                        ? `-${fuelAnalysis.summary.consumedLiters} L`
-                        : `${fuelAnalysis.summary.consumedLiters ?? 0} L`}
+                      {`${fuelAnalysis.summary.consumedLiters ?? 0} L`}
                     </span>
                   </div>
                   <p className="text-[10px] text-base-content/40 italic leading-relaxed mt-4">
@@ -1733,100 +1826,303 @@ export function VehicleDetailClient({
 
               {/* Event ledger */}
               <div className="glass-card p-6 rounded-2xl space-y-4">
-                <h3 className="text-sm font-bold flex items-center gap-1.5 uppercase tracking-wider text-base-content/60">
-                  <FileText className="text-primary size-4" />
-                  Registro de Eventos de Combustible
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold flex items-center gap-1.5 uppercase tracking-wider text-base-content/60">
+                    <FileText className="text-primary size-4" />
+                    Registro de Eventos de Combustible
+                  </h3>
+                  {sortedFuelEvents.length > 0 && (
+                    <span className="text-xs text-base-content/50">
+                      {sortedFuelEvents.length} eventos registrados
+                    </span>
+                  )}
+                </div>
 
-                {fuelAnalysis.events.length === 0 ? (
+                {sortedFuelEvents.length === 0 ? (
                   <div className="text-center py-8 text-xs text-base-content/40 border border-base-200/40 rounded-xl">
                     No se registraron anomalías (drenados) ni recargas en este
                     período.
                   </div>
                 ) : (
-                  <div className="overflow-x-auto w-full border border-base-200/40 rounded-2xl">
-                    <table className="table table-sm w-full text-xs">
-                      <thead className="bg-base-200/30">
-                        <tr>
-                          <th>Evento</th>
-                          <th>Fecha y Hora</th>
-                          <th>Nivel Inicial</th>
-                          <th>Nivel Final</th>
-                          <th>Variación</th>
-                          <th>Ubicación</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {fuelAnalysis.events.map((evt: any, index: number) => {
-                          const isRefuel = evt.type === "REFUEL";
-                          return (
-                            <tr key={index} className="hover:bg-base-200/20">
-                              <td className="font-bold">
-                                <span
-                                  className={`badge badge-sm font-bold border-none ${
-                                    isRefuel
-                                      ? "bg-success/15 text-success"
-                                      : "bg-error/15 text-error"
+                  <>
+                    <div className="overflow-x-auto w-full border border-base-200/40 rounded-2xl">
+                      <table className="table table-sm w-full text-xs">
+                        <thead className="bg-base-200/30">
+                          <tr>
+                            <th>Evento</th>
+                            <th>Fecha y Hora</th>
+                            <th>Nivel Inicial</th>
+                            <th>Nivel Final</th>
+                            <th>Volumen / Variación</th>
+                            <th>Ubicación</th>
+                            <th className="text-right">Calibración</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {paginatedFuelEvents.map((evt: any, index: number) => {
+                            const isRefuel = evt.type === "REFUEL";
+                            const delta = evt.delta ?? evt.percentageDelta ?? 0;
+                            const liters = evt.liters;
+                            const before = evt.beforeLevel ?? evt.startLevel ?? 0;
+                            const after = evt.afterLevel ?? evt.endLevel ?? 0;
+                            return (
+                              <tr key={evt.id || index} className="hover:bg-base-200/20">
+                                <td className="font-bold">
+                                  <span
+                                    className={`badge badge-sm font-bold border-none ${
+                                      isRefuel
+                                        ? "bg-success/15 text-success"
+                                        : "bg-error/15 text-error"
+                                    }`}
+                                  >
+                                    {isRefuel ? "Recarga" : "Drenado"}
+                                  </span>
+                                </td>
+                                <td className="text-base-content/60 font-medium">
+                                  {new Date(evt.timestamp).toLocaleString(
+                                    "es-ES",
+                                    {
+                                      day: "numeric",
+                                      month: "short",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )}
+                                </td>
+                                <td className="font-mono font-bold text-base-content/80">
+                                  {before.toFixed(1)}%
+                                </td>
+                                <td className="font-mono font-bold text-base-content/80">
+                                  {after.toFixed(1)}%
+                                </td>
+                                <td
+                                  className={`font-mono font-black ${
+                                    isRefuel ? "text-success" : "text-error"
                                   }`}
                                 >
-                                  {isRefuel ? "Recarga" : "Drenado Manual"}
-                                </span>
-                              </td>
-                              <td className="text-base-content/60 font-medium">
-                                {new Date(evt.timestamp).toLocaleString(
-                                  "es-ES",
-                                  {
-                                    day: "numeric",
-                                    month: "short",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )}
-                              </td>
-                              <td className="font-mono font-bold text-base-content/80">
-                                {evt.beforeLevel.toFixed(1)}%
-                              </td>
-                              <td className="font-mono font-bold text-base-content/80">
-                                {evt.afterLevel.toFixed(1)}%
-                              </td>
-                              <td
-                                className={`font-mono font-black ${
-                                  isRefuel ? "text-success" : "text-error"
-                                }`}
-                              >
-                                {isRefuel
-                                  ? `+${evt.delta.toFixed(1)}%`
-                                  : `${evt.delta.toFixed(1)}%`}
-                              </td>
-                              <td>
-                                {evt.latitude && evt.longitude ? (
-                                  <a
-                                    href={`https://www.google.com/maps/search/?api=1&query=${evt.latitude},${evt.longitude}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="btn btn-ghost btn-xs text-primary font-bold hover:underline inline-flex items-center gap-1"
-                                  >
-                                    <MapPin className="size-3" />
-                                    Ver Mapa
-                                  </a>
-                                ) : (
-                                  <span className="text-base-content/30 italic">
-                                    Sin GPS
-                                  </span>
-                                )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                                  {isRefuel ? `+` : `-`}
+                                  {liters != null ? `${liters.toFixed(1)} L ` : ""}
+                                  ({delta >= 0 ? `+${delta.toFixed(1)}%` : `${delta.toFixed(1)}%`})
+                                </td>
+                                <td>
+                                  {evt.latitude && evt.longitude ? (
+                                    <a
+                                      href={`https://www.google.com/maps/search/?api=1&query=${evt.latitude},${evt.longitude}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="btn btn-ghost btn-xs text-primary font-bold hover:underline inline-flex items-center gap-1"
+                                    >
+                                      <MapPin className="size-3" />
+                                      Ver Mapa
+                                    </a>
+                                  ) : (
+                                    <span className="text-base-content/30 italic">
+                                      Sin GPS
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="text-right">
+                                  {isRefuel && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedEventForCalibration(evt);
+                                        setPumpedLitersInput(
+                                          evt.liters ? String(Math.round(evt.liters * 10) / 10) : "",
+                                        );
+                                        setCalibrateError(null);
+                                        setCalibrateSuccess(null);
+                                        setCalibrateModalOpen(true);
+                                      }}
+                                      className="btn btn-ghost btn-xs text-primary hover:bg-primary/10 gap-1 font-semibold"
+                                      title="Calibrar capacidad del tanque con el recibo de esta recarga"
+                                    >
+                                      <Sliders className="size-3" />
+                                      Calibrar
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Controles de Paginación */}
+                    {totalFuelEventPages > 1 && (
+                      <div className="flex items-center justify-between pt-2">
+                        <span className="text-xs text-base-content/50">
+                          Página {fuelEventsPage} de {totalFuelEventPages}
+                        </span>
+                        <div className="join">
+                          <button
+                            className="join-item btn btn-xs btn-ghost"
+                            disabled={fuelEventsPage <= 1}
+                            onClick={() =>
+                              setFuelEventsPage((p) => Math.max(1, p - 1))
+                            }
+                          >
+                            «
+                          </button>
+                          {Array.from(
+                            { length: totalFuelEventPages },
+                            (_, i) => i + 1,
+                          ).map((p) => (
+                            <button
+                              key={p}
+                              className={`join-item btn btn-xs ${
+                                p === fuelEventsPage
+                                  ? "btn-active btn-primary text-white"
+                                  : "btn-ghost"
+                              }`}
+                              onClick={() => setFuelEventsPage(p)}
+                            >
+                              {p}
+                            </button>
+                          ))}
+                          <button
+                            className="join-item btn btn-xs btn-ghost"
+                            disabled={fuelEventsPage >= totalFuelEventPages}
+                            onClick={() =>
+                              setFuelEventsPage((p) =>
+                                Math.min(totalFuelEventPages, p + 1),
+                              )
+                            }
+                          >
+                            »
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
           )}
         </div>
       )}
+
+      {/* Modal de Calibración de Tanque con Recibo */}
+      <Modal
+        isOpen={calibrateModalOpen}
+        onClose={() => {
+          if (!calibrating) {
+            setCalibrateModalOpen(false);
+            setCalibrateError(null);
+            setCalibrateSuccess(null);
+          }
+        }}
+        title="Calibrar Capacidad de Tanque"
+        subtitle="Ajusta la capacidad nominal con base en los litros reales facturados en una recarga."
+        className="max-w-lg"
+      >
+        <form onSubmit={handleCalibrateSubmit} className="space-y-4 pt-2">
+          {selectedEventForCalibration && (
+            <div className="bg-base-200/40 border border-base-200/60 rounded-xl p-3 text-xs space-y-1.5">
+              <div className="flex justify-between items-center font-semibold">
+                <span className="text-base-content/60">Evento de Recarga:</span>
+                <span className="font-mono text-base-content/80">
+                  {new Date(selectedEventForCalibration.timestamp).toLocaleString("es-ES", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-base-content/60">Variación Detectada:</span>
+                <span className="font-mono font-bold text-success">
+                  +{selectedEventDelta.toFixed(1)}% (del{" "}
+                  {(selectedEventForCalibration.beforeLevel ?? selectedEventForCalibration.startLevel ?? 0).toFixed(1)}% al{" "}
+                  {(selectedEventForCalibration.afterLevel ?? selectedEventForCalibration.endLevel ?? 0).toFixed(1)}%)
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-base-content/60">Capacidad Registrada:</span>
+                <span className="font-mono font-medium text-base-content/70">
+                  {fuelAnalysis?.summary?.tankCapacity ?? 60} L{" "}
+                  {fuelAnalysis?.summary?.isCapacityCalibrated ? (
+                    <span className="text-success font-bold">(Calibrado)</span>
+                  ) : (
+                    <span className="text-warning font-bold">(Por Defecto)</span>
+                  )}
+                </span>
+              </div>
+            </div>
+          )}
+
+          <div>
+            <Input
+              label="Litros Surtidos Reales (Factura / Ticket)"
+              type="number"
+              step="0.01"
+              min="0.1"
+              required
+              placeholder="Ej: 45.5"
+              value={pumpedLitersInput}
+              onChange={(e) => setPumpedLitersInput(e.target.value)}
+              helperText="Ingrese la cantidad exacta de litros pagados según el ticket de la estación de servicio."
+              disabled={calibrating}
+            />
+          </div>
+
+          {previewCapacity !== null && (
+            <div className="bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-base-content/70">
+                  Nueva Capacidad Calculada:
+                </span>
+                <span className="text-xl font-black font-mono text-primary">
+                  {previewCapacity} Litros
+                </span>
+              </div>
+              <p className="text-[11px] text-base-content/60 font-mono">
+                Fórmula: ({parsedPumpedLiters} L / {selectedEventDelta.toFixed(1)}%) × 100 = {previewCapacity} L
+              </p>
+              <p className="text-[11px] text-base-content/50 italic">
+                Al guardar, se actualizará la capacidad del tanque del vehículo y se recalcularán automáticamente los litros de todos los viajes y eventos previos.
+              </p>
+            </div>
+          )}
+
+          {calibrateError && (
+            <div className="alert alert-error text-xs py-2">
+              <AlertCircle className="size-4 shrink-0" />
+              <span>{calibrateError}</span>
+            </div>
+          )}
+
+          {calibrateSuccess && (
+            <div className="alert alert-success text-xs py-2 text-white">
+              <CheckCircle2 className="size-4 shrink-0" />
+              <span>{calibrateSuccess}</span>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setCalibrateModalOpen(false)}
+              disabled={calibrating}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              isLoading={calibrating}
+              disabled={!previewCapacity || calibrating}
+            >
+              Guardar y Recalcular
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

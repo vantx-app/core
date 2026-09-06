@@ -248,6 +248,8 @@ export interface VehicleDetail {
   initialEngineHours?: number;
   engineHoursSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
   isEngineHoursAbsolute?: boolean;
+  tankCapacity?: number | null;
+  isCapacityCalibrated?: boolean;
   deviceModel?: string;
   liveState?: {
     lastLat: number;
@@ -1237,6 +1239,7 @@ export interface VehicleFormValues {
   engineHoursSource?: "AUTO" | "ABSOLUTE" | "RELATIVE";
   fuelType?: string;
   tankCapacity?: number | string;
+  isCapacityCalibrated?: boolean;
 }
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

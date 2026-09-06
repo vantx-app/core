@@ -80,8 +80,7 @@ enum OdometerSource {
   RELATIVE
 }
 
-
-
-
-
-
+enum FuelEventType {
+  REFUEL
+  DRAIN
+}

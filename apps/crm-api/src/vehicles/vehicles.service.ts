@@ -9,7 +9,14 @@ import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { AccessTokenPayload } from 'src/auth/types';
 import { CacheService } from 'src/common/cache.service';
-import { Vehicle, VehicleLiveState, VehicleCategory } from '@prisma/client';
+import {
+  Vehicle,
+  VehicleLiveState,
+  VehicleCategory,
+  FuelEventType,
+} from '@prisma/client';
+import { v7 as uuidv7 } from 'uuid';
+import { CalibrateTankDto } from './dto/calibrate-tank.dto';
 import PDFDocument from 'pdfkit';
 import AdmZip from 'adm-zip';
 import { RulesEngineService } from 'src/rules-engine/rules-engine.service';
@@ -1021,13 +1028,14 @@ export class VehiclesService {
       },
     });
 
-    // Obtener información del vehículo (capacidad de tanque)
+    // Obtener información del vehículo (capacidad de tanque y estado de calibración)
     const vehicle = await this.prisma.vehicle.findUnique({
       where: { id: vehicleId },
-      select: { tankCapacity: true },
+      select: { tankCapacity: true, isCapacityCalibrated: true },
     });
 
     const tankCapacity = vehicle?.tankCapacity ?? 60;
+    const isCapacityCalibrated = vehicle?.isCapacityCalibrated ?? false;
     // Calibración práctica interna: 5% reserva inferior y 5% cuello/sobrellenado (90% rango útil activo)
     const usableCapacity = tankCapacity * 0.9;
     const reserveLiters = tankCapacity * 0.05;
@@ -1036,6 +1044,7 @@ export class VehiclesService {
       return {
         summary: {
           tankCapacity,
+          isCapacityCalibrated,
           totalConsumed: 0,
           consumedLiters: 0,
           totalDrained: 0,
@@ -1056,6 +1065,7 @@ export class VehiclesService {
       return {
         summary: {
           tankCapacity,
+          isCapacityCalibrated,
           totalConsumed: 0,
           consumedLiters: 0,
           totalDrained: 0,
@@ -1073,42 +1083,73 @@ export class VehiclesService {
     const startLevel = firstLog.fuelLevel!;
     const endLevel = lastLog.fuelLevel!;
 
-    let totalConsumed = 0;
-    let consumedLiters = 0;
-    const totalDrained = 0;
-    const totalRefueled = 0;
-    const events: any[] = [];
+    // Consultar eventos de combustible (cargas y descargas) en la ventana de tiempo
+    const fuelEvents = await this.prisma.fuelEvent.findMany({
+      where: {
+        vehicleId,
+        timestamp: { gte: startDate },
+      },
+      orderBy: { timestamp: 'desc' },
+      select: {
+        id: true,
+        type: true,
+        liters: true,
+        percentageDelta: true,
+        startLevel: true,
+        endLevel: true,
+        latitude: true,
+        longitude: true,
+        timestamp: true,
+      },
+    });
 
-    // 1. Cálculo directo de consumo: si existe contador acumulado OBD/CAN, usarlo (ya viene en Litros)
-    if (
-      lastLog.fuelConsumption !== null &&
-      firstLog.fuelConsumption !== null &&
-      lastLog.fuelConsumption >= firstLog.fuelConsumption
-    ) {
-      consumedLiters =
-        Math.round(
-          (lastLog.fuelConsumption - firstLog.fuelConsumption) * 100,
-        ) / 100;
-      totalConsumed =
-        Math.round(((consumedLiters / usableCapacity) * 100) * 100) / 100;
-    } else if (startLevel >= endLevel) {
-      totalConsumed = Math.round((startLevel - endLevel) * 100) / 100;
-      consumedLiters =
-        Math.round(((totalConsumed / 100) * usableCapacity) * 10) / 10;
-    } else {
-      // Si el nivel final es mayor o igual que el inicial por deriva del sensor
-      let movingPoints = 0;
-      for (const log of validLogs) {
-        if ((log.speed ?? 0) > 2) {
-          movingPoints++;
-        }
-      }
-      if (movingPoints > 0) {
-        totalConsumed = Math.round(Math.max(0.1, movingPoints * 0.02) * 100) / 100;
-        consumedLiters =
-          Math.round(((totalConsumed / 100) * usableCapacity) * 10) / 10;
+    let totalRefueled = 0;
+    let totalDrained = 0;
+    for (const ev of fuelEvents) {
+      if (ev.type === 'REFUEL') {
+        totalRefueled += ev.liters;
+      } else if (ev.type === 'DRAIN') {
+        totalDrained += ev.liters;
       }
     }
+    totalRefueled = Math.round(totalRefueled * 10) / 10;
+    totalDrained = Math.round(totalDrained * 10) / 10;
+
+    // Calcular consumo total sumando el combustible consumido en los viajes del periodo
+    const trips = await this.prisma.trip.findMany({
+      where: {
+        vehicleId,
+        startTime: { gte: startDate },
+      },
+      select: {
+        fuelConsumedLiters: true,
+      },
+    });
+
+    let consumedLiters = 0;
+    for (const trip of trips) {
+      if (trip.fuelConsumedLiters && trip.fuelConsumedLiters > 0) {
+        consumedLiters += trip.fuelConsumedLiters;
+      }
+    }
+
+    // Si no hay viajes cerrados con cálculo de combustible, usar balance de masa de tanque
+    if (consumedLiters === 0 && validLogs.length > 0) {
+      const startLiters = (startLevel / 100) * usableCapacity;
+      const endLiters = (endLevel / 100) * usableCapacity;
+      const net = startLiters - endLiters + totalRefueled - totalDrained;
+      consumedLiters = Math.max(0, net);
+    }
+
+    consumedLiters = Math.round(consumedLiters * 10) / 10;
+    const totalConsumed =
+      Math.round(((consumedLiters / usableCapacity) * 100) * 10) / 10;
+    const events = fuelEvents.map((ev) => ({
+      ...ev,
+      beforeLevel: ev.startLevel,
+      afterLevel: ev.endLevel,
+      delta: ev.percentageDelta,
+    }));
 
     const currentLevel = lastLog.fuelLevel;
     const currentLiters =
@@ -1159,6 +1200,7 @@ export class VehiclesService {
     return {
       summary: {
         tankCapacity,
+        isCapacityCalibrated,
         totalConsumed,
         consumedLiters,
         totalDrained,
@@ -1231,5 +1273,506 @@ export class VehiclesService {
     }
 
     return route;
+  }
+
+  private calculateMedian(values: number[]): number {
+    if (values.length === 0) return 0;
+    const sorted = [...values].sort((a, b) => a - b);
+    const half = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+      ? sorted[half]
+      : (sorted[half - 1] + sorted[half]) / 2;
+  }
+
+  async recalculateVehicleFuel(vehicleId: string): Promise<{
+    eventsCount: number;
+    updatedTripsCount: number;
+  }> {
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: {
+        id: true,
+        tankCapacity: true,
+      },
+    });
+
+    if (!vehicle) {
+      throw new NotFoundException(`Vehículo con ID ${vehicleId} no encontrado.`);
+    }
+
+    const capacity = vehicle.tankCapacity ?? 60;
+    const usableCapacity = capacity * 0.9;
+
+    // 1. Limpiar eventos existentes
+    await this.prisma.fuelEvent.deleteMany({
+      where: { vehicleId },
+    });
+
+    // 2. Obtener registros de telemetría con nivel de combustible
+    const logs = await this.prisma.telemetryLog.findMany({
+      where: {
+        vehicleId,
+        fuelLevel: { not: null },
+      },
+      orderBy: { timestamp: 'asc' },
+      select: {
+        id: true,
+        tripId: true,
+        timestamp: true,
+        fuelLevel: true,
+        speed: true,
+        ignition: true,
+        latitude: true,
+        longitude: true,
+        accelX: true,
+        accelY: true,
+      },
+    });
+
+    if (logs.length === 0) {
+      return { eventsCount: 0, updatedTripsCount: 0 };
+    }
+
+    const initialLevel = logs[0].fuelLevel!;
+    const virtualState: any = {
+      currentDisplayPercent: initialLevel,
+      lastValidAnchorPercent: initialLevel,
+      vehicleState: 'PARKED',
+      segmentReadings: [],
+      distanceAccumulator: 0,
+      timeAccumulator: 0,
+      ignitionOnTime: null,
+      ignitionOnReadings: [],
+      session: {
+        type: 'NONE',
+        startAnchor: null,
+        stableCounter: 0,
+        lastMedian: null,
+      },
+    };
+
+    const fuelEventsToInsert: Array<{
+      id: string;
+      vehicleId: string;
+      tripId: string | null;
+      type: FuelEventType;
+      liters: number;
+      percentageDelta: number;
+      startLevel: number;
+      endLevel: number;
+      latitude: number | null;
+      longitude: number | null;
+      timestamp: Date;
+    }> = [];
+
+    let previousIgnition = false;
+    let previousTimestamp = logs[0].timestamp.getTime();
+
+    for (const log of logs) {
+      const rawFuel = log.fuelLevel!;
+      const logTimeMs = log.timestamp.getTime();
+      const timeDeltaSeconds = Math.max(0, (logTimeMs - previousTimestamp) / 1000);
+      previousTimestamp = logTimeMs;
+
+      // Ventana de observación al encender ignición (60s)
+      const isTransitionIgnition = log.ignition && !previousIgnition;
+      previousIgnition = log.ignition ?? false;
+
+      if (isTransitionIgnition) {
+        virtualState.ignitionOnTime = logTimeMs;
+        virtualState.ignitionOnReadings = [rawFuel];
+      } else if (virtualState.ignitionOnTime !== null) {
+        const elapsedMs = logTimeMs - virtualState.ignitionOnTime;
+        if (elapsedMs <= 60000) {
+          if ((log.speed ?? 0) <= 5) {
+            virtualState.ignitionOnReadings.push(rawFuel);
+          }
+        } else {
+          if (virtualState.ignitionOnReadings.length > 0) {
+            const calibratedAnchor = this.calculateMedian(
+              virtualState.ignitionOnReadings,
+            );
+            const anchorDiff =
+              calibratedAnchor -
+              (virtualState.lastValidAnchorPercent ?? calibratedAnchor);
+
+            if (anchorDiff >= 4.0) {
+              const liters =
+                Math.round(((anchorDiff / 100.0) * usableCapacity) * 100) / 100;
+              fuelEventsToInsert.push({
+                id: uuidv7(),
+                vehicleId,
+                tripId: log.tripId ?? null,
+                type: FuelEventType.REFUEL,
+                liters,
+                percentageDelta: Math.round(anchorDiff * 100) / 100,
+                startLevel:
+                  Math.round(
+                    (virtualState.lastValidAnchorPercent ?? calibratedAnchor) *
+                      100,
+                  ) / 100,
+                endLevel: Math.round(calibratedAnchor * 100) / 100,
+                latitude: log.latitude,
+                longitude: log.longitude,
+                timestamp: log.timestamp,
+              });
+            } else if (anchorDiff <= -4.0) {
+              const liters =
+                Math.round(
+                  ((Math.abs(anchorDiff) / 100.0) * usableCapacity) * 100,
+                ) / 100;
+              fuelEventsToInsert.push({
+                id: uuidv7(),
+                vehicleId,
+                tripId: log.tripId ?? null,
+                type: FuelEventType.DRAIN,
+                liters,
+                percentageDelta: Math.round(anchorDiff * 100) / 100,
+                startLevel:
+                  Math.round(
+                    (virtualState.lastValidAnchorPercent ?? calibratedAnchor) *
+                      100,
+                  ) / 100,
+                endLevel: Math.round(calibratedAnchor * 100) / 100,
+                latitude: log.latitude,
+                longitude: log.longitude,
+                timestamp: log.timestamp,
+              });
+            }
+
+            virtualState.currentDisplayPercent = calibratedAnchor;
+            virtualState.lastValidAnchorPercent = calibratedAnchor;
+          }
+          virtualState.ignitionOnTime = null;
+          virtualState.ignitionOnReadings = [];
+        }
+      }
+
+      // Cinemática
+      const isMoving = (log.speed ?? 0) > 5;
+      if (isMoving && virtualState.vehicleState === 'PARKED') {
+        if (
+          virtualState.session &&
+          virtualState.session.type !== 'NONE' &&
+          virtualState.segmentReadings.length >= 3
+        ) {
+          const currentMed = this.calculateMedian(virtualState.segmentReadings);
+          const startAnchor =
+            virtualState.session.startAnchor ??
+            virtualState.lastValidAnchorPercent ??
+            currentMed;
+          const delta = currentMed - startAnchor;
+          if (virtualState.session.type === 'REFUEL' && delta >= 4.0) {
+            const liters =
+              Math.round(((delta / 100.0) * usableCapacity) * 100) / 100;
+            fuelEventsToInsert.push({
+              id: uuidv7(),
+              vehicleId,
+              tripId: log.tripId ?? null,
+              type: FuelEventType.REFUEL,
+              liters,
+              percentageDelta: Math.round(delta * 100) / 100,
+              startLevel: Math.round(startAnchor * 100) / 100,
+              endLevel: Math.round(currentMed * 100) / 100,
+              latitude: log.latitude,
+              longitude: log.longitude,
+              timestamp: log.timestamp,
+            });
+            virtualState.lastValidAnchorPercent = currentMed;
+            virtualState.currentDisplayPercent = currentMed;
+          } else if (virtualState.session.type === 'DRAIN' && delta <= -4.0) {
+            const liters =
+              Math.round(
+                ((Math.abs(delta) / 100.0) * usableCapacity) * 100,
+              ) / 100;
+            fuelEventsToInsert.push({
+              id: uuidv7(),
+              vehicleId,
+              tripId: log.tripId ?? null,
+              type: FuelEventType.DRAIN,
+              liters,
+              percentageDelta: Math.round(delta * 100) / 100,
+              startLevel: Math.round(startAnchor * 100) / 100,
+              endLevel: Math.round(currentMed * 100) / 100,
+              latitude: log.latitude,
+              longitude: log.longitude,
+              timestamp: log.timestamp,
+            });
+            virtualState.lastValidAnchorPercent = currentMed;
+            virtualState.currentDisplayPercent = currentMed;
+          }
+          virtualState.session = {
+            type: 'NONE',
+            startAnchor: null,
+            stableCounter: 0,
+            lastMedian: null,
+          };
+        }
+
+        virtualState.vehicleState = 'MOVING';
+        virtualState.distanceAccumulator = 0;
+        virtualState.timeAccumulator = 0;
+        virtualState.segmentReadings = [];
+      } else if (!isMoving && virtualState.vehicleState === 'MOVING') {
+        virtualState.vehicleState = 'PARKED';
+        virtualState.segmentReadings = [];
+        virtualState.distanceAccumulator = 0;
+        virtualState.timeAccumulator = 0;
+      }
+
+      if (virtualState.vehicleState === 'MOVING') {
+        virtualState.timeAccumulator += timeDeltaSeconds;
+        if (virtualState.timeAccumulator >= 300) {
+          if (virtualState.segmentReadings.length > 0) {
+            const currentMedian = this.calculateMedian(virtualState.segmentReadings);
+            const fuelDelta = virtualState.currentDisplayPercent! - currentMedian;
+            if (fuelDelta > 0) {
+              const alpha = 0.05;
+              virtualState.currentDisplayPercent =
+                alpha * currentMedian +
+                (1 - alpha) * virtualState.currentDisplayPercent!;
+            }
+          }
+          virtualState.timeAccumulator = 0;
+          virtualState.segmentReadings = [];
+        }
+      } else {
+        virtualState.segmentReadings.push(rawFuel);
+        if (virtualState.segmentReadings.length > 20) {
+          virtualState.segmentReadings.shift();
+        }
+
+        const stableMedian = this.calculateMedian(virtualState.segmentReadings);
+        const currentAnchor = virtualState.lastValidAnchorPercent ?? stableMedian;
+
+        if (!virtualState.session || virtualState.session.type === 'NONE') {
+          const parkedDelta = stableMedian - currentAnchor;
+          const isSettled = virtualState.segmentReadings.length >= 3;
+
+          if (isSettled && parkedDelta >= 4.0) {
+            virtualState.session = {
+              type: 'REFUEL',
+              startAnchor: currentAnchor,
+              stableCounter: 0,
+              lastMedian: stableMedian,
+            };
+          } else if (isSettled && parkedDelta <= -4.0) {
+            virtualState.session = {
+              type: 'DRAIN',
+              startAnchor: currentAnchor,
+              stableCounter: 0,
+              lastMedian: stableMedian,
+            };
+          }
+        }
+
+        if (virtualState.session && virtualState.session.type !== 'NONE') {
+          virtualState.currentDisplayPercent = stableMedian;
+          const prevMed = virtualState.session.lastMedian ?? stableMedian;
+          if (Math.abs(stableMedian - prevMed) <= 0.5) {
+            virtualState.session.stableCounter++;
+          } else {
+            virtualState.session.stableCounter = 0;
+          }
+          virtualState.session.lastMedian = stableMedian;
+
+          if (virtualState.session.stableCounter >= 3) {
+            const sessionType = virtualState.session.type;
+            const startAnchor =
+              virtualState.session.startAnchor ??
+              virtualState.lastValidAnchorPercent ??
+              stableMedian;
+            const delta = stableMedian - startAnchor;
+
+            if (sessionType === 'REFUEL' && delta >= 4.0) {
+              const liters =
+                Math.round(((delta / 100.0) * usableCapacity) * 100) / 100;
+              fuelEventsToInsert.push({
+                id: uuidv7(),
+                vehicleId,
+                tripId: log.tripId ?? null,
+                type: FuelEventType.REFUEL,
+                liters,
+                percentageDelta: Math.round(delta * 100) / 100,
+                startLevel: Math.round(startAnchor * 100) / 100,
+                endLevel: Math.round(stableMedian * 100) / 100,
+                latitude: log.latitude,
+                longitude: log.longitude,
+                timestamp: log.timestamp,
+              });
+            } else if (sessionType === 'DRAIN' && delta <= -4.0) {
+              const liters =
+                Math.round(
+                  ((Math.abs(delta) / 100.0) * usableCapacity) * 100,
+                ) / 100;
+              fuelEventsToInsert.push({
+                id: uuidv7(),
+                vehicleId,
+                tripId: log.tripId ?? null,
+                type: FuelEventType.DRAIN,
+                liters,
+                percentageDelta: Math.round(delta * 100) / 100,
+                startLevel: Math.round(startAnchor * 100) / 100,
+                endLevel: Math.round(stableMedian * 100) / 100,
+                latitude: log.latitude,
+                longitude: log.longitude,
+                timestamp: log.timestamp,
+              });
+            }
+
+            virtualState.lastValidAnchorPercent = stableMedian;
+            virtualState.session = {
+              type: 'NONE',
+              startAnchor: null,
+              stableCounter: 0,
+              lastMedian: null,
+            };
+          }
+        }
+      }
+    }
+
+    if (fuelEventsToInsert.length > 0) {
+      await this.prisma.fuelEvent.createMany({
+        data: fuelEventsToInsert,
+      });
+    }
+
+    // 3. Recalcular viajes
+    const trips = await this.prisma.trip.findMany({
+      where: { vehicleId },
+      orderBy: { startTime: 'asc' },
+      select: { id: true, distanceKm: true },
+    });
+
+    let updatedTripsCount = 0;
+    for (const trip of trips) {
+      const tripLogs = await this.prisma.telemetryLog.findMany({
+        where: { tripId: trip.id, fuelLevel: { not: null } },
+        orderBy: { timestamp: 'asc' },
+        select: { fuelLevel: true },
+      });
+
+      if (tripLogs.length === 0) continue;
+
+      const startFuel = tripLogs[0].fuelLevel!;
+      const endFuel = tripLogs[tripLogs.length - 1].fuelLevel!;
+
+      const tripRefuelEvents = fuelEventsToInsert.filter(
+        (e) => e.tripId === trip.id && e.type === FuelEventType.REFUEL,
+      );
+      const midTripRefuels = tripRefuelEvents.reduce(
+        (sum, e) => sum + e.liters,
+        0,
+      );
+
+      const netLiters = ((startFuel - endFuel) / 100.0) * usableCapacity + midTripRefuels;
+      const consumedLiters = Math.max(0, Math.round(netLiters * 100) / 100);
+      const efficiency =
+        consumedLiters > 0 && trip.distanceKm && trip.distanceKm > 0
+          ? Math.round((trip.distanceKm / consumedLiters) * 100) / 100
+          : null;
+
+      await this.prisma.trip.update({
+        where: { id: trip.id },
+        data: {
+          startFuelLevel: Math.round(startFuel * 100) / 100,
+          endFuelLevel: Math.round(endFuel * 100) / 100,
+          fuelConsumedLiters: consumedLiters,
+          fuelEfficiencyKmL: efficiency,
+        },
+      });
+      updatedTripsCount++;
+    }
+
+    // 4. Actualizar liveState
+    if (virtualState.currentDisplayPercent !== null) {
+      await this.prisma.vehicleLiveState.upsert({
+        where: { vehicleId },
+        update: {
+          lastFuelLevel: Math.round(virtualState.currentDisplayPercent * 100) / 100,
+          virtualState,
+        },
+        create: {
+          vehicleId,
+          lastLat: logs[logs.length - 1].latitude ?? 0,
+          lastLng: logs[logs.length - 1].longitude ?? 0,
+          lastFuelLevel: Math.round(virtualState.currentDisplayPercent * 100) / 100,
+          virtualState,
+          lastUpdate: new Date(),
+        },
+      });
+    }
+
+    return { eventsCount: fuelEventsToInsert.length, updatedTripsCount };
+  }
+
+  async calibrateTank(vehicleId: string, dto: CalibrateTankDto) {
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: { id: true, tankCapacity: true, isCapacityCalibrated: true },
+    });
+    if (!vehicle) {
+      throw new NotFoundException(`Vehículo con ID ${vehicleId} no encontrado.`);
+    }
+
+    let delta = dto.percentageDelta;
+    if (dto.eventId) {
+      const event = await this.prisma.fuelEvent.findUnique({
+        where: { id: dto.eventId },
+        select: { percentageDelta: true, type: true },
+      });
+      if (event) {
+        delta = Math.abs(event.percentageDelta);
+      }
+    }
+
+    if (!delta || delta <= 0) {
+      throw new BadRequestException(
+        'El incremento porcentual (delta) debe ser mayor a 0% para calibrar.',
+      );
+    }
+    if (!dto.pumpedLiters || dto.pumpedLiters <= 0) {
+      throw new BadRequestException(
+        'Los litros despachados en el recibo deben ser un número positivo.',
+      );
+    }
+
+    // Capacidad real efectiva reemplaza el valor manual previo:
+    // Capacidad = Litros Surtidos / (Delta% / 100)
+    const rawCapacity = (dto.pumpedLiters / delta) * 100.0;
+    const newCapacity = Math.round(rawCapacity * 10) / 10;
+
+    if (newCapacity < 15 || newCapacity > 2000) {
+      throw new BadRequestException(
+        `La capacidad calculada (${newCapacity} L) está fuera del rango normal (15L - 2000L). Por favor verifique los litros del recibo.`,
+      );
+    }
+
+    // Actualizar vehículo con el nuevo valor que REEMPLAZA el anterior
+    await this.prisma.vehicle.update({
+      where: { id: vehicleId },
+      data: {
+        tankCapacity: newCapacity,
+        isCapacityCalibrated: true,
+      },
+    });
+
+    // Invalidar caché
+    this.cacheService.delByPattern('vehicles:');
+
+    // Recalcular eventos de combustible y consumo de viajes del vehículo con la nueva capacidad
+    const result = await this.recalculateVehicleFuel(vehicleId);
+
+    return {
+      success: true,
+      message: `Capacidad de tanque calibrada exitosamente a ${newCapacity} L.`,
+      vehicleId,
+      previousCapacity: vehicle.tankCapacity,
+      calibratedCapacity: newCapacity,
+      isCapacityCalibrated: true,
+      eventsRecalculated: result.eventsCount,
+      tripsUpdated: result.updatedTripsCount,
+    };
   }
 }

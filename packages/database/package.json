@@ -10,7 +10,7 @@
   "scripts": {
     "build": "tsc",
     "prisma:generate": "prisma generate --schema=prisma/schema",
-    "prisma:migrate:deploy": "prisma migrate deploy"
+    "prisma:migrate:deploy": "prisma migrate deploy --schema=prisma/schema"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3"

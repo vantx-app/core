@@ -21,6 +21,7 @@ import { CreateVehicleDto } from './dto/create-vehicle.dto';
 import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { AssignDriverDto } from './dto/assign-driver.dto';
 import { CreateTrackingLinkDto } from './dto/create-tracking-link.dto';
+import { CalibrateTankDto } from './dto/calibrate-tank.dto';
 import { ROLES } from 'src/common/enums/roles.enum';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -243,6 +244,17 @@ export class VehiclesController {
       id,
       isNaN(daysNum) ? 7 : daysNum,
     );
+  }
+
+  @RequiresSubscription()
+  @Post(':id/calibrate-tank')
+  async calibrateTank(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request & { user: AccessTokenPayload },
+    @Body() dto: CalibrateTankDto,
+  ) {
+    await this.vehiclesService.verifyVehicleAccess(id, req.user);
+    return this.vehiclesService.calibrateTank(id, dto);
   }
 
   @Public()

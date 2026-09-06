@@ -516,6 +516,11 @@ async function processDataBatchInternal(records: any[], imei: string) {
     };
   }
 
+  const fuelEventsToCreate: any[] = [];
+  const tripMidRefuels = new Map<string, number>();
+  const vehicleTankCapacity = vehicle.tankCapacity ?? 60;
+  const vehicleUsableCapacity = vehicleTankCapacity * 0.9;
+
   const telemetryLogs: any = [];
 
   for (const rec of sortedRecords) {
@@ -624,6 +629,63 @@ async function processDataBatchInternal(records: any[], imei: string) {
             const calibratedAnchor = calculateMedian(
               virtualState.ignitionOnReadings,
             );
+            const anchorDiff =
+              calibratedAnchor -
+              (virtualState.lastValidAnchorPercent ?? calibratedAnchor);
+
+            if (anchorDiff >= 4.0) {
+              const liters =
+                Math.round(((anchorDiff / 100.0) * vehicleUsableCapacity) * 100) /
+                100;
+              fuelEventsToCreate.push({
+                id: uuidv7(),
+                vehicleId: vehicle.id,
+                tripId: liveTripState.activeTrip?.id ?? null,
+                type: "REFUEL",
+                liters,
+                percentageDelta: Math.round(anchorDiff * 100) / 100,
+                startLevel:
+                  Math.round(
+                    (virtualState.lastValidAnchorPercent ?? calibratedAnchor) *
+                      100,
+                  ) / 100,
+                endLevel: Math.round(calibratedAnchor * 100) / 100,
+                latitude: rec.latitude,
+                longitude: rec.longitude,
+                timestamp: rec.timestamp as Date,
+              });
+              if (liveTripState.activeTrip) {
+                const tId = liveTripState.activeTrip.id;
+                tripMidRefuels.set(
+                  tId,
+                  (tripMidRefuels.get(tId) ?? 0) + liters,
+                );
+              }
+            } else if (anchorDiff <= -4.0) {
+              const liters =
+                Math.round(
+                  ((Math.abs(anchorDiff) / 100.0) * vehicleUsableCapacity) *
+                    100,
+                ) / 100;
+              fuelEventsToCreate.push({
+                id: uuidv7(),
+                vehicleId: vehicle.id,
+                tripId: liveTripState.activeTrip?.id ?? null,
+                type: "DRAIN",
+                liters,
+                percentageDelta: Math.round(anchorDiff * 100) / 100,
+                startLevel:
+                  Math.round(
+                    (virtualState.lastValidAnchorPercent ?? calibratedAnchor) *
+                      100,
+                  ) / 100,
+                endLevel: Math.round(calibratedAnchor * 100) / 100,
+                latitude: rec.latitude,
+                longitude: rec.longitude,
+                timestamp: rec.timestamp as Date,
+              });
+            }
+
             virtualState.currentDisplayPercent = calibratedAnchor;
             virtualState.lastValidAnchorPercent = calibratedAnchor;
           }
@@ -640,6 +702,68 @@ async function processDataBatchInternal(records: any[], imei: string) {
       // 3. Dynamic State Transitions
       const isMoving = parsed.speedToUse > 5;
       if (isMoving && virtualState.vehicleState === "PARKED") {
+        if (
+          virtualState.session &&
+          virtualState.session.type !== "NONE" &&
+          virtualState.segmentReadings.length >= 3
+        ) {
+          const currentMed = calculateMedian(virtualState.segmentReadings);
+          const startAnchor =
+            virtualState.session.startAnchor ??
+            virtualState.lastValidAnchorPercent ??
+            currentMed;
+          const delta = currentMed - startAnchor;
+          if (virtualState.session.type === "REFUEL" && delta >= 4.0) {
+            const liters =
+              Math.round(((delta / 100.0) * vehicleUsableCapacity) * 100) / 100;
+            fuelEventsToCreate.push({
+              id: uuidv7(),
+              vehicleId: vehicle.id,
+              tripId: liveTripState.activeTrip?.id ?? null,
+              type: "REFUEL",
+              liters,
+              percentageDelta: Math.round(delta * 100) / 100,
+              startLevel: Math.round(startAnchor * 100) / 100,
+              endLevel: Math.round(currentMed * 100) / 100,
+              latitude: rec.latitude,
+              longitude: rec.longitude,
+              timestamp: rec.timestamp as Date,
+            });
+            if (liveTripState.activeTrip) {
+              const tId = liveTripState.activeTrip.id;
+              tripMidRefuels.set(tId, (tripMidRefuels.get(tId) ?? 0) + liters);
+            }
+            virtualState.lastValidAnchorPercent = currentMed;
+            virtualState.currentDisplayPercent = currentMed;
+          } else if (virtualState.session.type === "DRAIN" && delta <= -4.0) {
+            const liters =
+              Math.round(
+                ((Math.abs(delta) / 100.0) * vehicleUsableCapacity) * 100,
+              ) / 100;
+            fuelEventsToCreate.push({
+              id: uuidv7(),
+              vehicleId: vehicle.id,
+              tripId: liveTripState.activeTrip?.id ?? null,
+              type: "DRAIN",
+              liters,
+              percentageDelta: Math.round(delta * 100) / 100,
+              startLevel: Math.round(startAnchor * 100) / 100,
+              endLevel: Math.round(currentMed * 100) / 100,
+              latitude: rec.latitude,
+              longitude: rec.longitude,
+              timestamp: rec.timestamp as Date,
+            });
+            virtualState.lastValidAnchorPercent = currentMed;
+            virtualState.currentDisplayPercent = currentMed;
+          }
+          virtualState.session = {
+            type: "NONE",
+            startAnchor: null,
+            stableCounter: 0,
+            lastMedian: null,
+          };
+        }
+
         virtualState.vehicleState = "MOVING";
         virtualState.distanceAccumulator = 0;
         virtualState.timeAccumulator = 0;
@@ -728,6 +852,57 @@ async function processDataBatchInternal(records: any[], imei: string) {
 
           // Confirm and settle session after 3 consecutive stable readings
           if (virtualState.session.stableCounter >= 3) {
+            const sessionType = virtualState.session.type;
+            const startAnchor =
+              virtualState.session.startAnchor ??
+              virtualState.lastValidAnchorPercent ??
+              stableMedian;
+            const delta = stableMedian - startAnchor;
+
+            if (sessionType === "REFUEL" && delta >= 4.0) {
+              const liters =
+                Math.round(((delta / 100.0) * vehicleUsableCapacity) * 100) /
+                100;
+              fuelEventsToCreate.push({
+                id: uuidv7(),
+                vehicleId: vehicle.id,
+                tripId: liveTripState.activeTrip?.id ?? null,
+                type: "REFUEL",
+                liters,
+                percentageDelta: Math.round(delta * 100) / 100,
+                startLevel: Math.round(startAnchor * 100) / 100,
+                endLevel: Math.round(stableMedian * 100) / 100,
+                latitude: rec.latitude,
+                longitude: rec.longitude,
+                timestamp: rec.timestamp as Date,
+              });
+              if (liveTripState.activeTrip) {
+                const tId = liveTripState.activeTrip.id;
+                tripMidRefuels.set(
+                  tId,
+                  (tripMidRefuels.get(tId) ?? 0) + liters,
+                );
+              }
+            } else if (sessionType === "DRAIN" && delta <= -4.0) {
+              const liters =
+                Math.round(
+                  ((Math.abs(delta) / 100.0) * vehicleUsableCapacity) * 100,
+                ) / 100;
+              fuelEventsToCreate.push({
+                id: uuidv7(),
+                vehicleId: vehicle.id,
+                tripId: liveTripState.activeTrip?.id ?? null,
+                type: "DRAIN",
+                liters,
+                percentageDelta: Math.round(delta * 100) / 100,
+                startLevel: Math.round(startAnchor * 100) / 100,
+                endLevel: Math.round(stableMedian * 100) / 100,
+                latitude: rec.latitude,
+                longitude: rec.longitude,
+                timestamp: rec.timestamp as Date,
+              });
+            }
+
             virtualState.lastValidAnchorPercent = stableMedian;
             virtualState.session = {
               type: "NONE",
@@ -927,24 +1102,27 @@ async function processDataBatchInternal(records: any[], imei: string) {
 
       let consumedLiters: number | null = null;
       if (
-        lastLog.fuelConsumption !== null &&
-        firstLog.fuelConsumption !== null &&
-        firstLog.fuelConsumption !== undefined &&
-        lastLog.fuelConsumption !== undefined
-      ) {
-        consumedLiters = Math.max(
-          0,
-          lastLog.fuelConsumption - firstLog.fuelConsumption,
-        );
-      } else if (
         startFuel !== null &&
         endFuel !== null &&
         startFuel !== undefined &&
         endFuel !== undefined
       ) {
+        let midRefuels = tripMidRefuels.get(tripId) ?? 0;
+        try {
+          const prevEvents = await prisma.fuelEvent.findMany({
+            where: { tripId, type: "REFUEL" },
+            select: { liters: true },
+          });
+          for (const ev of prevEvents) {
+            midRefuels += ev.liters;
+          }
+        } catch (err: any) {
+          // En caso de error de consulta, usar los acumulados del lote
+        }
+
         consumedLiters = Math.max(
           0,
-          ((startFuel - endFuel) / 100.0) * usableCapacity,
+          ((startFuel - endFuel) / 100.0) * usableCapacity + midRefuels,
         );
       }
 
@@ -984,6 +1162,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
     tripsToUpdate,
     tripsToDelete,
     tripsToMerge,
+    fuelEvents: fuelEventsToCreate,
     virtualState,
     newVinDetected,
     newFuelTypeDetected,

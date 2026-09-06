@@ -41,6 +41,7 @@ export interface TelemetryBatchWriteParams {
   >;
   tripsToDelete: Set<string>;
   tripsToMerge?: Map<string, string>;
+  fuelEvents?: any[];
   virtualState?: any;
   newVinDetected: string | null;
   newFuelTypeDetected: "GASOLINE" | "DIESEL" | "ELECTRIC" | "HYBRID" | null;
@@ -54,6 +55,7 @@ export async function saveTelemetryBatchData({
   tripsToUpdate,
   tripsToDelete,
   tripsToMerge,
+  fuelEvents,
   virtualState,
   newVinDetected,
   newFuelTypeDetected,
@@ -63,7 +65,7 @@ export async function saveTelemetryBatchData({
   const lastRecord = telemetryLogs[telemetryLogs.length - 1];
   const transactionPromises: Prisma.PrismaPromise<any>[] = [];
 
-  // 1. Create new trips (must be first so telemetry logs can resolve their FK)
+  // 1. Create new trips (must be first so telemetry logs and fuel events can resolve their FK)
   for (const [_, tripData] of tripsToCreate) {
     transactionPromises.push(
       prisma.trip.create({
@@ -79,6 +81,15 @@ export async function saveTelemetryBatchData({
           engineHours: tripData.engineHours,
           distanceKm: tripData.distanceKm,
         },
+      }),
+    );
+  }
+
+  // 1.5 Create fuel events (after trips so tripId FK resolves if present)
+  if (fuelEvents && fuelEvents.length > 0) {
+    transactionPromises.push(
+      prisma.fuelEvent.createMany({
+        data: fuelEvents,
       }),
     );
   }

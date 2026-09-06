@@ -112,7 +112,7 @@ export const DEVICE_PROFILES: Record<string, AvlMapping> = {
     fuelType: 759,
     engineHours: { id: 102, multiplier: 0.0002777777777777778 }, // seconds to hours
     fuelLevel: 89,
-    fuelConsumption: 83, // Liters directly (no multiplier)
+    fuelConsumption: { id: 83, multiplier: 0.1 }, // 0.1 Liters to Liters
     fuelRate: { id: 110, multiplier: 0.1 }, // deciliters/h to L/h
     accelX: { id: 17, multiplier: 0.001, signed: true },
     accelY: { id: 18, multiplier: 0.001, signed: true },
