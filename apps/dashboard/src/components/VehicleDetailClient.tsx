@@ -1732,6 +1732,7 @@ export function VehicleDetailClient({
                       {/* Event overlay nodes */}
                       {fuelAnalysis.events.map((evt: any, idx: number) => {
                         const timeMs = new Date(evt.timestamp).getTime();
+                        if (timeMs < minX || timeMs > maxX) return null;
                         const cx = getX(timeMs);
                         const cy = getY(evt.afterLevel);
                         const isRefuel = evt.type === "REFUEL";

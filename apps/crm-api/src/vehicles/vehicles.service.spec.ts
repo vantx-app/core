@@ -29,6 +29,15 @@ describe('VehiclesService', () => {
     telemetryLog: {
       findMany: jest.Mock;
     };
+    fuelEvent: {
+      findMany: jest.Mock;
+      deleteMany: jest.Mock;
+      createMany: jest.Mock;
+    };
+    trip: {
+      findMany: jest.Mock;
+      update: jest.Mock;
+    };
   };
   let cacheMock: {
     get: jest.Mock;
@@ -58,6 +67,15 @@ describe('VehiclesService', () => {
       },
       telemetryLog: {
         findMany: jest.fn(),
+      },
+      fuelEvent: {
+        findMany: jest.fn().mockResolvedValue([]),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        createMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      trip: {
+        findMany: jest.fn().mockResolvedValue([]),
+        update: jest.fn().mockResolvedValue({}),
       },
     };
 
@@ -433,6 +451,7 @@ describe('VehiclesService', () => {
       expect(result).toEqual({
         summary: {
           tankCapacity: 60,
+          isCapacityCalibrated: false,
           totalConsumed: 0,
           consumedLiters: 0,
           totalDrained: 0,
@@ -538,6 +557,7 @@ describe('VehiclesService', () => {
 
       expect(result.summary).toEqual({
         tankCapacity: 60,
+        isCapacityCalibrated: false,
         totalConsumed: 15.0,
         consumedLiters: 8.1,
         totalRefueled: 0,

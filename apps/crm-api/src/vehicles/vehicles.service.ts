@@ -1126,6 +1126,7 @@ export class VehiclesService {
       },
     });
 
+    // Prioridad 1: Suma de combustible consumido en viajes cerrados del periodo
     let consumedLiters = 0;
     for (const trip of trips) {
       if (trip.fuelConsumedLiters && trip.fuelConsumedLiters > 0) {
@@ -1133,7 +1134,22 @@ export class VehiclesService {
       }
     }
 
-    // Si no hay viajes cerrados con cálculo de combustible, usar balance de masa de tanque
+    // Prioridad 2: Contador acumulado OBD/CAN directo en registros de telemetría
+    if (consumedLiters === 0 && validLogs.length >= 2) {
+      const logsWithConsumption = validLogs.filter(
+        (l) => l.fuelConsumption !== null && l.fuelConsumption > 0,
+      );
+      if (logsWithConsumption.length >= 2) {
+        const firstConsumption = logsWithConsumption[0].fuelConsumption!;
+        const lastConsumption =
+          logsWithConsumption[logsWithConsumption.length - 1].fuelConsumption!;
+        if (lastConsumption >= firstConsumption) {
+          consumedLiters = lastConsumption - firstConsumption;
+        }
+      }
+    }
+
+    // Prioridad 3: Si no hay viajes ni contador OBD, usar balance de masa de tanque
     if (consumedLiters === 0 && validLogs.length > 0) {
       const startLiters = (startLevel / 100) * usableCapacity;
       const endLiters = (endLevel / 100) * usableCapacity;
@@ -1301,6 +1317,36 @@ export class VehiclesService {
     return this.calculateMedian(samples);
   }
 
+  private checkDrainRebound(logs: any[], startIndex: number, anchor: number): boolean {
+    const baseTime = logs[startIndex].timestamp.getTime();
+    const maxLookaheadMs = 2 * 60 * 60 * 1000;
+    for (let i = startIndex + 1; i < logs.length; i++) {
+      const elapsed = logs[i].timestamp.getTime() - baseTime;
+      if (elapsed > maxLookaheadMs) break;
+      if (logs[i].fuelLevel >= anchor - 3.0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private checkRefuelRebound(logs: any[], startIndex: number, anchor: number): boolean {
+    const baseTime = logs[startIndex].timestamp.getTime();
+    const maxLookaheadMs = 45 * 60 * 1000;
+    let dropCount = 0;
+    for (let i = startIndex + 1; i < logs.length; i++) {
+      const elapsed = logs[i].timestamp.getTime() - baseTime;
+      if (elapsed > maxLookaheadMs) break;
+      if (logs[i].fuelLevel <= anchor + 4.0) {
+        dropCount++;
+        if (dropCount >= 5) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   async recalculateVehicleFuel(vehicleId: string): Promise<{
     eventsCount: number;
     updatedTripsCount: number;
@@ -1319,9 +1365,8 @@ export class VehiclesService {
 
     const capacity = vehicle.tankCapacity ?? 60;
     const effectiveCapacity = capacity;
-    // Detección basada en ESTADO Y ASENTAMIENTO (Waiting & Settling) anti-rebote:
-    const MIN_NOISE_FLOOR_PERCENT = 2.5; // Ruido eléctrico del sensor (ADC)
-    const MIN_NOISE_FLOOR_LITERS = 1.0;   // Mínimo 1.0 L
+    const MIN_EVENT_PERCENT = 8.0;
+    const MIN_EVENT_LITERS = 4.0;
     const CONFIRM_WINDOW_MS = 8 * 60 * 1000;
 
     // 1. Limpiar eventos existentes
@@ -1370,124 +1415,134 @@ export class VehiclesService {
     const initialSample = logs.slice(0, Math.min(10, logs.length)).map((l) => l.fuelLevel!);
     let lastConfirmedAnchor = this.calculateMedian(initialSample);
     let stationaryReadings: number[] = [];
+    let stationaryStartTime: number | null = null;
 
     for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
       const rawFuel = log.fuelLevel!;
       const isMoving = (log.speed ?? 0) > 3;
-      const instantDelta = rawFuel - lastConfirmedAnchor;
 
-      // 1. REGLA DE RECARGA DIRECTA (REFUEL):
-      // Las recargas pueden ocurrir en paradas de viaje (gasolinera) o con motor apagado.
-      // Si el nivel sube >= 2.5% y >= 1.0 L relativo al ancla confirmada:
-      if (instantDelta >= MIN_NOISE_FLOOR_PERCENT) {
-        const liters = Math.round(((instantDelta / 100.0) * effectiveCapacity) * 100) / 100;
-        if (liters >= MIN_NOISE_FLOOR_LITERS) {
-          const forwardMed = this.getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
-          const isPersistent =
-            forwardMed === null || forwardMed >= lastConfirmedAnchor + instantDelta * 0.6;
-
-          if (isPersistent) {
-            const settledEndLevel = forwardMed ?? rawFuel;
-            const realDelta = settledEndLevel - lastConfirmedAnchor;
-            const realLiters = Math.round(((realDelta / 100.0) * effectiveCapacity) * 100) / 100;
-
-            const lastEvent =
-              fuelEventsToInsert.length > 0
-                ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
-                : null;
-            const timeSinceLastEventMs = lastEvent
-              ? log.timestamp.getTime() - lastEvent.timestamp.getTime()
-              : Infinity;
-
-            if (
-              lastEvent &&
-              lastEvent.type === FuelEventType.REFUEL &&
-              timeSinceLastEventMs <= 15 * 60 * 1000
-            ) {
-              const consolidatedDelta = settledEndLevel - lastEvent.startLevel;
-              const consolidatedLiters =
-                Math.round(((consolidatedDelta / 100.0) * effectiveCapacity) * 100) / 100;
-              lastEvent.endLevel = Math.round(settledEndLevel * 10) / 10;
-              lastEvent.percentageDelta = Math.round(consolidatedDelta * 10) / 10;
-              lastEvent.liters = consolidatedLiters;
-            } else {
-              fuelEventsToInsert.push({
-                id: uuidv7(),
-                vehicleId,
-                tripId: log.tripId ?? null,
-                type: FuelEventType.REFUEL,
-                liters: realLiters,
-                percentageDelta: Math.round(realDelta * 10) / 10,
-                startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
-                endLevel: Math.round(settledEndLevel * 10) / 10,
-                latitude: log.latitude,
-                longitude: log.longitude,
-                timestamp: log.timestamp,
-              });
-            }
-            lastConfirmedAnchor = settledEndLevel;
-            stationaryReadings = [];
-            continue;
-          }
-        }
-      }
-
-      // 2. CONDUCCIÓN / MOVIMIENTO:
+      // 1. VEHÍCULO EN MOVIMIENTO (CONDUCCIÓN):
       if (isMoving) {
         stationaryReadings = [];
+        stationaryStartTime = null;
         if (rawFuel < lastConfirmedAnchor) {
           lastConfirmedAnchor = 0.02 * rawFuel + 0.98 * lastConfirmedAnchor;
         }
         continue;
       }
 
-      // 3. VEHÍCULO DETENIDO / ESTACIONADO:
+      // 2. VEHÍCULO DETENIDO (PARADA O ESTACIONADO):
+      if (!stationaryStartTime) {
+        stationaryStartTime = log.timestamp.getTime();
+      }
       stationaryReadings.push(rawFuel);
       if (stationaryReadings.length > 30) {
         stationaryReadings.shift();
       }
 
-      if (stationaryReadings.length < 6) continue;
+      const elapsedStationaryMs = log.timestamp.getTime() - stationaryStartTime;
+      const isSettled =
+        stationaryReadings.length >= 5 ||
+        (elapsedStationaryMs >= 45_000 && stationaryReadings.length >= 2);
 
-      const currentMed = this.calculateMedian(stationaryReadings);
-      const delta = currentMed - lastConfirmedAnchor;
+      if (!isSettled) {
+        continue;
+      }
 
-      // Detección de DRENADO / ROBO (DRAIN):
-      if (
-        delta <= -MIN_NOISE_FLOOR_PERCENT &&
-        (!log.ignition || (log.speed ?? 0) === 0)
-      ) {
-        const liters =
-          Math.round(((Math.abs(delta) / 100.0) * effectiveCapacity) * 100) / 100;
-        if (liters >= MIN_NOISE_FLOOR_LITERS) {
+      const settledLevel = this.calculateMedian(stationaryReadings);
+      const delta = settledLevel - lastConfirmedAnchor;
+      const absDeltaPercent = Math.abs(delta);
+      const deltaLiters =
+        Math.round(((absDeltaPercent / 100.0) * effectiveCapacity) * 100) / 100;
+
+      // 3. DETECCIÓN DE RECARGA (REFUEL):
+      if (delta >= MIN_EVENT_PERCENT && deltaLiters >= MIN_EVENT_LITERS) {
+        const forwardMed = this.getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
+        const isPersistent =
+          forwardMed === null || forwardMed >= lastConfirmedAnchor + delta * 0.7;
+        const isRebound = this.checkRefuelRebound(logs, i, lastConfirmedAnchor);
+
+        if (isPersistent && !isRebound) {
+          const finalEndLevel =
+            forwardMed !== null ? Math.max(settledLevel, forwardMed) : settledLevel;
+          const realDelta = finalEndLevel - lastConfirmedAnchor;
+          const realLiters =
+            Math.round(((realDelta / 100.0) * effectiveCapacity) * 100) / 100;
+
+          const lastEvent =
+            fuelEventsToInsert.length > 0
+              ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
+              : null;
+          const timeSinceLastEventMs = lastEvent
+            ? log.timestamp.getTime() - lastEvent.timestamp.getTime()
+            : Infinity;
+
+          if (
+            lastEvent &&
+            lastEvent.type === FuelEventType.REFUEL &&
+            timeSinceLastEventMs <= 15 * 60 * 1000
+          ) {
+            const consolidatedDelta = finalEndLevel - lastEvent.startLevel;
+            lastEvent.endLevel = Math.round(finalEndLevel * 10) / 10;
+            lastEvent.percentageDelta = Math.round(consolidatedDelta * 10) / 10;
+            lastEvent.liters =
+              Math.round(((consolidatedDelta / 100.0) * effectiveCapacity) * 100) / 100;
+          } else {
+            fuelEventsToInsert.push({
+              id: uuidv7(),
+              vehicleId,
+              tripId: log.tripId ?? null,
+              type: FuelEventType.REFUEL,
+              liters: realLiters,
+              percentageDelta: Math.round(realDelta * 10) / 10,
+              startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
+              endLevel: Math.round(finalEndLevel * 10) / 10,
+              latitude: log.latitude,
+              longitude: log.longitude,
+              timestamp: log.timestamp,
+            });
+          }
+          lastConfirmedAnchor = finalEndLevel;
+          stationaryReadings = [finalEndLevel];
+          continue;
+        }
+      }
+
+      // 4. DETECCIÓN DE DRENADO / ROBO (DRAIN):
+      else if (delta <= -MIN_EVENT_PERCENT && deltaLiters >= MIN_EVENT_LITERS) {
+        if (!log.ignition) {
           const forwardMed = this.getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
           const isPersistent =
             forwardMed === null ||
-            forwardMed <= lastConfirmedAnchor - Math.abs(delta) * 0.6;
+            forwardMed <= lastConfirmedAnchor - absDeltaPercent * 0.7;
+          const isRebound = this.checkDrainRebound(logs, i, lastConfirmedAnchor);
 
-          if (isPersistent) {
+          if (isPersistent && !isRebound) {
             fuelEventsToInsert.push({
               id: uuidv7(),
               vehicleId,
               tripId: log.tripId ?? null,
               type: FuelEventType.DRAIN,
-              liters,
+              liters: deltaLiters,
               percentageDelta: Math.round(delta * 10) / 10,
               startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
-              endLevel: Math.round(currentMed * 10) / 10,
+              endLevel: Math.round(settledLevel * 10) / 10,
               latitude: log.latitude,
               longitude: log.longitude,
               timestamp: log.timestamp,
             });
-            lastConfirmedAnchor = currentMed;
-            stationaryReadings = [currentMed];
+
+            lastConfirmedAnchor = settledLevel;
+            stationaryReadings = [settledLevel];
+            continue;
           }
         }
       } else {
-        if (Math.abs(delta) < MIN_NOISE_FLOOR_PERCENT || log.ignition) {
-          if (rawFuel < lastConfirmedAnchor) {
-            lastConfirmedAnchor = 0.05 * currentMed + 0.95 * lastConfirmedAnchor;
+        // 5. RALENTÍ Y MICRO-VARIACIONES:
+        if (absDeltaPercent < MIN_EVENT_PERCENT) {
+          if (log.ignition && settledLevel < lastConfirmedAnchor) {
+            lastConfirmedAnchor = 0.05 * settledLevel + 0.95 * lastConfirmedAnchor;
           }
         }
       }

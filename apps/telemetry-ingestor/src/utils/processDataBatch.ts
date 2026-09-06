@@ -633,11 +633,11 @@ async function processDataBatchInternal(records: any[], imei: string) {
               calibratedAnchor -
               (virtualState.lastValidAnchorPercent ?? calibratedAnchor);
 
-            if (anchorDiff >= 2.5) {
+            if (anchorDiff >= 8.0) {
               const liters =
                 Math.round(((anchorDiff / 100.0) * vehicleUsableCapacity) * 100) /
                 100;
-              if (liters >= 1.0) {
+              if (liters >= 4.0) {
                 fuelEventsToCreate.push({
                   id: uuidv7(),
                   vehicleId: vehicle.id,
@@ -664,7 +664,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
                 }
               }
             } else if (
-              anchorDiff <= -2.5 &&
+              anchorDiff <= -8.0 &&
               !liveTripState.activeTrip &&
               !parsed.trueIgnition
             ) {
@@ -673,7 +673,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
                   ((Math.abs(anchorDiff) / 100.0) * vehicleUsableCapacity) *
                     100,
                 ) / 100;
-              if (liters >= 1.0) {
+              if (liters >= 4.0) {
                 fuelEventsToCreate.push({
                   id: uuidv7(),
                   vehicleId: vehicle.id,
@@ -725,10 +725,10 @@ async function processDataBatchInternal(records: any[], imei: string) {
           const isRebound = Math.abs(delta) < 2.0;
 
           if (!isRebound) {
-            if (virtualState.session.type === "REFUEL" && delta >= 2.5) {
+            if (virtualState.session.type === "REFUEL" && delta >= 8.0) {
               const liters =
                 Math.round(((delta / 100.0) * vehicleUsableCapacity) * 100) / 100;
-              if (liters >= 1.0) {
+              if (liters >= 4.0) {
                 fuelEventsToCreate.push({
                   id: uuidv7(),
                   vehicleId: vehicle.id,
@@ -751,7 +751,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
               }
             } else if (
               virtualState.session.type === "DRAIN" &&
-              delta <= -2.5 &&
+              delta <= -8.0 &&
               !liveTripState.activeTrip &&
               !parsed.trueIgnition
             ) {
@@ -759,7 +759,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
                 Math.round(
                   ((Math.abs(delta) / 100.0) * vehicleUsableCapacity) * 100,
                 ) / 100;
-              if (liters >= 1.0) {
+              if (liters >= 4.0) {
                 fuelEventsToCreate.push({
                   id: uuidv7(),
                   vehicleId: vehicle.id,
@@ -843,7 +843,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
           const parkedDelta = stableMedian - currentAnchor;
           const isSettled = virtualState.segmentReadings.length >= 6;
 
-          if (isSettled && parkedDelta >= 2.5) {
+          if (isSettled && parkedDelta >= 8.0) {
             virtualState.session = {
               type: "REFUEL",
               startAnchor: currentAnchor,
@@ -852,7 +852,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
             };
           } else if (
             isSettled &&
-            parkedDelta <= -2.5 &&
+            parkedDelta <= -8.0 &&
             !liveTripState.activeTrip &&
             !parsed.trueIgnition
           ) {
@@ -877,8 +877,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
 
           // Rebound check: if reading moves back towards startAnchor, cancel candidate
           if (
-            (virtualState.session.type === "DRAIN" && delta >= -1.5) ||
-            (virtualState.session.type === "REFUEL" && delta <= 1.5)
+            (virtualState.session.type === "DRAIN" && delta >= -3.0) ||
+            (virtualState.session.type === "REFUEL" && delta <= 3.0)
           ) {
             virtualState.session = {
               type: "NONE",
@@ -899,11 +899,11 @@ async function processDataBatchInternal(records: any[], imei: string) {
             if (virtualState.session.stableCounter >= 4) {
               const sessionType = virtualState.session.type;
 
-              if (sessionType === "REFUEL" && delta >= 2.5) {
+              if (sessionType === "REFUEL" && delta >= 8.0) {
                 const liters =
                   Math.round(((delta / 100.0) * vehicleUsableCapacity) * 100) /
                   100;
-                if (liters >= 1.0) {
+                if (liters >= 4.0) {
                   fuelEventsToCreate.push({
                     id: uuidv7(),
                     vehicleId: vehicle.id,
@@ -927,7 +927,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
                 }
               } else if (
                 sessionType === "DRAIN" &&
-                delta <= -2.5 &&
+                delta <= -8.0 &&
                 !liveTripState.activeTrip &&
                 !parsed.trueIgnition
               ) {
@@ -935,7 +935,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
                   Math.round(
                     ((Math.abs(delta) / 100.0) * vehicleUsableCapacity) * 100,
                   ) / 100;
-                if (liters >= 1.0) {
+                if (liters >= 4.0) {
                   fuelEventsToCreate.push({
                     id: uuidv7(),
                     vehicleId: vehicle.id,
