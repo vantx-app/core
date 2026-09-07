@@ -684,38 +684,42 @@ async function processVehicleFuelHistory(vehicleId: string) {
   });
 
   console.log(`[INFO] Recalculando consumo en ${trips.length} viajes...`);
-  let updatedTrips = 0;
+
+  // Agrupar los fuelLevel de los logs en memoria por tripId (O(N) en RAM, evitando N+1 consultas a la BD)
+  const tripFuelLogsMap = new Map<string, number[]>();
+  for (const l of logs) {
+    if (l.tripId && l.fuelLevel !== null && l.fuelLevel !== undefined) {
+      let arr = tripFuelLogsMap.get(l.tripId);
+      if (!arr) {
+        arr = [];
+        tripFuelLogsMap.set(l.tripId, arr);
+      }
+      arr.push(l.fuelLevel);
+    }
+  }
+
+  // Mapear eventos de recarga por tripId en memoria
+  const tripRefuelMap = new Map<string, number>();
+  for (const e of fuelEventsToInsert) {
+    if (e.tripId && e.type === FuelEventType.REFUEL) {
+      tripRefuelMap.set(e.tripId, (tripRefuelMap.get(e.tripId) ?? 0) + e.liters);
+    }
+  }
+
+  const updatePromises: any[] = [];
+  const BATCH_SIZE = 50;
 
   for (const trip of trips) {
-    const tripLogs = await prisma.telemetryLog.findMany({
-      where: { tripId: trip.id, fuelLevel: { not: null } },
-      orderBy: { timestamp: 'asc' },
-      select: { fuelLevel: true, timestamp: true },
-    });
-
-    if (tripLogs.length === 0) continue;
-
-    console.log(`[INFO] Recalculando consumo en trip ${trip.id}`);
+    const fuelLevels = tripFuelLogsMap.get(trip.id);
+    if (!fuelLevels || fuelLevels.length === 0) continue;
 
     // Mediana inicial y final sobre muestras para eliminar ruido puntual de boya en arranque/parada
-    const startSample = tripLogs
-      .slice(0, Math.min(10, tripLogs.length))
-      .map((l) => l.fuelLevel!);
-    const endSample = tripLogs
-      .slice(-Math.min(10, tripLogs.length))
-      .map((l) => l.fuelLevel!);
+    const startSample = fuelLevels.slice(0, Math.min(10, fuelLevels.length));
+    const endSample = fuelLevels.slice(-Math.min(10, fuelLevels.length));
     const startFuel = calculateMedian(startSample);
     const endFuel = calculateMedian(endSample);
 
-    // Buscar eventos de recarga dentro de este viaje
-    const tripRefuelEvents = fuelEventsToInsert.filter(
-      (e) => e.tripId === trip.id && e.type === FuelEventType.REFUEL,
-    );
-    const midTripRefuels = tripRefuelEvents.reduce(
-      (sum, e) => sum + e.liters,
-      0,
-    );
-
+    const midTripRefuels = tripRefuelMap.get(trip.id) ?? 0;
     const netLiters = ((startFuel - endFuel) / 100.0) * effectiveCapacity + midTripRefuels;
     const consumedLiters = Math.max(0, Math.round(netLiters * 100) / 100);
     const efficiency =
@@ -723,19 +727,26 @@ async function processVehicleFuelHistory(vehicleId: string) {
         ? Math.round((trip.distanceKm / consumedLiters) * 100) / 100
         : null;
 
-    await prisma.trip.update({
-      where: { id: trip.id },
-      data: {
-        startFuelLevel: Math.round(startFuel * 100) / 100,
-        endFuelLevel: Math.round(endFuel * 100) / 100,
-        fuelConsumedLiters: consumedLiters,
-        fuelEfficiencyKmL: efficiency,
-      },
-    });
-    updatedTrips++;
+    updatePromises.push(
+      prisma.trip.update({
+        where: { id: trip.id },
+        data: {
+          startFuelLevel: Math.round(startFuel * 100) / 100,
+          endFuelLevel: Math.round(endFuel * 100) / 100,
+          fuelConsumedLiters: consumedLiters,
+          fuelEfficiencyKmL: efficiency,
+        },
+      }),
+    );
   }
 
-  console.log(`[SUCCESS] ${updatedTrips} viajes actualizados correctamente.`);
+  // Ejecutar actualizaciones en lotes paralelos de 50 para máxima velocidad sin saturar el pool de conexiones
+  for (let i = 0; i < updatePromises.length; i += BATCH_SIZE) {
+    const chunk = updatePromises.slice(i, i + BATCH_SIZE);
+    await Promise.all(chunk);
+  }
+
+  console.log(`[SUCCESS] ${updatePromises.length} viajes actualizados correctamente.`);
 
   // 6. Actualizar VehicleLiveState con el nivel final verificado
   const lastLog = logs[logs.length - 1];

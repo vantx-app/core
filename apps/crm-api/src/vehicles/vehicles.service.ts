@@ -1863,40 +1863,46 @@ export class VehiclesService {
       });
     }
 
-    // 3. Recalcular viajes
+    // 3. Recalcular viajes en memoria y en lotes
     const trips = await this.prisma.trip.findMany({
       where: { vehicleId },
       orderBy: { startTime: 'asc' },
       select: { id: true, distanceKm: true },
     });
 
-    let updatedTripsCount = 0;
+    // Agrupar los fuelLevel de los logs en memoria por tripId (O(N) en RAM, evitando N+1 consultas a la BD)
+    const tripFuelLogsMap = new Map<string, number[]>();
+    for (const l of logs) {
+      if (l.tripId && l.fuelLevel !== null && l.fuelLevel !== undefined) {
+        let arr = tripFuelLogsMap.get(l.tripId);
+        if (!arr) {
+          arr = [];
+          tripFuelLogsMap.set(l.tripId, arr);
+        }
+        arr.push(l.fuelLevel);
+      }
+    }
+
+    const tripRefuelMap = new Map<string, number>();
+    for (const e of fuelEventsToInsert) {
+      if (e.tripId && e.type === FuelEventType.REFUEL) {
+        tripRefuelMap.set(e.tripId, (tripRefuelMap.get(e.tripId) ?? 0) + e.liters);
+      }
+    }
+
+    const updatePromises: any[] = [];
+    const BATCH_SIZE = 50;
+
     for (const trip of trips) {
-      const tripLogs = await this.prisma.telemetryLog.findMany({
-        where: { tripId: trip.id, fuelLevel: { not: null } },
-        orderBy: { timestamp: 'asc' },
-        select: { fuelLevel: true },
-      });
+      const fuelLevels = tripFuelLogsMap.get(trip.id);
+      if (!fuelLevels || fuelLevels.length === 0) continue;
 
-      if (tripLogs.length === 0) continue;
-
-      const startSample = tripLogs
-        .slice(0, Math.min(10, tripLogs.length))
-        .map((l) => l.fuelLevel!);
-      const endSample = tripLogs
-        .slice(-Math.min(10, tripLogs.length))
-        .map((l) => l.fuelLevel!);
+      const startSample = fuelLevels.slice(0, Math.min(10, fuelLevels.length));
+      const endSample = fuelLevels.slice(-Math.min(10, fuelLevels.length));
       const startFuel = this.calculateMedian(startSample);
       const endFuel = this.calculateMedian(endSample);
 
-      const tripRefuelEvents = fuelEventsToInsert.filter(
-        (e) => e.tripId === trip.id && e.type === FuelEventType.REFUEL,
-      );
-      const midTripRefuels = tripRefuelEvents.reduce(
-        (sum, e) => sum + e.liters,
-        0,
-      );
-
+      const midTripRefuels = tripRefuelMap.get(trip.id) ?? 0;
       const netLiters = ((startFuel - endFuel) / 100.0) * effectiveCapacity + midTripRefuels;
       const consumedLiters = Math.max(0, Math.round(netLiters * 100) / 100);
       const efficiency =
@@ -1904,17 +1910,25 @@ export class VehiclesService {
           ? Math.round((trip.distanceKm / consumedLiters) * 100) / 100
           : null;
 
-      await this.prisma.trip.update({
-        where: { id: trip.id },
-        data: {
-          startFuelLevel: Math.round(startFuel * 100) / 100,
-          endFuelLevel: Math.round(endFuel * 100) / 100,
-          fuelConsumedLiters: consumedLiters,
-          fuelEfficiencyKmL: efficiency,
-        },
-      });
-      updatedTripsCount++;
+      updatePromises.push(
+        this.prisma.trip.update({
+          where: { id: trip.id },
+          data: {
+            startFuelLevel: Math.round(startFuel * 100) / 100,
+            endFuelLevel: Math.round(endFuel * 100) / 100,
+            fuelConsumedLiters: consumedLiters,
+            fuelEfficiencyKmL: efficiency,
+          },
+        }),
+      );
     }
+
+    for (let i = 0; i < updatePromises.length; i += BATCH_SIZE) {
+      const chunk = updatePromises.slice(i, i + BATCH_SIZE);
+      await Promise.all(chunk);
+    }
+
+    const updatedTripsCount = updatePromises.length;
 
     // 4. Actualizar liveState
     const lastLog = logs[logs.length - 1];
