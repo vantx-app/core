@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -125,6 +125,7 @@ export function VehicleDetailClient({
   const [fuelLoading, setFuelLoading] = useState<boolean>(false);
   const [fuelError, setFuelError] = useState<string | null>(null);
   const [fuelEventsPage, setFuelEventsPage] = useState<number>(1);
+  const lastLoadedFuelDaysRef = useRef<number | null>(null);
 
   // Hover interactivo para la gráfica de combustible
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
@@ -190,7 +191,10 @@ export function VehicleDetailClient({
 
     let active = true;
     const fetchFuel = async () => {
-      setFuelLoading(true);
+      // Solo mostrar spinner si no hay datos previos o si cambió el rango de días seleccionado
+      if (!fuelAnalysis || lastLoadedFuelDaysRef.current !== fuelDays) {
+        setFuelLoading(true);
+      }
       setFuelError(null);
       setFuelEventsPage(1);
       try {
@@ -199,6 +203,7 @@ export function VehicleDetailClient({
         );
         if (active) {
           setFuelAnalysis(res.data);
+          lastLoadedFuelDaysRef.current = fuelDays;
         }
       } catch (err: any) {
         if (active) {

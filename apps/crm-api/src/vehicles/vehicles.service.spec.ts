@@ -585,6 +585,32 @@ describe('VehiclesService', () => {
       expect(result.events).toHaveLength(0);
       expect(result.history[1].fuelLevel).toEqual(90.0);
     });
+
+    it('debe retornar datos desde caché si existen y guardar en caché en cache miss', async () => {
+      const mockCached = {
+        summary: { tankCapacity: 60 },
+        events: [],
+        history: [{ timestamp: new Date(), fuelLevel: 80 }],
+      };
+      cacheMock.get.mockReturnValueOnce(mockCached);
+
+      const cachedResult = await service.getFuelAnalysis('vehicle-cache-1', 7);
+      expect(cachedResult).toBe(mockCached);
+      expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
+
+      // Cache miss
+      cacheMock.get.mockReturnValueOnce(null);
+      prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
+      prismaMock.$queryRaw.mockResolvedValue([]);
+
+      const liveResult = await service.getFuelAnalysis('vehicle-cache-1', 7);
+      expect(liveResult.summary.tankCapacity).toBe(60);
+      expect(cacheMock.set).toHaveBeenCalledWith(
+        'vehicles:fuel-analysis:vehicle-cache-1:7',
+        expect.any(Object),
+        expect.any(Number),
+      );
+    });
   });
 
   describe('recalculateVehicleFuel', () => {

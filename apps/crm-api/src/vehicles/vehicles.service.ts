@@ -1005,14 +1005,81 @@ export class VehiclesService {
   async getFuelAnalysis(vehicleId: string, days = 7) {
     // Limitar el análisis a un rango razonable para proteger la base de datos
     const safeDays = Math.min(30, Math.max(1, days));
+    const cacheKey = `vehicles:fuel-analysis:${vehicleId}:${safeDays}`;
+    const cached = this.cacheService.get<any>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - safeDays);
 
-    // Obtener información del vehículo (capacidad de tanque y estado de calibración)
-    const vehicle = await this.prisma.vehicle.findUnique({
-      where: { id: vehicleId },
-      select: { tankCapacity: true, isCapacityCalibrated: true },
-    });
+    // Tamaño de bucket para generar ~300 puntos óptimos en safeDays
+    const bucketSeconds = Math.max(60, Math.floor((safeDays * 24 * 3600) / 300));
+
+    // Ejecutar todas las consultas independientes en paralelo para minimizar la latencia de BD
+    const [vehicle, bucketedRows, fuelEvents, trips, latestLog] = await Promise.all([
+      this.prisma.vehicle.findUnique({
+        where: { id: vehicleId },
+        select: { tankCapacity: true, isCapacityCalibrated: true },
+      }),
+      this.prisma.$queryRaw<
+        Array<{
+          bucket: Date;
+          fuelLevel: number | null;
+          fuelConsumption: number | null;
+          fuelRate: number | null;
+          ignition: boolean | null;
+        }>
+      >`
+        SELECT
+          to_timestamp(floor(extract(epoch from "timestamp") / ${bucketSeconds}) * ${bucketSeconds}) AS "bucket",
+          PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY "fuelLevel") AS "fuelLevel",
+          MAX("fuelConsumption") AS "fuelConsumption",
+          AVG("fuelRate") AS "fuelRate",
+          BOOL_OR("ignition") AS "ignition"
+        FROM "TelemetryLog"
+        WHERE "vehicleId" = ${vehicleId}::uuid
+          AND "timestamp" >= ${startDate}
+          AND "fuelLevel" IS NOT NULL
+          AND "fuelLevel" >= 0
+          AND "fuelLevel" <= 100
+        GROUP BY 1
+        ORDER BY 1 ASC;
+      `,
+      this.prisma.fuelEvent.findMany({
+        where: {
+          vehicleId,
+          timestamp: { gte: startDate },
+        },
+        orderBy: { timestamp: 'desc' },
+        select: {
+          id: true,
+          type: true,
+          liters: true,
+          percentageDelta: true,
+          startLevel: true,
+          endLevel: true,
+          latitude: true,
+          longitude: true,
+          timestamp: true,
+        },
+      }),
+      this.prisma.trip.findMany({
+        where: {
+          vehicleId,
+          startTime: { gte: startDate },
+        },
+        select: {
+          fuelConsumedLiters: true,
+        },
+      }),
+      this.prisma.telemetryLog.findFirst({
+        where: { vehicleId, fuelLevel: { not: null } },
+        orderBy: { timestamp: 'desc' },
+        select: { fuelLevel: true },
+      }),
+    ]);
 
     const tankCapacity = vehicle?.tankCapacity ?? 60;
     const isCapacityCalibrated = vehicle?.isCapacityCalibrated ?? false;
@@ -1020,37 +1087,8 @@ export class VehiclesService {
     const usableCapacity = tankCapacity * 0.9;
     const reserveLiters = tankCapacity * 0.05;
 
-    // Tamaño de bucket para generar ~300 puntos óptimos en safeDays
-    const bucketSeconds = Math.max(60, Math.floor((safeDays * 24 * 3600) / 300));
-
-    // Agrupación y filtrado de mediana directo en PostgreSQL (PERCENTILE_CONT) para rendimiento sub-50ms
-    const bucketedRows = await this.prisma.$queryRaw<
-      Array<{
-        bucket: Date;
-        fuelLevel: number | null;
-        fuelConsumption: number | null;
-        fuelRate: number | null;
-        ignition: boolean | null;
-      }>
-    >`
-      SELECT
-        to_timestamp(floor(extract(epoch from "timestamp") / ${bucketSeconds}) * ${bucketSeconds}) AS "bucket",
-        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY "fuelLevel") AS "fuelLevel",
-        MAX("fuelConsumption") AS "fuelConsumption",
-        AVG("fuelRate") AS "fuelRate",
-        BOOL_OR("ignition") AS "ignition"
-      FROM "TelemetryLog"
-      WHERE "vehicleId" = ${vehicleId}::uuid
-        AND "timestamp" >= ${startDate}
-        AND "fuelLevel" IS NOT NULL
-        AND "fuelLevel" >= 0
-        AND "fuelLevel" <= 100
-      GROUP BY 1
-      ORDER BY 1 ASC;
-    `;
-
     if (!bucketedRows || bucketedRows.length === 0) {
-      return {
+      const emptyResult = {
         summary: {
           tankCapacity,
           isCapacityCalibrated,
@@ -1064,32 +1102,14 @@ export class VehiclesService {
         events: [],
         history: [],
       };
+      this.cacheService.set(cacheKey, emptyResult, 30 * 1000);
+      return emptyResult;
     }
 
     const firstBucket = bucketedRows[0];
     const lastBucket = bucketedRows[bucketedRows.length - 1];
     const startLevel = firstBucket.fuelLevel ?? 0;
     const endLevel = lastBucket.fuelLevel ?? 0;
-
-    // Consultar eventos de combustible (cargas y descargas) en la ventana de tiempo
-    const fuelEvents = await this.prisma.fuelEvent.findMany({
-      where: {
-        vehicleId,
-        timestamp: { gte: startDate },
-      },
-      orderBy: { timestamp: 'desc' },
-      select: {
-        id: true,
-        type: true,
-        liters: true,
-        percentageDelta: true,
-        startLevel: true,
-        endLevel: true,
-        latitude: true,
-        longitude: true,
-        timestamp: true,
-      },
-    });
 
     let totalRefueled = 0;
     let totalDrained = 0;
@@ -1102,17 +1122,6 @@ export class VehiclesService {
     }
     totalRefueled = Math.round(totalRefueled * 10) / 10;
     totalDrained = Math.round(totalDrained * 10) / 10;
-
-    // Calcular consumo total sumando el combustible consumido en los viajes del periodo
-    const trips = await this.prisma.trip.findMany({
-      where: {
-        vehicleId,
-        startTime: { gte: startDate },
-      },
-      select: {
-        fuelConsumedLiters: true,
-      },
-    });
 
     // Prioridad 1: Suma de combustible consumido en viajes cerrados del periodo
     let consumedLiters = 0;
@@ -1155,13 +1164,6 @@ export class VehiclesService {
       delta: ev.percentageDelta,
     }));
 
-    // Obtener la lectura más reciente para el nivel actual
-    const latestLog = await this.prisma.telemetryLog.findFirst({
-      where: { vehicleId, fuelLevel: { not: null } },
-      orderBy: { timestamp: 'desc' },
-      select: { fuelLevel: true },
-    });
-
     const currentLevel = latestLog?.fuelLevel ?? lastBucket.fuelLevel;
     const currentLiters =
       currentLevel !== null
@@ -1186,7 +1188,7 @@ export class VehiclesService {
       };
     });
 
-    return {
+    const result = {
       summary: {
         tankCapacity,
         isCapacityCalibrated,
@@ -1201,6 +1203,11 @@ export class VehiclesService {
       events,
       history,
     };
+
+    // Almacenar en caché en memoria por 60 segundos
+    this.cacheService.set(cacheKey, result, 60 * 1000);
+
+    return result;
   }
 
   async getPublicTrackingRoute(
@@ -1843,6 +1850,9 @@ export class VehiclesService {
         lastUpdate: new Date(),
       },
     });
+
+    // Invalidar caché de análisis de combustible para este vehículo
+    this.cacheService.delByPattern(`vehicles:fuel-analysis:${vehicleId}`);
 
     return { eventsCount: fuelEventsToInsert.length, updatedTripsCount };
   }
