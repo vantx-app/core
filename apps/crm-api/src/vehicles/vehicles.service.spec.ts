@@ -695,6 +695,134 @@ describe('VehiclesService', () => {
         ],
       });
     });
+
+    it('debe detectar una recarga con motor encendido y salida en marcha inmediata, retro-anclando a la bomba', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({
+        id: 'vehicle-pump-1',
+        tankCapacity: 41,
+      });
+
+      const t0 = new Date('2026-09-04T22:07:00Z').getTime();
+      const pumpLat = 9.066126;
+      const pumpLng = -79.516831;
+      const pumpTime = new Date(t0 + 170 * 1000); // 22:09:50Z
+
+      const logs: any[] = [];
+      // 0. Llegando a la estación a 36% de combustible
+      for (let i = 0; i < 10; i++) {
+        logs.push({
+          id: `log-arr-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(t0 - (10 - i) * 20 * 1000),
+          fuelLevel: 36.0,
+          speed: 30,
+          gpsSpeed: 30,
+          ignition: true,
+          latitude: pumpLat,
+          longitude: pumpLng,
+        });
+      }
+      // 1. Detenido en la bomba antes de cargar (36%)
+      logs.push({
+        id: 'log-p1',
+        tripId: 'trip-1',
+        timestamp: new Date(t0),
+        fuelLevel: 36.0,
+        speed: 0,
+        gpsSpeed: 0,
+        ignition: true,
+        latitude: pumpLat,
+        longitude: pumpLng,
+      });
+      logs.push({
+        id: 'log-p2',
+        tripId: 'trip-1',
+        timestamp: new Date(t0 + 40 * 1000),
+        fuelLevel: 36.0,
+        speed: 0,
+        gpsSpeed: 0,
+        ignition: true,
+        latitude: pumpLat,
+        longitude: pumpLng,
+      });
+      // 2. Cargando en la bomba (39% -> 44% -> 92% -> 100%)
+      logs.push({
+        id: 'log-p3',
+        tripId: 'trip-1',
+        timestamp: new Date(t0 + 80 * 1000),
+        fuelLevel: 39.0,
+        speed: 0,
+        gpsSpeed: 0,
+        ignition: true,
+        latitude: pumpLat,
+        longitude: pumpLng,
+      });
+      logs.push({
+        id: 'log-p4',
+        tripId: 'trip-1',
+        timestamp: new Date(t0 + 90 * 1000),
+        fuelLevel: 44.0,
+        speed: 0,
+        gpsSpeed: 0,
+        ignition: true,
+        latitude: pumpLat,
+        longitude: pumpLng,
+      });
+      logs.push({
+        id: 'log-p5',
+        tripId: 'trip-1',
+        timestamp: new Date(t0 + 140 * 1000),
+        fuelLevel: 92.0,
+        speed: 0,
+        gpsSpeed: 0,
+        ignition: true,
+        latitude: pumpLat,
+        longitude: pumpLng,
+      });
+      logs.push({
+        id: 'log-p6',
+        tripId: 'trip-1',
+        timestamp: pumpTime,
+        fuelLevel: 100.0,
+        speed: 0,
+        gpsSpeed: 0,
+        ignition: true,
+        latitude: pumpLat,
+        longitude: pumpLng,
+      });
+      // 3. Salida inmediata en marcha (speed > 3, carretera a varios km)
+      for (let i = 1; i <= 20; i++) {
+        logs.push({
+          id: `log-moving-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(pumpTime.getTime() + i * 20 * 1000),
+          fuelLevel: 100.0,
+          speed: 40 + i,
+          gpsSpeed: 40 + i,
+          ignition: true,
+          latitude: pumpLat + i * 0.005, // Coordenada en carretera alejada
+          longitude: pumpLng + i * 0.005,
+        });
+      }
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(logs);
+
+      const result = await service.recalculateVehicleFuel('vehicle-pump-1');
+
+      expect(result.eventsCount).toBe(1);
+      expect(prismaMock.fuelEvent.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            type: 'REFUEL',
+            startLevel: 36,
+            endLevel: 100,
+            latitude: pumpLat,
+            longitude: pumpLng,
+            timestamp: pumpTime,
+          }),
+        ],
+      });
+    });
   });
 });
 

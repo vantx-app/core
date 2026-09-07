@@ -110,6 +110,138 @@ function checkRefuelRebound(logs: any[], startIndex: number, anchor: number): bo
   return false;
 }
 
+// Retro-localización del evento de combustible:
+// Cuando un evento de recarga o drenado se confirma (ya sea en marcha o al detenerse más tarde),
+// escanea hacia atrás la curva de combustible para determinar con precisión física el momento y lugar
+// exacto en el que el nivel comenzó a subir o caer en la bomba / punto de robo.
+function findFuelEventSourceLog(
+  logs: any[],
+  currentIndex: number,
+  type: FuelEventType,
+  startAnchor: number,
+  targetLevel: number,
+): {
+  timestamp: Date;
+  latitude: number | null;
+  longitude: number | null;
+  tripId: string | null;
+} {
+  const currentLog = logs[currentIndex];
+
+  if (type === FuelEventType.REFUEL) {
+    let surgeStartIndex = currentIndex;
+    let targetReachedIndex = currentIndex;
+
+    for (let j = currentIndex; j >= 0; j--) {
+      const l = logs[j];
+      if (l.fuelLevel === null || l.fuelLevel === undefined) continue;
+
+      if (l.fuelLevel >= targetLevel - 3.0) {
+        targetReachedIndex = j;
+      }
+
+      if (l.fuelLevel <= startAnchor + 3.0) {
+        surgeStartIndex = Math.min(currentIndex, j + 1);
+        break;
+      }
+    }
+
+    let stationaryLog: any = null;
+    for (let k = targetReachedIndex; k >= surgeStartIndex; k--) {
+      const l = logs[k];
+      const isStopped = (l.speed ?? 0) <= 3 && (l.gpsSpeed ?? 0) <= 3;
+      if (
+        isStopped &&
+        l.latitude !== null &&
+        l.latitude !== undefined &&
+        l.latitude !== 0 &&
+        Math.abs(l.latitude) > 0.0001
+      ) {
+        stationaryLog = l;
+        break;
+      }
+    }
+
+    if (!stationaryLog) {
+      for (let k = surgeStartIndex; k >= Math.max(0, surgeStartIndex - 15); k--) {
+        const l = logs[k];
+        const isStopped = (l.speed ?? 0) <= 3 && (l.gpsSpeed ?? 0) <= 3;
+        if (
+          isStopped &&
+          l.latitude !== null &&
+          l.latitude !== undefined &&
+          l.latitude !== 0 &&
+          Math.abs(l.latitude) > 0.0001
+        ) {
+          stationaryLog = l;
+          break;
+        }
+      }
+    }
+
+    const chosenCoordLog =
+      stationaryLog ??
+      logs[targetReachedIndex] ??
+      logs[surgeStartIndex] ??
+      currentLog;
+    const eventTimeLog = logs[targetReachedIndex] ?? chosenCoordLog;
+
+    return {
+      timestamp: eventTimeLog.timestamp,
+      latitude: chosenCoordLog.latitude ?? currentLog.latitude,
+      longitude: chosenCoordLog.longitude ?? currentLog.longitude,
+      tripId: chosenCoordLog.tripId ?? currentLog.tripId ?? null,
+    };
+  } else {
+    let drainStartIndex = currentIndex;
+    let targetReachedIndex = currentIndex;
+
+    for (let j = currentIndex; j >= 0; j--) {
+      const l = logs[j];
+      if (l.fuelLevel === null || l.fuelLevel === undefined) continue;
+
+      if (l.fuelLevel <= targetLevel + 3.0) {
+        targetReachedIndex = j;
+      }
+
+      if (l.fuelLevel >= startAnchor - 3.0) {
+        drainStartIndex = Math.min(currentIndex, j + 1);
+        break;
+      }
+    }
+
+    let stationaryLog: any = null;
+    for (let k = targetReachedIndex; k >= drainStartIndex; k--) {
+      const l = logs[k];
+      const isStopped = (l.speed ?? 0) <= 3 && (l.gpsSpeed ?? 0) <= 3;
+      if (
+        isStopped &&
+        l.latitude !== null &&
+        l.latitude !== undefined &&
+        l.latitude !== 0 &&
+        Math.abs(l.latitude) > 0.0001
+      ) {
+        stationaryLog = l;
+        break;
+      }
+    }
+
+    const chosenCoordLog =
+      stationaryLog ??
+      logs[targetReachedIndex] ??
+      logs[drainStartIndex] ??
+      currentLog;
+    const eventTimeLog = logs[targetReachedIndex] ?? chosenCoordLog;
+
+    return {
+      timestamp: eventTimeLog.timestamp,
+      latitude: chosenCoordLog.latitude ?? currentLog.latitude,
+      longitude: chosenCoordLog.longitude ?? currentLog.longitude,
+      tripId: chosenCoordLog.tripId ?? currentLog.tripId ?? null,
+    };
+  }
+}
+
 // Resuelve la ubicación física real de la gasolinera:
 // Bajo marquesinas o techos metálicos de gasolineras, la señal GPS suele perderse o mantener
 // la posición previa a ingresar (stale fix).
@@ -288,10 +420,79 @@ async function processVehicleFuelHistory(vehicleId: string) {
     const isMoving = (log.speed ?? 0) > 3 || (log.gpsSpeed ?? 0) > 3;
 
     // 1. VEHÍCULO EN MOVIMIENTO (CONDUCCIÓN):
-    // Ningún evento de recarga ni robo puede ocurrir físicamente en marcha.
     if (isMoving) {
       stationaryReadings = [];
       stationaryStartTime = null;
+
+      const movingDelta = rawFuel - lastConfirmedAnchor;
+      const movingDeltaLiters =
+        Math.round(((movingDelta / 100.0) * effectiveCapacity) * 100) / 100;
+
+      // Detección de recarga con salida en marcha (ej. tanque lleno y salida inmediata sin estabilización previa)
+      if (
+        movingDelta >= MIN_EVENT_PERCENT &&
+        movingDeltaLiters >= MIN_EVENT_LITERS
+      ) {
+        const forwardMed = getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
+        const isPersistent =
+          forwardMed === null ||
+          forwardMed >= lastConfirmedAnchor + movingDelta * 0.7;
+        const isRebound = checkRefuelRebound(logs, i, lastConfirmedAnchor);
+
+        if (isPersistent && !isRebound) {
+          const finalEndLevel =
+            forwardMed !== null ? Math.max(rawFuel, forwardMed) : rawFuel;
+          const realDelta = finalEndLevel - lastConfirmedAnchor;
+          const realLiters =
+            Math.round(((realDelta / 100.0) * effectiveCapacity) * 100) / 100;
+
+          const sourceLog = findFuelEventSourceLog(
+            logs,
+            i,
+            FuelEventType.REFUEL,
+            lastConfirmedAnchor,
+            finalEndLevel,
+          );
+
+          const lastEvent =
+            fuelEventsToInsert.length > 0
+              ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
+              : null;
+          const timeSinceLastEventMs = lastEvent
+            ? sourceLog.timestamp.getTime() - lastEvent.timestamp.getTime()
+            : Infinity;
+
+          if (
+            lastEvent &&
+            lastEvent.type === FuelEventType.REFUEL &&
+            timeSinceLastEventMs <= 15 * 60 * 1000
+          ) {
+            const consolidatedDelta = finalEndLevel - lastEvent.startLevel;
+            lastEvent.endLevel = Math.round(finalEndLevel * 10) / 10;
+            lastEvent.percentageDelta = Math.round(consolidatedDelta * 10) / 10;
+            lastEvent.liters =
+              Math.round(((consolidatedDelta / 100.0) * effectiveCapacity) * 100) / 100;
+          } else {
+            fuelEventsToInsert.push({
+              id: uuidv7(),
+              vehicleId: vehicle.id,
+              tripId: sourceLog.tripId,
+              type: FuelEventType.REFUEL,
+              liters: realLiters,
+              percentageDelta: Math.round(realDelta * 10) / 10,
+              startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
+              endLevel: Math.round(finalEndLevel * 10) / 10,
+              latitude: sourceLog.latitude,
+              longitude: sourceLog.longitude,
+              timestamp: sourceLog.timestamp,
+            });
+          }
+
+          lastConfirmedAnchor = finalEndLevel;
+          continue;
+        }
+      }
+
       // Seguir suavemente el consumo hacia abajo durante la conducción
       if (rawFuel < lastConfirmedAnchor) {
         lastConfirmedAnchor = 0.02 * rawFuel + 0.98 * lastConfirmedAnchor;
@@ -338,12 +539,20 @@ async function processVehicleFuelHistory(vehicleId: string) {
         const realLiters =
           Math.round(((realDelta / 100.0) * effectiveCapacity) * 100) / 100;
 
+        const sourceLog = findFuelEventSourceLog(
+          logs,
+          i,
+          FuelEventType.REFUEL,
+          lastConfirmedAnchor,
+          finalEndLevel,
+        );
+
         const lastEvent =
           fuelEventsToInsert.length > 0
             ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
             : null;
         const timeSinceLastEventMs = lastEvent
-          ? log.timestamp.getTime() - lastEvent.timestamp.getTime()
+          ? sourceLog.timestamp.getTime() - lastEvent.timestamp.getTime()
           : Infinity;
 
         // Consolidación de recargas en etapas (ej. despachador en pausas sucesivas en <= 15 min):
@@ -361,15 +570,15 @@ async function processVehicleFuelHistory(vehicleId: string) {
           fuelEventsToInsert.push({
             id: uuidv7(),
             vehicleId: vehicle.id,
-            tripId: log.tripId ?? null,
+            tripId: sourceLog.tripId,
             type: FuelEventType.REFUEL,
             liters: realLiters,
             percentageDelta: Math.round(realDelta * 10) / 10,
             startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
             endLevel: Math.round(finalEndLevel * 10) / 10,
-            latitude: log.latitude,
-            longitude: log.longitude,
-            timestamp: log.timestamp,
+            latitude: sourceLog.latitude,
+            longitude: sourceLog.longitude,
+            timestamp: sourceLog.timestamp,
           });
         }
 
@@ -390,18 +599,26 @@ async function processVehicleFuelHistory(vehicleId: string) {
         const isRebound = checkDrainRebound(logs, i, lastConfirmedAnchor);
 
         if (isPersistent && !isRebound) {
+          const sourceLog = findFuelEventSourceLog(
+            logs,
+            i,
+            FuelEventType.DRAIN,
+            lastConfirmedAnchor,
+            settledLevel,
+          );
+
           fuelEventsToInsert.push({
             id: uuidv7(),
             vehicleId: vehicle.id,
-            tripId: log.tripId ?? null,
+            tripId: sourceLog.tripId,
             type: FuelEventType.DRAIN,
             liters: deltaLiters,
             percentageDelta: Math.round(delta * 10) / 10,
             startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
             endLevel: Math.round(settledLevel * 10) / 10,
-            latitude: log.latitude,
-            longitude: log.longitude,
-            timestamp: log.timestamp,
+            latitude: sourceLog.latitude,
+            longitude: sourceLog.longitude,
+            timestamp: sourceLog.timestamp,
           });
 
           lastConfirmedAnchor = settledLevel;

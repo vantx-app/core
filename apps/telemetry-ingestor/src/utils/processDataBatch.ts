@@ -51,6 +51,7 @@ export interface FuelVirtualState {
     lastMedian: number | null;
     anchorLat?: number | null;
     anchorLng?: number | null;
+    anchorTimestamp?: Date | null;
   };
 }
 
@@ -742,7 +743,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
                   endLevel: Math.round(currentMed * 100) / 100,
                   latitude: virtualState.session.anchorLat ?? rec.latitude,
                   longitude: virtualState.session.anchorLng ?? rec.longitude,
-                  timestamp: rec.timestamp as Date,
+                  timestamp:
+                    virtualState.session.anchorTimestamp ??
+                    (rec.timestamp as Date),
                 });
                 if (liveTripState.activeTrip) {
                   const tId = liveTripState.activeTrip.id;
@@ -773,7 +776,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
                   endLevel: Math.round(currentMed * 100) / 100,
                   latitude: virtualState.session.anchorLat ?? rec.latitude,
                   longitude: virtualState.session.anchorLng ?? rec.longitude,
-                  timestamp: rec.timestamp as Date,
+                  timestamp:
+                    virtualState.session.anchorTimestamp ??
+                    (rec.timestamp as Date),
                 });
                 virtualState.lastValidAnchorPercent = currentMed;
                 virtualState.currentDisplayPercent = currentMed;
@@ -853,6 +858,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
               lastMedian: stableMedian,
               anchorLat: rec.latitude,
               anchorLng: rec.longitude,
+              anchorTimestamp: rec.timestamp as Date,
             };
           } else if (
             isSettled &&
@@ -867,6 +873,7 @@ async function processDataBatchInternal(records: any[], imei: string) {
               lastMedian: stableMedian,
               anchorLat: rec.latitude,
               anchorLng: rec.longitude,
+              anchorTimestamp: rec.timestamp as Date,
             };
           }
         }
@@ -921,7 +928,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
                     endLevel: Math.round(stableMedian * 100) / 100,
                     latitude: virtualState.session.anchorLat ?? rec.latitude,
                     longitude: virtualState.session.anchorLng ?? rec.longitude,
-                    timestamp: rec.timestamp as Date,
+                    timestamp:
+                      virtualState.session.anchorTimestamp ??
+                      (rec.timestamp as Date),
                   });
                   if (liveTripState.activeTrip) {
                     const tId = liveTripState.activeTrip.id;
@@ -953,7 +962,9 @@ async function processDataBatchInternal(records: any[], imei: string) {
                     endLevel: Math.round(stableMedian * 100) / 100,
                     latitude: virtualState.session.anchorLat ?? rec.latitude,
                     longitude: virtualState.session.anchorLng ?? rec.longitude,
-                    timestamp: rec.timestamp as Date,
+                    timestamp:
+                      virtualState.session.anchorTimestamp ??
+                      (rec.timestamp as Date),
                   });
                 }
               }
