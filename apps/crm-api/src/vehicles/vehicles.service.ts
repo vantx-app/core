@@ -1487,8 +1487,8 @@ export class VehiclesService {
 
     const capacity = vehicle.tankCapacity ?? 60;
     const effectiveCapacity = capacity;
-    const MIN_EVENT_PERCENT = 8.0;
-    const MIN_EVENT_LITERS = 4.5;
+    const MIN_EVENT_PERCENT = 15.0;
+    const MIN_EVENT_LITERS = 6.0;
     const CONFIRM_WINDOW_MS = 8 * 60 * 1000;
 
     // 1. Limpiar eventos existentes

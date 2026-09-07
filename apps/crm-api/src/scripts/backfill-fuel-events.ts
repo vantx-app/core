@@ -45,8 +45,8 @@ const prisma = new PrismaClient();
 // 5. Persistencia y anti-rebote (Waiting): el nuevo nivel debe sostenerse en el tiempo y no rebotar
 //    al reanudar la marcha (descartando inclinaciones/rampas de estacionamiento).
 // 6. Para drenado (robo), el motor DEBE estar apagado (!ignition), pues encendido detenido es ralentí.
-const MIN_EVENT_PERCENT = 8.0; // 8% mínimo de variación
-const MIN_EVENT_LITERS = 4.5;   // 4.5 L mínimo para descartar cualquier oscilación
+const MIN_EVENT_PERCENT = 15.0; // 15% mínimo de variación para descartar variaciones de estacionamiento y boya
+const MIN_EVENT_LITERS = 6.0;   // 6.0 L mínimo para descartar cualquier fluctuación
 const CONFIRM_WINDOW_MS = 8 * 60 * 1000; // 8 minutos para confirmar persistencia
 
 function calculateMedian(values: number[]): number {
