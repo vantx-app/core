@@ -40,6 +40,7 @@ describe('VehiclesService', () => {
       findMany: jest.Mock;
       update: jest.Mock;
     };
+    $queryRaw: jest.Mock;
   };
   let cacheMock: {
     get: jest.Mock;
@@ -51,6 +52,7 @@ describe('VehiclesService', () => {
 
   beforeEach(async () => {
     prismaMock = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       vehicle: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
@@ -448,7 +450,7 @@ describe('VehiclesService', () => {
   describe('getFuelAnalysis', () => {
     it('debe retornar resumen vacío si no existen registros de telemetría', async () => {
       prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
-      prismaMock.telemetryLog.findMany.mockResolvedValue([]);
+      prismaMock.$queryRaw.mockResolvedValue([]);
 
       const result = await service.getFuelAnalysis('vehicle-id', 7);
 
@@ -470,50 +472,38 @@ describe('VehiclesService', () => {
 
     it('debe calcular consumo directo usando contador acumulado OBD/CAN', async () => {
       prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
-      const mockLogs = [
+      const mockBuckets = [
         {
-          timestamp: new Date('2026-07-04T10:00:00Z'),
+          bucket: new Date('2026-07-04T10:00:00Z'),
           fuelLevel: 50.0,
           fuelConsumption: 100,
           fuelRate: 2.0,
           ignition: false,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
         },
         {
-          timestamp: new Date('2026-07-04T10:10:00Z'),
+          bucket: new Date('2026-07-04T10:10:00Z'),
           fuelLevel: 85.0,
           fuelConsumption: 100,
           fuelRate: 2.0,
           ignition: false,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
         },
         {
-          timestamp: new Date('2026-07-04T10:20:00Z'),
+          bucket: new Date('2026-07-04T10:20:00Z'),
           fuelLevel: 80.0,
           fuelConsumption: 100,
           fuelRate: 0,
           ignition: false,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
         },
         {
-          timestamp: new Date('2026-07-04T10:30:00Z'),
+          bucket: new Date('2026-07-04T10:30:00Z'),
           fuelLevel: 74.0,
           fuelConsumption: 106,
           fuelRate: 12.0,
           ignition: true,
-          speed: 50,
-          latitude: 10.1,
-          longitude: 20.1,
         },
       ];
 
-      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
+      prismaMock.$queryRaw.mockResolvedValue(mockBuckets);
 
       const result = await service.getFuelAnalysis('vehicle-id', 7);
 
@@ -532,30 +522,24 @@ describe('VehiclesService', () => {
 
     it('debe calcular consumo directo basado en niveles cuando no hay contador OBD', async () => {
       prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
-      const mockLogs = [
+      const mockBuckets = [
         {
-          timestamp: new Date('2026-07-04T09:40:00Z'),
+          bucket: new Date('2026-07-04T09:40:00Z'),
           fuelLevel: 80.0,
           fuelConsumption: null,
           fuelRate: 2.0,
           ignition: true,
-          speed: 0,
-          latitude: 10,
-          longitude: 20,
         },
         {
-          timestamp: new Date('2026-07-04T09:50:00Z'),
+          bucket: new Date('2026-07-04T09:50:00Z'),
           fuelLevel: 65.0,
           fuelConsumption: null,
           fuelRate: 2.0,
           ignition: true,
-          speed: 30,
-          latitude: 10,
-          longitude: 20,
         },
       ];
 
-      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
+      prismaMock.$queryRaw.mockResolvedValue(mockBuckets);
 
       const result = await service.getFuelAnalysis('vehicle-id', 7);
 
@@ -573,42 +557,26 @@ describe('VehiclesService', () => {
       expect(result.history).toHaveLength(2);
     });
 
-    it('debe suavizar picos de sloshing en la historia para la gráfica', async () => {
+    it('debe entregar historia agregada y limpia para la gráfica SVG', async () => {
       prismaMock.vehicle.findUnique.mockResolvedValue({ tankCapacity: 60 });
-      const mockLogs = [
+      const mockBuckets = [
         {
-          timestamp: new Date('2026-07-31T22:25:23Z'),
+          bucket: new Date('2026-07-31T22:25:23Z'),
           fuelLevel: 90.0,
           fuelConsumption: 100,
           fuelRate: 2.0,
           ignition: true,
-          speed: 15,
-          latitude: 8.99,
-          longitude: -79.51,
         },
         {
-          timestamp: new Date('2026-07-31T22:25:28Z'),
-          fuelLevel: 40.0,
-          fuelConsumption: 100,
-          fuelRate: 2.0,
-          ignition: true,
-          speed: 4,
-          latitude: 8.99,
-          longitude: -79.51,
-        },
-        {
-          timestamp: new Date('2026-07-31T22:25:29Z'),
+          bucket: new Date('2026-07-31T22:25:29Z'),
           fuelLevel: 90.0,
           fuelConsumption: 100,
           fuelRate: 0,
           ignition: true,
-          speed: 0,
-          latitude: 8.99,
-          longitude: -79.51,
         },
       ];
 
-      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs);
+      prismaMock.$queryRaw.mockResolvedValue(mockBuckets);
 
       const result = await service.getFuelAnalysis('vehicle-id', 7);
 

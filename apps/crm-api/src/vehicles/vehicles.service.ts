@@ -1008,26 +1008,6 @@ export class VehiclesService {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - safeDays);
 
-    // Obtener registros de telemetría con nivel de combustible no nulo
-    const logs = await this.prisma.telemetryLog.findMany({
-      where: {
-        vehicleId,
-        timestamp: { gte: startDate },
-        fuelLevel: { not: null },
-      },
-      orderBy: { timestamp: 'asc' },
-      select: {
-        timestamp: true,
-        fuelLevel: true,
-        fuelConsumption: true,
-        fuelRate: true,
-        ignition: true,
-        speed: true,
-        latitude: true,
-        longitude: true,
-      },
-    });
-
     // Obtener información del vehículo (capacidad de tanque y estado de calibración)
     const vehicle = await this.prisma.vehicle.findUnique({
       where: { id: vehicleId },
@@ -1040,7 +1020,36 @@ export class VehiclesService {
     const usableCapacity = tankCapacity * 0.9;
     const reserveLiters = tankCapacity * 0.05;
 
-    if (logs.length === 0) {
+    // Tamaño de bucket para generar ~300 puntos óptimos en safeDays
+    const bucketSeconds = Math.max(60, Math.floor((safeDays * 24 * 3600) / 300));
+
+    // Agrupación y filtrado de mediana directo en PostgreSQL (PERCENTILE_CONT) para rendimiento sub-50ms
+    const bucketedRows = await this.prisma.$queryRaw<
+      Array<{
+        bucket: Date;
+        fuelLevel: number | null;
+        fuelConsumption: number | null;
+        fuelRate: number | null;
+        ignition: boolean | null;
+      }>
+    >`
+      SELECT
+        to_timestamp(floor(extract(epoch from "timestamp") / ${bucketSeconds}) * ${bucketSeconds}) AS "bucket",
+        PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY "fuelLevel") AS "fuelLevel",
+        MAX("fuelConsumption") AS "fuelConsumption",
+        AVG("fuelRate") AS "fuelRate",
+        BOOL_OR("ignition") AS "ignition"
+      FROM "TelemetryLog"
+      WHERE "vehicleId" = ${vehicleId}::uuid
+        AND "timestamp" >= ${startDate}
+        AND "fuelLevel" IS NOT NULL
+        AND "fuelLevel" >= 0
+        AND "fuelLevel" <= 100
+      GROUP BY 1
+      ORDER BY 1 ASC;
+    `;
+
+    if (!bucketedRows || bucketedRows.length === 0) {
       return {
         summary: {
           tankCapacity,
@@ -1057,31 +1066,10 @@ export class VehiclesService {
       };
     }
 
-    const validLogs = logs.filter(
-      (l) => l.fuelLevel !== null && l.fuelLevel >= 0 && l.fuelLevel <= 100,
-    );
-
-    if (validLogs.length === 0) {
-      return {
-        summary: {
-          tankCapacity,
-          isCapacityCalibrated,
-          totalConsumed: 0,
-          consumedLiters: 0,
-          totalDrained: 0,
-          totalRefueled: 0,
-          currentLevel: null,
-          currentLiters: null,
-        },
-        events: [],
-        history: [],
-      };
-    }
-
-    const firstLog = validLogs[0];
-    const lastLog = validLogs[validLogs.length - 1];
-    const startLevel = firstLog.fuelLevel!;
-    const endLevel = lastLog.fuelLevel!;
+    const firstBucket = bucketedRows[0];
+    const lastBucket = bucketedRows[bucketedRows.length - 1];
+    const startLevel = firstBucket.fuelLevel ?? 0;
+    const endLevel = lastBucket.fuelLevel ?? 0;
 
     // Consultar eventos de combustible (cargas y descargas) en la ventana de tiempo
     const fuelEvents = await this.prisma.fuelEvent.findMany({
@@ -1135,14 +1123,14 @@ export class VehiclesService {
     }
 
     // Prioridad 2: Contador acumulado OBD/CAN directo en registros de telemetría
-    if (consumedLiters === 0 && validLogs.length >= 2) {
-      const logsWithConsumption = validLogs.filter(
-        (l) => l.fuelConsumption !== null && l.fuelConsumption > 0,
+    if (consumedLiters === 0 && bucketedRows.length >= 2) {
+      const rowsWithConsumption = bucketedRows.filter(
+        (b) => b.fuelConsumption !== null && b.fuelConsumption > 0,
       );
-      if (logsWithConsumption.length >= 2) {
-        const firstConsumption = logsWithConsumption[0].fuelConsumption!;
+      if (rowsWithConsumption.length >= 2) {
+        const firstConsumption = rowsWithConsumption[0].fuelConsumption!;
         const lastConsumption =
-          logsWithConsumption[logsWithConsumption.length - 1].fuelConsumption!;
+          rowsWithConsumption[rowsWithConsumption.length - 1].fuelConsumption!;
         if (lastConsumption >= firstConsumption) {
           consumedLiters = lastConsumption - firstConsumption;
         }
@@ -1150,7 +1138,7 @@ export class VehiclesService {
     }
 
     // Prioridad 3: Si no hay viajes ni contador OBD, usar balance de masa de tanque
-    if (consumedLiters === 0 && validLogs.length > 0) {
+    if (consumedLiters === 0 && bucketedRows.length > 0) {
       const startLiters = (startLevel / 100) * usableCapacity;
       const endLiters = (endLevel / 100) * usableCapacity;
       const net = startLiters - endLiters + totalRefueled - totalDrained;
@@ -1167,51 +1155,36 @@ export class VehiclesService {
       delta: ev.percentageDelta,
     }));
 
-    const currentLevel = lastLog.fuelLevel;
+    // Obtener la lectura más reciente para el nivel actual
+    const latestLog = await this.prisma.telemetryLog.findFirst({
+      where: { vehicleId, fuelLevel: { not: null } },
+      orderBy: { timestamp: 'desc' },
+      select: { fuelLevel: true },
+    });
+
+    const currentLevel = latestLog?.fuelLevel ?? lastBucket.fuelLevel;
     const currentLiters =
       currentLevel !== null
         ? Math.round((reserveLiters + (currentLevel / 100) * usableCapacity) * 10) /
           10
         : null;
 
-    // 2. Filtro de Mediana Móvil Denso (Pre-downsampling Anti-aliasing)
-    // Se procesa la secuencia completa antes de submuestrear para eliminar picos de sloshing
-    const windowSize = 15;
-    const halfWindow = Math.floor(windowSize / 2);
-    const denseSmoothedLevels: number[] = new Array(validLogs.length);
+    // Mapear los ~300 puntos pre-agrupados con mediana de PostgreSQL
+    const history = bucketedRows.map((row) => {
+      const smoothedPct = Math.round((row.fuelLevel ?? 0) * 10) / 10;
+      const smoothedLiters =
+        Math.round((reserveLiters + (smoothedPct / 100) * usableCapacity) * 10) /
+        10;
 
-    for (let i = 0; i < validLogs.length; i++) {
-      const windowVals: number[] = [];
-      const start = Math.max(0, i - halfWindow);
-      const end = Math.min(validLogs.length - 1, i + halfWindow);
-      for (let w = start; w <= end; w++) {
-        windowVals.push(validLogs[w].fuelLevel!);
-      }
-      windowVals.sort((a, b) => a - b);
-      denseSmoothedLevels[i] = windowVals[Math.floor(windowVals.length / 2)];
-    }
-
-    // 3. Submuestreo de la serie ya suavizada para renderizado SVG óptimo
-    const history: any[] = [];
-    const step = Math.max(1, Math.floor(validLogs.length / 300));
-
-    for (let i = 0; i < validLogs.length; i++) {
-      if (i === 0 || i === validLogs.length - 1 || i % step === 0) {
-        const smoothedPct = Math.round(denseSmoothedLevels[i] * 10) / 10;
-        const smoothedLiters =
-          Math.round((reserveLiters + (smoothedPct / 100) * usableCapacity) * 10) /
-          10;
-
-        history.push({
-          timestamp: validLogs[i].timestamp,
-          fuelLevel: smoothedPct,
-          fuelLiters: smoothedLiters,
-          fuelConsumption: validLogs[i].fuelConsumption,
-          fuelRate: validLogs[i].fuelRate,
-          ignition: validLogs[i].ignition,
-        });
-      }
-    }
+      return {
+        timestamp: row.bucket,
+        fuelLevel: smoothedPct,
+        fuelLiters: smoothedLiters,
+        fuelConsumption: row.fuelConsumption,
+        fuelRate: row.fuelRate !== null ? Math.round(row.fuelRate * 10) / 10 : null,
+        ignition: row.ignition ?? false,
+      };
+    });
 
     return {
       summary: {
