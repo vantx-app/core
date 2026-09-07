@@ -45,17 +45,16 @@ const prisma = new PrismaClient();
 // 5. Persistencia y anti-rebote (Waiting): el nuevo nivel debe sostenerse en el tiempo y no rebotar
 //    al reanudar la marcha (descartando inclinaciones/rampas de estacionamiento).
 // 6. Para drenado (robo), el motor DEBE estar apagado (!ignition), pues encendido detenido es ralentí.
-const MIN_EVENT_PERCENT = 15.0; // 15% mínimo de variación para descartar variaciones de estacionamiento y boya
-const MIN_EVENT_LITERS = 6.0;   // 6.0 L mínimo para descartar cualquier fluctuación
+const MIN_EVENT_PERCENT = 7.5; // 7.5% mínimo para capturar recargas parciales reales (desde 4.0 L)
+const MIN_EVENT_LITERS = 4.0;   // 4.0 L mínimo para descartar ruido eléctrico
 const CONFIRM_WINDOW_MS = 8 * 60 * 1000; // 8 minutos para confirmar persistencia
 
 function calculateMedian(values: number[]): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
-  const half = Math.floor(sorted.length / 2);
   return sorted.length % 2 !== 0
-    ? sorted[half]
-    : (sorted[half - 1] + sorted[half]) / 2;
+    ? sorted[Math.floor(sorted.length / 2)]
+    : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
 }
 
 // Ventana de verificación hacia adelante: confirma que el nuevo estado se mantenga
@@ -90,7 +89,7 @@ function checkDrainRebound(logs: any[], startIndex: number, anchor: number): boo
   return false;
 }
 
-// Anti-pendiente para recarga: verifica si al reanudar la marcha en carretera el nivel cae de vuelta al ancla previa (+3%)
+// Anti-pendiente para recarga: verifica si al reanudar la marcha en carretera el nivel cae de vuelta al ancla previa (+2.5%)
 function checkRefuelRebound(logs: any[], startIndex: number, anchor: number): boolean {
   let drivingReadings = 0;
   // Examinar hacia adelante: cuando el vehículo reanude la marcha (speed > 3)
@@ -99,8 +98,8 @@ function checkRefuelRebound(logs: any[], startIndex: number, anchor: number): bo
     if (isDriving) {
       drivingReadings++;
       // En los primeros 5 minutos de conducción (~30 lecturas), si el nivel regresa
-      // al ancla previa (+3%), confirma que fue una falsa subida por inclinación/rampa o boya.
-      if (logs[i].fuelLevel <= anchor + 3.0) {
+      // al ancla previa (+2.5%), confirma que fue una falsa subida por inclinación/rampa o boya.
+      if (logs[i].fuelLevel <= anchor + 2.5) {
         return true; // Rebote confirmado
       }
       // Si ya condujo más de 5 minutos en marcha y el combustible se mantuvo alto,
@@ -346,6 +345,8 @@ async function processVehicleFuelHistory(vehicleId: string) {
   let lastStationaryLog: (typeof logs)[0] | null = null;
   let lastStationaryIndex: number | null = null;
 
+  let cruisingReadings: number[] = [];
+
   for (let i = 0; i < logs.length; i++) {
     const log = logs[i];
     const rawFuel = log.fuelLevel!;
@@ -354,6 +355,15 @@ async function processVehicleFuelHistory(vehicleId: string) {
     // 1. VEHÍCULO EN MOVIMIENTO (CONDUCCIÓN):
     // Ningún evento de recarga ni robo puede ocurrir físicamente en marcha.
     if (isMoving) {
+      // Recopilar lecturas en crucero estable (velocidad > 15 km/h) para tener una línea base
+      // libre del oleaje de frenada al detenerse
+      if ((log.speed ?? 0) > 15 || (log.gpsSpeed ?? 0) > 15) {
+        cruisingReadings.push(rawFuel);
+        if (cruisingReadings.length > 20) {
+          cruisingReadings.shift();
+        }
+      }
+
       stationaryReadings = [];
       stationaryStartTime = null;
       lastStationaryLog = null;
@@ -371,7 +381,9 @@ async function processVehicleFuelHistory(vehicleId: string) {
     // 2. VEHÍCULO DETENIDO (PARADA O ESTACIONADO):
     if (stationaryStartTime === null) {
       stationaryStartTime = log.timestamp.getTime();
-      preStopFuelLevel = lastConfirmedAnchor;
+      const cruisingBaseline =
+        cruisingReadings.length >= 3 ? calculateMedian(cruisingReadings) : null;
+      preStopFuelLevel = cruisingBaseline ?? lastConfirmedAnchor;
     }
     lastStationaryLog = log;
     lastStationaryIndex = i;
@@ -382,10 +394,10 @@ async function processVehicleFuelHistory(vehicleId: string) {
     }
 
     const elapsedStationaryMs = log.timestamp.getTime() - stationaryStartTime;
-    // Esperar al menos 3 lecturas o 45 segundos detenido para asentar el oleaje de frenado
+    // FÍSICA: Una recarga en gasolinera requiere al menos 60 segundos de parada
+    // (descarta el 100% de semáforos y paradas de tráfico de 15 a 45 segundos).
     const isSettled =
-      stationaryReadings.length >= 3 ||
-      (elapsedStationaryMs >= 45_000 && stationaryReadings.length >= 2);
+      stationaryReadings.length >= 4 && elapsedStationaryMs >= 60_000;
 
     if (!isSettled) {
       continue;

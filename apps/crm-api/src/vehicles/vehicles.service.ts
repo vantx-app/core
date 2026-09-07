@@ -1314,8 +1314,8 @@ export class VehiclesService {
       if (isDriving) {
         drivingReadings++;
         // En los primeros 5 minutos de conducción (~30 lecturas), si el nivel regresa
-        // al ancla previa (+3%), confirma que fue una falsa subida por inclinación/rampa o boya.
-        if (logs[i].fuelLevel <= anchor + 3.0) {
+        // al ancla previa (+2.5%), confirma que fue una falsa subida por inclinación/rampa o boya.
+        if (logs[i].fuelLevel <= anchor + 2.5) {
           return true; // Rebote confirmado
         }
         // Si ya condujo más de 5 minutos en marcha y el combustible se mantuvo alto,
@@ -1487,8 +1487,8 @@ export class VehiclesService {
 
     const capacity = vehicle.tankCapacity ?? 60;
     const effectiveCapacity = capacity;
-    const MIN_EVENT_PERCENT = 15.0;
-    const MIN_EVENT_LITERS = 6.0;
+    const MIN_EVENT_PERCENT = 7.5;
+    const MIN_EVENT_LITERS = 4.0;
     const CONFIRM_WINDOW_MS = 8 * 60 * 1000;
 
     // 1. Limpiar eventos existentes
@@ -1542,6 +1542,8 @@ export class VehiclesService {
     let stationaryStartTime: number | null = null;
     let lastStationaryLog: (typeof logs)[0] | null = null;
     let lastStationaryIndex: number | null = null;
+    let cruisingReadings: number[] = [];
+
     for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
       const rawFuel = log.fuelLevel!;
@@ -1550,6 +1552,15 @@ export class VehiclesService {
       // 1. VEHÍCULO EN MOVIMIENTO (CONDUCCIÓN):
       // Ningún evento de recarga ni robo puede ocurrir físicamente en marcha.
       if (isMoving) {
+        // Recopilar lecturas en crucero estable (velocidad > 15 km/h) para tener una línea base
+        // libre del oleaje de frenada al detenerse
+        if ((log.speed ?? 0) > 15 || (log.gpsSpeed ?? 0) > 15) {
+          cruisingReadings.push(rawFuel);
+          if (cruisingReadings.length > 20) {
+            cruisingReadings.shift();
+          }
+        }
+
         stationaryReadings = [];
         stationaryStartTime = null;
         lastStationaryLog = null;
@@ -1567,7 +1578,9 @@ export class VehiclesService {
       // 2. VEHÍCULO DETENIDO (PARADA O ESTACIONADO):
       if (stationaryStartTime === null) {
         stationaryStartTime = log.timestamp.getTime();
-        preStopFuelLevel = lastConfirmedAnchor;
+        const cruisingBaseline =
+          cruisingReadings.length >= 3 ? this.calculateMedian(cruisingReadings) : null;
+        preStopFuelLevel = cruisingBaseline ?? lastConfirmedAnchor;
       }
       lastStationaryLog = log;
       lastStationaryIndex = i;
@@ -1578,10 +1591,10 @@ export class VehiclesService {
       }
 
       const elapsedStationaryMs = log.timestamp.getTime() - stationaryStartTime;
-      // Esperar al menos 3 lecturas o 45 segundos detenido para asentar el oleaje de frenado
+      // FÍSICA: Una recarga en gasolinera requiere al menos 60 segundos de parada
+      // (descarta el 100% de semáforos y paradas de tráfico de 15 a 45 segundos).
       const isSettled =
-        stationaryReadings.length >= 3 ||
-        (elapsedStationaryMs >= 45_000 && stationaryReadings.length >= 2);
+        stationaryReadings.length >= 4 && elapsedStationaryMs >= 60_000;
 
       if (!isSettled) {
         continue;
