@@ -1204,6 +1204,88 @@ async function processDataBatchInternal(records: any[], imei: string) {
     liveTripState,
   });
 
+  if (fuelEventsToCreate.length > 0) {
+    for (const evt of fuelEventsToCreate) {
+      if (evt.type === "REFUEL") {
+        const evtTime = new Date(evt.timestamp).getTime();
+        const fallbackLat = evt.latitude;
+        const fallbackLng = evt.longitude;
+
+        const departure =
+          telemetryLogs.find(
+            (l: any) =>
+              new Date(l.timestamp).getTime() >= evtTime &&
+              new Date(l.timestamp).getTime() <= evtTime + 20 * 60 * 1000 &&
+              ((l.speed ?? 0) > 3 || (l.gpsSpeed ?? 0) > 3) &&
+              l.latitude !== 0 &&
+              l.longitude !== 0 &&
+              Math.abs(l.latitude) > 0.0001 &&
+              (fallbackLat === null ||
+                fallbackLng === null ||
+                Math.abs(l.latitude - fallbackLat) > 0.0001 ||
+                Math.abs(l.longitude - fallbackLng) > 0.0001),
+          ) ||
+          telemetryLogs.find(
+            (l: any) =>
+              new Date(l.timestamp).getTime() >= evtTime &&
+              new Date(l.timestamp).getTime() <= evtTime + 20 * 60 * 1000 &&
+              ((l.speed ?? 0) > 3 || (l.gpsSpeed ?? 0) > 3) &&
+              l.latitude !== 0 &&
+              l.longitude !== 0 &&
+              Math.abs(l.latitude) > 0.0001,
+          );
+
+        if (departure) {
+          evt.latitude = departure.latitude;
+          evt.longitude = departure.longitude;
+        } else {
+          const arrival = [...telemetryLogs].reverse().find(
+            (l: any) =>
+              new Date(l.timestamp).getTime() <= evtTime &&
+              new Date(l.timestamp).getTime() >= evtTime - 20 * 60 * 1000 &&
+              ((l.speed ?? 0) > 3 || (l.gpsSpeed ?? 0) > 3) &&
+              l.latitude !== 0 &&
+              l.longitude !== 0 &&
+              Math.abs(l.latitude) > 0.0001,
+          );
+
+          if (arrival) {
+            evt.latitude = arrival.latitude;
+            evt.longitude = arrival.longitude;
+          } else {
+            try {
+              const dbArrival = await prisma.telemetryLog.findFirst({
+                where: {
+                  vehicleId: vehicle.id,
+                  timestamp: {
+                    gte: new Date(evtTime - 20 * 60 * 1000),
+                    lte: new Date(evtTime),
+                  },
+                  OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+                  latitude: { not: 0 },
+                  longitude: { not: 0 },
+                },
+                orderBy: { timestamp: "desc" },
+                select: { latitude: true, longitude: true },
+              });
+              if (
+                dbArrival &&
+                dbArrival.latitude !== 0 &&
+                dbArrival.longitude !== 0 &&
+                Math.abs(dbArrival.latitude) > 0.0001
+              ) {
+                evt.latitude = dbArrival.latitude;
+                evt.longitude = dbArrival.longitude;
+              }
+            } catch {
+              // fallback a las coordenadas de evt
+            }
+          }
+        }
+      }
+    }
+  }
+
   await saveTelemetryBatchData({
     prisma,
     vehicle,

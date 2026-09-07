@@ -16,6 +16,7 @@ describe('VehiclesService', () => {
     };
     vehicleLiveState: {
       findMany: jest.Mock;
+      upsert: jest.Mock;
     };
     assignment: {
       findFirst: jest.Mock;
@@ -28,6 +29,7 @@ describe('VehiclesService', () => {
     };
     telemetryLog: {
       findMany: jest.Mock;
+      findFirst: jest.Mock;
     };
     fuelEvent: {
       findMany: jest.Mock;
@@ -55,6 +57,7 @@ describe('VehiclesService', () => {
       },
       vehicleLiveState: {
         findMany: jest.fn(),
+        upsert: jest.fn().mockResolvedValue({}),
       },
       assignment: {
         findFirst: jest.fn(),
@@ -67,6 +70,7 @@ describe('VehiclesService', () => {
       },
       telemetryLog: {
         findMany: jest.fn(),
+        findFirst: jest.fn().mockResolvedValue(null),
       },
       fuelEvent: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -614,4 +618,70 @@ describe('VehiclesService', () => {
       expect(result.history[1].fuelLevel).toEqual(90.0);
     });
   });
+
+  describe('recalculateVehicleFuel', () => {
+    it('debe resolver la ubicación exacta de la gasolinera al detectar una recarga', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({
+        id: 'vehicle-1',
+        tankCapacity: 41,
+      });
+
+      const t0 = new Date('2026-09-01T18:00:00Z').getTime();
+      const logs: any[] = [];
+      // 10 lecturas al 40% (estacionado antes y durante la llegada a la bomba)
+      for (let i = 0; i < 10; i++) {
+        logs.push({
+          id: `log-${i}`,
+          tripId: null,
+          timestamp: new Date(t0 + i * 10000),
+          fuelLevel: 40.0,
+          speed: 0,
+          gpsSpeed: 0,
+          ignition: false,
+          latitude: 9.00001, // Stale fix previo
+          longitude: -79.00001,
+          odometer: 1000,
+        });
+      }
+      // 25 lecturas al 100% (recarga completada, estacionado en bomba y saliendo)
+      for (let i = 10; i < 35; i++) {
+        logs.push({
+          id: `log-${i}`,
+          tripId: null,
+          timestamp: new Date(t0 + i * 10000),
+          fuelLevel: 100.0,
+          speed: 0,
+          gpsSpeed: 0,
+          ignition: true,
+          latitude: 9.00001, // Aún bajo la marquesina
+          longitude: -79.00001,
+          odometer: 1000,
+        });
+      }
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(logs);
+
+      // Simular que findFirst encuentra el registro de salida con la ubicación real de la gasolinera
+      prismaMock.telemetryLog.findFirst.mockResolvedValue({
+        latitude: 9.123456,
+        longitude: -79.654321,
+      });
+
+      const result = await service.recalculateVehicleFuel('vehicle-1');
+
+      expect(result.eventsCount).toBe(1);
+      expect(prismaMock.fuelEvent.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            type: 'REFUEL',
+            startLevel: 40,
+            endLevel: 100,
+            latitude: 9.123456,
+            longitude: -79.654321,
+          }),
+        ],
+      });
+    });
+  });
 });
+

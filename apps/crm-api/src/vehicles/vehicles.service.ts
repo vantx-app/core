@@ -1347,6 +1347,148 @@ export class VehiclesService {
     return false;
   }
 
+  private async resolveEventLocation(
+    vehicleId: string,
+    eventTimestamp: Date,
+    fallbackLat: number | null,
+    fallbackLng: number | null,
+  ): Promise<{ latitude: number | null; longitude: number | null }> {
+    try {
+      // 1. Prioridad 1: Salida de la gasolinera (primer movimiento con fix fresco post-recarga)
+      // Intentar primero encontrar un registro en movimiento cuyas coordenadas NO sean el stale fix de la marquesina
+      const departureLog = await this.prisma.telemetryLog.findFirst({
+        where: {
+          vehicleId,
+          timestamp: {
+            gte: eventTimestamp,
+            lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
+          },
+          OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+          latitude: { not: 0 },
+          longitude: { not: 0 },
+          ...(fallbackLat !== null && fallbackLng !== null
+            ? {
+                NOT: {
+                  AND: [{ latitude: fallbackLat }, { longitude: fallbackLng }],
+                },
+              }
+            : {}),
+        },
+        orderBy: { timestamp: 'asc' },
+        select: { latitude: true, longitude: true },
+      });
+
+      if (
+        departureLog &&
+        departureLog.latitude !== 0 &&
+        departureLog.longitude !== 0 &&
+        Math.abs(departureLog.latitude) > 0.0001
+      ) {
+        return {
+          latitude: departureLog.latitude,
+          longitude: departureLog.longitude,
+        };
+      }
+
+      // Si no hubo cambio con respecto a fallback, tomar el primer registro en movimiento post-recarga
+      const anyDepartureLog = await this.prisma.telemetryLog.findFirst({
+        where: {
+          vehicleId,
+          timestamp: {
+            gte: eventTimestamp,
+            lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
+          },
+          OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+          latitude: { not: 0 },
+          longitude: { not: 0 },
+        },
+        orderBy: { timestamp: 'asc' },
+        select: { latitude: true, longitude: true },
+      });
+
+      if (
+        anyDepartureLog &&
+        anyDepartureLog.latitude !== 0 &&
+        anyDepartureLog.longitude !== 0 &&
+        Math.abs(anyDepartureLog.latitude) > 0.0001
+      ) {
+        return {
+          latitude: anyDepartureLog.latitude,
+          longitude: anyDepartureLog.longitude,
+        };
+      }
+
+      // 2. Prioridad 2: Entrada a la gasolinera (último movimiento antes de detenerse a recargar)
+      const arrivalLog = await this.prisma.telemetryLog.findFirst({
+        where: {
+          vehicleId,
+          timestamp: {
+            gte: new Date(eventTimestamp.getTime() - 20 * 60 * 1000),
+            lte: eventTimestamp,
+          },
+          OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+          latitude: { not: 0 },
+          longitude: { not: 0 },
+          ...(fallbackLat !== null && fallbackLng !== null
+            ? {
+                NOT: {
+                  AND: [{ latitude: fallbackLat }, { longitude: fallbackLng }],
+                },
+              }
+            : {}),
+        },
+        orderBy: { timestamp: 'desc' },
+        select: { latitude: true, longitude: true },
+      });
+
+      if (
+        arrivalLog &&
+        arrivalLog.latitude !== 0 &&
+        arrivalLog.longitude !== 0 &&
+        Math.abs(arrivalLog.latitude) > 0.0001
+      ) {
+        return {
+          latitude: arrivalLog.latitude,
+          longitude: arrivalLog.longitude,
+        };
+      }
+
+      // 3. Prioridad 3: Primer registro con GPS válido post-evento
+      const anyPostLog = await this.prisma.telemetryLog.findFirst({
+        where: {
+          vehicleId,
+          timestamp: {
+            gte: eventTimestamp,
+            lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
+          },
+          latitude: { not: 0 },
+          longitude: { not: 0 },
+        },
+        orderBy: { timestamp: 'asc' },
+        select: { latitude: true, longitude: true },
+      });
+
+      if (
+        anyPostLog &&
+        anyPostLog.latitude !== 0 &&
+        anyPostLog.longitude !== 0 &&
+        Math.abs(anyPostLog.latitude) > 0.0001
+      ) {
+        return {
+          latitude: anyPostLog.latitude,
+          longitude: anyPostLog.longitude,
+        };
+      }
+    } catch {
+      // Mantener fallback si ocurre error
+    }
+
+    return {
+      latitude: fallbackLat,
+      longitude: fallbackLng,
+    };
+  }
+
   async recalculateVehicleFuel(vehicleId: string): Promise<{
     eventsCount: number;
     updatedTripsCount: number;
@@ -1387,6 +1529,7 @@ export class VehiclesService {
         timestamp: true,
         fuelLevel: true,
         speed: true,
+        gpsSpeed: true,
         ignition: true,
         latitude: true,
         longitude: true,
@@ -1420,7 +1563,7 @@ export class VehiclesService {
     for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
       const rawFuel = log.fuelLevel!;
-      const isMoving = (log.speed ?? 0) > 3;
+      const isMoving = (log.speed ?? 0) > 3 || (log.gpsSpeed ?? 0) > 3;
 
       // 1. VEHÍCULO EN MOVIMIENTO (CONDUCCIÓN):
       if (isMoving) {
@@ -1549,6 +1692,19 @@ export class VehiclesService {
     }
 
     if (fuelEventsToInsert.length > 0) {
+      for (const evt of fuelEventsToInsert) {
+        if (evt.type === FuelEventType.REFUEL) {
+          const resolved = await this.resolveEventLocation(
+            vehicleId,
+            evt.timestamp,
+            evt.latitude,
+            evt.longitude,
+          );
+          evt.latitude = resolved.latitude;
+          evt.longitude = resolved.longitude;
+        }
+      }
+
       await this.prisma.fuelEvent.createMany({
         data: fuelEventsToInsert,
       });

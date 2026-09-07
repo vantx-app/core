@@ -110,6 +110,156 @@ function checkRefuelRebound(logs: any[], startIndex: number, anchor: number): bo
   return false;
 }
 
+// Resuelve la ubicación física real de la gasolinera:
+// Bajo marquesinas o techos metálicos de gasolineras, la señal GPS suele perderse o mantener
+// la posición previa a ingresar (stale fix).
+// Buscamos la posición real examinando:
+// 1) El primer punto en movimiento (speed > 3 o gpsSpeed > 3) al salir de la gasolinera (hasta 8 min después).
+// 2) El último punto en movimiento al ingresar a la gasolinera (hasta 15 min antes).
+// 3) Cualquier punto post-evento con coordenadas válidas.
+async function resolveEventLocation(
+  prismaClient: typeof prisma,
+  vehicleId: string,
+  eventTimestamp: Date,
+  fallbackLat: number | null,
+  fallbackLng: number | null,
+): Promise<{ latitude: number | null; longitude: number | null }> {
+  try {
+    // 1. Prioridad 1: Salida de la gasolinera (primer movimiento con fix fresco post-recarga)
+    // Intentar primero encontrar un registro en movimiento cuyas coordenadas NO sean el stale fix de la marquesina
+    const departureLog = await prismaClient.telemetryLog.findFirst({
+      where: {
+        vehicleId,
+        timestamp: {
+          gte: eventTimestamp,
+          lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
+        },
+        OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+        latitude: { not: 0 },
+        longitude: { not: 0 },
+        ...(fallbackLat !== null && fallbackLng !== null
+          ? {
+              NOT: {
+                AND: [{ latitude: fallbackLat }, { longitude: fallbackLng }],
+              },
+            }
+          : {}),
+      },
+      orderBy: { timestamp: 'asc' },
+      select: { latitude: true, longitude: true },
+    });
+
+    if (
+      departureLog &&
+      departureLog.latitude !== 0 &&
+      departureLog.longitude !== 0 &&
+      Math.abs(departureLog.latitude) > 0.0001
+    ) {
+      return {
+        latitude: departureLog.latitude,
+        longitude: departureLog.longitude,
+      };
+    }
+
+    // Si no hubo cambio con respecto a fallback, tomar el primer registro en movimiento post-recarga
+    const anyDepartureLog = await prismaClient.telemetryLog.findFirst({
+      where: {
+        vehicleId,
+        timestamp: {
+          gte: eventTimestamp,
+          lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
+        },
+        OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+        latitude: { not: 0 },
+        longitude: { not: 0 },
+      },
+      orderBy: { timestamp: 'asc' },
+      select: { latitude: true, longitude: true },
+    });
+
+    if (
+      anyDepartureLog &&
+      anyDepartureLog.latitude !== 0 &&
+      anyDepartureLog.longitude !== 0 &&
+      Math.abs(anyDepartureLog.latitude) > 0.0001
+    ) {
+      return {
+        latitude: anyDepartureLog.latitude,
+        longitude: anyDepartureLog.longitude,
+      };
+    }
+
+    // 2. Prioridad 2: Entrada a la gasolinera (último movimiento antes de detenerse a recargar)
+    const arrivalLog = await prismaClient.telemetryLog.findFirst({
+      where: {
+        vehicleId,
+        timestamp: {
+          gte: new Date(eventTimestamp.getTime() - 20 * 60 * 1000),
+          lte: eventTimestamp,
+        },
+        OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+        latitude: { not: 0 },
+        longitude: { not: 0 },
+        ...(fallbackLat !== null && fallbackLng !== null
+          ? {
+              NOT: {
+                AND: [{ latitude: fallbackLat }, { longitude: fallbackLng }],
+              },
+            }
+          : {}),
+      },
+      orderBy: { timestamp: 'desc' },
+      select: { latitude: true, longitude: true },
+    });
+
+    if (
+      arrivalLog &&
+      arrivalLog.latitude !== 0 &&
+      arrivalLog.longitude !== 0 &&
+      Math.abs(arrivalLog.latitude) > 0.0001
+    ) {
+      return {
+        latitude: arrivalLog.latitude,
+        longitude: arrivalLog.longitude,
+      };
+    }
+
+    // 3. Prioridad 3: Primer registro con GPS válido post-evento
+    const anyPostLog = await prismaClient.telemetryLog.findFirst({
+      where: {
+        vehicleId,
+        timestamp: {
+          gte: eventTimestamp,
+          lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
+        },
+        latitude: { not: 0 },
+        longitude: { not: 0 },
+      },
+      orderBy: { timestamp: 'asc' },
+      select: { latitude: true, longitude: true },
+    });
+
+    if (
+      anyPostLog &&
+      anyPostLog.latitude !== 0 &&
+      anyPostLog.longitude !== 0 &&
+      Math.abs(anyPostLog.latitude) > 0.0001
+    ) {
+      return {
+        latitude: anyPostLog.latitude,
+        longitude: anyPostLog.longitude,
+      };
+    }
+  } catch (err) {
+    console.warn(`[WARN] Error al resolver ubicación precisa para evento de combustible:`, err);
+  }
+
+  return {
+    latitude: fallbackLat,
+    longitude: fallbackLng,
+  };
+}
+
 async function processVehicleFuelHistory(vehicleId: string) {
   const vehicle = await prisma.vehicle.findUnique({
     where: { id: vehicleId },
@@ -158,6 +308,7 @@ async function processVehicleFuelHistory(vehicleId: string) {
       timestamp: true,
       fuelLevel: true,
       speed: true,
+      gpsSpeed: true,
       ignition: true,
       latitude: true,
       longitude: true,
@@ -193,7 +344,7 @@ async function processVehicleFuelHistory(vehicleId: string) {
   for (let i = 0; i < logs.length; i++) {
     const log = logs[i];
     const rawFuel = log.fuelLevel!;
-    const isMoving = (log.speed ?? 0) > 3;
+    const isMoving = (log.speed ?? 0) > 3 || (log.gpsSpeed ?? 0) > 3;
 
     // 1. VEHÍCULO EN MOVIMIENTO (CONDUCCIÓN):
     // Ningún evento de recarga ni robo puede ocurrir físicamente en marcha.
@@ -329,6 +480,21 @@ async function processVehicleFuelHistory(vehicleId: string) {
 
   // 4. Guardar eventos de combustible creados en lotes
   if (fuelEventsToInsert.length > 0) {
+    // Resolver la ubicación precisa de la gasolinera para cada evento REFUEL
+    for (const evt of fuelEventsToInsert) {
+      if (evt.type === FuelEventType.REFUEL) {
+        const resolved = await resolveEventLocation(
+          prisma,
+          vehicle.id,
+          evt.timestamp,
+          evt.latitude,
+          evt.longitude,
+        );
+        evt.latitude = resolved.latitude;
+        evt.longitude = resolved.longitude;
+      }
+    }
+
     await prisma.fuelEvent.createMany({
       data: fuelEventsToInsert,
     });
@@ -337,8 +503,12 @@ async function processVehicleFuelHistory(vehicleId: string) {
     );
     fuelEventsToInsert.forEach((e) => {
       const sign = e.type === FuelEventType.REFUEL ? '+' : '-';
+      const gpsInfo =
+        e.latitude && e.longitude
+          ? ` | GPS: ${e.latitude.toFixed(6)}, ${e.longitude.toFixed(6)}`
+          : ' | Sin GPS';
       console.log(
-        `  -> [${e.type}] ${e.timestamp.toISOString().substring(0, 19)}: ${sign}${e.liters}L (${sign}${Math.abs(e.percentageDelta)}%) de ${e.startLevel}% a ${e.endLevel}%`,
+        `  -> [${e.type}] ${e.timestamp.toISOString().substring(0, 19)}: ${sign}${e.liters}L (${sign}${Math.abs(e.percentageDelta)}%) de ${e.startLevel}% a ${e.endLevel}%${gpsInfo}`,
       );
     });
   } else {
@@ -368,6 +538,8 @@ async function processVehicleFuelHistory(vehicleId: string) {
     });
 
     if (tripLogs.length === 0) continue;
+
+    console.log(`[INFO] Recalculando consumo en trip ${trip.id}`);
 
     // Mediana inicial y final sobre muestras para eliminar ruido puntual de boya en arranque/parada
     const startSample = tripLogs
