@@ -38,6 +38,7 @@ describe('VehiclesService', () => {
     };
     trip: {
       findMany: jest.Mock;
+      aggregate: jest.Mock;
       update: jest.Mock;
     };
     $queryRaw: jest.Mock;
@@ -81,6 +82,7 @@ describe('VehiclesService', () => {
       },
       trip: {
         findMany: jest.fn().mockResolvedValue([]),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { fuelConsumedLiters: 0 } }),
         update: jest.fn().mockResolvedValue({}),
       },
     };
