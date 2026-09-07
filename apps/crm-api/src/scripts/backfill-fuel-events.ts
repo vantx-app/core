@@ -125,112 +125,53 @@ async function resolveEventLocation(
   fallbackLng: number | null,
 ): Promise<{ latitude: number | null; longitude: number | null }> {
   try {
-    // 1. Prioridad 1: Salida de la gasolinera (primer movimiento con fix fresco post-recarga)
-    // Intentar primero encontrar un registro en movimiento cuyas coordenadas NO sean el stale fix de la marquesina
-    const departureLog = await prismaClient.telemetryLog.findFirst({
-      where: {
-        vehicleId,
-        timestamp: {
-          gte: eventTimestamp,
-          lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
-        },
-        OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
-        latitude: { not: 0 },
-        longitude: { not: 0 },
-        ...(fallbackLat !== null && fallbackLng !== null
-          ? {
-              NOT: {
-                AND: [{ latitude: fallbackLat }, { longitude: fallbackLng }],
-              },
-            }
-          : {}),
-      },
-      orderBy: { timestamp: 'asc' },
-      select: { latitude: true, longitude: true },
-    });
-
+    // 1. Prioridad 1: Si ya contamos con una coordenada válida en fallback, la preservamos
     if (
-      departureLog &&
-      departureLog.latitude !== 0 &&
-      departureLog.longitude !== 0 &&
-      Math.abs(departureLog.latitude) > 0.0001
+      fallbackLat !== null &&
+      fallbackLng !== null &&
+      fallbackLat !== 0 &&
+      fallbackLng !== 0 &&
+      Math.abs(fallbackLat) > 0.0001
     ) {
       return {
-        latitude: departureLog.latitude,
-        longitude: departureLog.longitude,
+        latitude: fallbackLat,
+        longitude: fallbackLng,
       };
     }
 
-    // Si no hubo cambio con respecto a fallback, tomar el primer registro en movimiento post-recarga
-    const anyDepartureLog = await prismaClient.telemetryLog.findFirst({
+    // 2. Prioridad 2: Ubicación de llegada/parada previa o en el momento del evento (entrada a la gasolinera/parada)
+    // Buscar el último registro con GPS válido anterior o igual al evento
+    const priorLog = await prismaClient.telemetryLog.findFirst({
       where: {
         vehicleId,
         timestamp: {
-          gte: eventTimestamp,
-          lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
-        },
-        OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
-        latitude: { not: 0 },
-        longitude: { not: 0 },
-      },
-      orderBy: { timestamp: 'asc' },
-      select: { latitude: true, longitude: true },
-    });
-
-    if (
-      anyDepartureLog &&
-      anyDepartureLog.latitude !== 0 &&
-      anyDepartureLog.longitude !== 0 &&
-      Math.abs(anyDepartureLog.latitude) > 0.0001
-    ) {
-      return {
-        latitude: anyDepartureLog.latitude,
-        longitude: anyDepartureLog.longitude,
-      };
-    }
-
-    // 2. Prioridad 2: Entrada a la gasolinera (último movimiento antes de detenerse a recargar)
-    const arrivalLog = await prismaClient.telemetryLog.findFirst({
-      where: {
-        vehicleId,
-        timestamp: {
-          gte: new Date(eventTimestamp.getTime() - 20 * 60 * 1000),
           lte: eventTimestamp,
         },
-        OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
         latitude: { not: 0 },
         longitude: { not: 0 },
-        ...(fallbackLat !== null && fallbackLng !== null
-          ? {
-              NOT: {
-                AND: [{ latitude: fallbackLat }, { longitude: fallbackLng }],
-              },
-            }
-          : {}),
       },
       orderBy: { timestamp: 'desc' },
       select: { latitude: true, longitude: true },
     });
 
     if (
-      arrivalLog &&
-      arrivalLog.latitude !== 0 &&
-      arrivalLog.longitude !== 0 &&
-      Math.abs(arrivalLog.latitude) > 0.0001
+      priorLog &&
+      priorLog.latitude !== 0 &&
+      priorLog.longitude !== 0 &&
+      Math.abs(priorLog.latitude) > 0.0001
     ) {
       return {
-        latitude: arrivalLog.latitude,
-        longitude: arrivalLog.longitude,
+        latitude: priorLog.latitude,
+        longitude: priorLog.longitude,
       };
     }
 
-    // 3. Prioridad 3: Primer registro con GPS válido post-evento
+    // 3. Prioridad 3: Primer registro con GPS válido post-evento como último recurso
     const anyPostLog = await prismaClient.telemetryLog.findFirst({
       where: {
         vehicleId,
         timestamp: {
           gte: eventTimestamp,
-          lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
         },
         latitude: { not: 0 },
         longitude: { not: 0 },
@@ -480,19 +421,17 @@ async function processVehicleFuelHistory(vehicleId: string) {
 
   // 4. Guardar eventos de combustible creados en lotes
   if (fuelEventsToInsert.length > 0) {
-    // Resolver la ubicación precisa de la gasolinera para cada evento REFUEL
+    // Resolver la ubicación precisa de la gasolinera o parada para cada evento
     for (const evt of fuelEventsToInsert) {
-      if (evt.type === FuelEventType.REFUEL) {
-        const resolved = await resolveEventLocation(
-          prisma,
-          vehicle.id,
-          evt.timestamp,
-          evt.latitude,
-          evt.longitude,
-        );
-        evt.latitude = resolved.latitude;
-        evt.longitude = resolved.longitude;
-      }
+      const resolved = await resolveEventLocation(
+        prisma,
+        vehicle.id,
+        evt.timestamp,
+        evt.latitude,
+        evt.longitude,
+      );
+      evt.latitude = resolved.latitude;
+      evt.longitude = resolved.longitude;
     }
 
     await prisma.fuelEvent.createMany({

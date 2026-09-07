@@ -638,12 +638,12 @@ describe('VehiclesService', () => {
           speed: 0,
           gpsSpeed: 0,
           ignition: false,
-          latitude: 9.00001, // Stale fix previo
-          longitude: -79.00001,
+          latitude: 0, // Sin señal GPS bajo la marquesina
+          longitude: 0,
           odometer: 1000,
         });
       }
-      // 25 lecturas al 100% (recarga completada, estacionado en bomba y saliendo)
+      // 25 lecturas al 100% (recarga completada, estacionado en bomba con motor encendido)
       for (let i = 10; i < 35; i++) {
         logs.push({
           id: `log-${i}`,
@@ -653,15 +653,15 @@ describe('VehiclesService', () => {
           speed: 0,
           gpsSpeed: 0,
           ignition: true,
-          latitude: 9.00001, // Aún bajo la marquesina
-          longitude: -79.00001,
+          latitude: 0, // Sin señal GPS bajo la marquesina
+          longitude: 0,
           odometer: 1000,
         });
       }
 
       prismaMock.telemetryLog.findMany.mockResolvedValue(logs);
 
-      // Simular que findFirst encuentra el registro de salida con la ubicación real de la gasolinera
+      // Simular que findFirst encuentra el registro de llegada previo a la gasolinera
       prismaMock.telemetryLog.findFirst.mockResolvedValue({
         latitude: 9.123456,
         longitude: -79.654321,
@@ -670,6 +670,19 @@ describe('VehiclesService', () => {
       const result = await service.recalculateVehicleFuel('vehicle-1');
 
       expect(result.eventsCount).toBe(1);
+      expect(prismaMock.telemetryLog.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            vehicleId: 'vehicle-1',
+            timestamp: expect.objectContaining({
+              lte: expect.any(Date),
+            }),
+            latitude: { not: 0 },
+            longitude: { not: 0 },
+          }),
+          orderBy: { timestamp: 'desc' },
+        }),
+      );
       expect(prismaMock.fuelEvent.createMany).toHaveBeenCalledWith({
         data: [
           expect.objectContaining({

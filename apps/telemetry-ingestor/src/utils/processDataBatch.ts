@@ -49,6 +49,8 @@ export interface FuelVirtualState {
     startAnchor: number | null;
     stableCounter: number;
     lastMedian: number | null;
+    anchorLat?: number | null;
+    anchorLng?: number | null;
   };
 }
 
@@ -738,8 +740,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
                   percentageDelta: Math.round(delta * 100) / 100,
                   startLevel: Math.round(startAnchor * 100) / 100,
                   endLevel: Math.round(currentMed * 100) / 100,
-                  latitude: rec.latitude,
-                  longitude: rec.longitude,
+                  latitude: virtualState.session.anchorLat ?? rec.latitude,
+                  longitude: virtualState.session.anchorLng ?? rec.longitude,
                   timestamp: rec.timestamp as Date,
                 });
                 if (liveTripState.activeTrip) {
@@ -769,8 +771,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
                   percentageDelta: Math.round(delta * 100) / 100,
                   startLevel: Math.round(startAnchor * 100) / 100,
                   endLevel: Math.round(currentMed * 100) / 100,
-                  latitude: rec.latitude,
-                  longitude: rec.longitude,
+                  latitude: virtualState.session.anchorLat ?? rec.latitude,
+                  longitude: virtualState.session.anchorLng ?? rec.longitude,
                   timestamp: rec.timestamp as Date,
                 });
                 virtualState.lastValidAnchorPercent = currentMed;
@@ -849,6 +851,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
               startAnchor: currentAnchor,
               stableCounter: 0,
               lastMedian: stableMedian,
+              anchorLat: rec.latitude,
+              anchorLng: rec.longitude,
             };
           } else if (
             isSettled &&
@@ -861,6 +865,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
               startAnchor: currentAnchor,
               stableCounter: 0,
               lastMedian: stableMedian,
+              anchorLat: rec.latitude,
+              anchorLng: rec.longitude,
             };
           }
         }
@@ -913,8 +919,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
                     percentageDelta: Math.round(delta * 100) / 100,
                     startLevel: Math.round(startAnchor * 100) / 100,
                     endLevel: Math.round(stableMedian * 100) / 100,
-                    latitude: rec.latitude,
-                    longitude: rec.longitude,
+                    latitude: virtualState.session.anchorLat ?? rec.latitude,
+                    longitude: virtualState.session.anchorLng ?? rec.longitude,
                     timestamp: rec.timestamp as Date,
                   });
                   if (liveTripState.activeTrip) {
@@ -945,8 +951,8 @@ async function processDataBatchInternal(records: any[], imei: string) {
                     percentageDelta: Math.round(delta * 100) / 100,
                     startLevel: Math.round(startAnchor * 100) / 100,
                     endLevel: Math.round(stableMedian * 100) / 100,
-                    latitude: rec.latitude,
-                    longitude: rec.longitude,
+                    latitude: virtualState.session.anchorLat ?? rec.latitude,
+                    longitude: virtualState.session.anchorLng ?? rec.longitude,
                     timestamp: rec.timestamp as Date,
                   });
                 }
@@ -1206,81 +1212,59 @@ async function processDataBatchInternal(records: any[], imei: string) {
 
   if (fuelEventsToCreate.length > 0) {
     for (const evt of fuelEventsToCreate) {
-      if (evt.type === "REFUEL") {
-        const evtTime = new Date(evt.timestamp).getTime();
-        const fallbackLat = evt.latitude;
-        const fallbackLng = evt.longitude;
+      const evtTime = new Date(evt.timestamp).getTime();
+      const fallbackLat = evt.latitude;
+      const fallbackLng = evt.longitude;
 
-        const departure =
-          telemetryLogs.find(
-            (l: any) =>
-              new Date(l.timestamp).getTime() >= evtTime &&
-              new Date(l.timestamp).getTime() <= evtTime + 20 * 60 * 1000 &&
-              ((l.speed ?? 0) > 3 || (l.gpsSpeed ?? 0) > 3) &&
-              l.latitude !== 0 &&
-              l.longitude !== 0 &&
-              Math.abs(l.latitude) > 0.0001 &&
-              (fallbackLat === null ||
-                fallbackLng === null ||
-                Math.abs(l.latitude - fallbackLat) > 0.0001 ||
-                Math.abs(l.longitude - fallbackLng) > 0.0001),
-          ) ||
-          telemetryLogs.find(
-            (l: any) =>
-              new Date(l.timestamp).getTime() >= evtTime &&
-              new Date(l.timestamp).getTime() <= evtTime + 20 * 60 * 1000 &&
-              ((l.speed ?? 0) > 3 || (l.gpsSpeed ?? 0) > 3) &&
-              l.latitude !== 0 &&
-              l.longitude !== 0 &&
-              Math.abs(l.latitude) > 0.0001,
-          );
+      // 1. Si ya contamos con una coordenada válida en fallback (estacionaria/ancla), la preservamos
+      if (
+        fallbackLat !== null &&
+        fallbackLng !== null &&
+        fallbackLat !== 0 &&
+        fallbackLng !== 0 &&
+        Math.abs(fallbackLat) > 0.0001
+      ) {
+        continue;
+      }
 
-        if (departure) {
-          evt.latitude = departure.latitude;
-          evt.longitude = departure.longitude;
-        } else {
-          const arrival = [...telemetryLogs].reverse().find(
-            (l: any) =>
-              new Date(l.timestamp).getTime() <= evtTime &&
-              new Date(l.timestamp).getTime() >= evtTime - 20 * 60 * 1000 &&
-              ((l.speed ?? 0) > 3 || (l.gpsSpeed ?? 0) > 3) &&
-              l.latitude !== 0 &&
-              l.longitude !== 0 &&
-              Math.abs(l.latitude) > 0.0001,
-          );
+      // 2. Prioridad 2: Buscar último punto con GPS válido en el lote actual anterior o igual al evento
+      const arrival = [...telemetryLogs].reverse().find(
+        (l: any) =>
+          new Date(l.timestamp).getTime() <= evtTime &&
+          l.latitude !== 0 &&
+          l.longitude !== 0 &&
+          Math.abs(l.latitude) > 0.0001,
+      );
 
-          if (arrival) {
-            evt.latitude = arrival.latitude;
-            evt.longitude = arrival.longitude;
-          } else {
-            try {
-              const dbArrival = await prisma.telemetryLog.findFirst({
-                where: {
-                  vehicleId: vehicle.id,
-                  timestamp: {
-                    gte: new Date(evtTime - 20 * 60 * 1000),
-                    lte: new Date(evtTime),
-                  },
-                  OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
-                  latitude: { not: 0 },
-                  longitude: { not: 0 },
-                },
-                orderBy: { timestamp: "desc" },
-                select: { latitude: true, longitude: true },
-              });
-              if (
-                dbArrival &&
-                dbArrival.latitude !== 0 &&
-                dbArrival.longitude !== 0 &&
-                Math.abs(dbArrival.latitude) > 0.0001
-              ) {
-                evt.latitude = dbArrival.latitude;
-                evt.longitude = dbArrival.longitude;
-              }
-            } catch {
-              // fallback a las coordenadas de evt
-            }
+      if (arrival) {
+        evt.latitude = arrival.latitude;
+        evt.longitude = arrival.longitude;
+      } else {
+        // 3. Prioridad 3: Buscar en la base de datos el último registro con GPS válido anterior o igual al evento
+        try {
+          const dbArrival = await prisma.telemetryLog.findFirst({
+            where: {
+              vehicleId: vehicle.id,
+              timestamp: {
+                lte: new Date(evtTime),
+              },
+              latitude: { not: 0 },
+              longitude: { not: 0 },
+            },
+            orderBy: { timestamp: "desc" },
+            select: { latitude: true, longitude: true },
+          });
+          if (
+            dbArrival &&
+            dbArrival.latitude !== 0 &&
+            dbArrival.longitude !== 0 &&
+            Math.abs(dbArrival.latitude) > 0.0001
+          ) {
+            evt.latitude = dbArrival.latitude;
+            evt.longitude = dbArrival.longitude;
           }
+        } catch {
+          // fallback a las coordenadas de evt
         }
       }
     }
