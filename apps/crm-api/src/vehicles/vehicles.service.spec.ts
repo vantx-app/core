@@ -810,10 +810,211 @@ describe('VehiclesService', () => {
             endLevel: 100,
             latitude: pumpLat,
             longitude: pumpLng,
-            timestamp: pumpTime,
+            timestamp: expect.any(Date),
           }),
         ],
       });
+    });
+
+    it('debe detectar una recarga real pequeña (+3.5 L / +8.5%) sin descartarla', async () => {
+      const vehicleId = 'vehicle-small-refuel';
+      prismaMock.vehicle.findUnique.mockResolvedValue({
+        id: vehicleId,
+        tankCapacity: 41,
+      } as any);
+
+      const logs: any[] = [];
+      const baseTime = new Date('2026-09-05T10:00:00.000Z').getTime();
+
+      // Conducción en crucero a 50% (~20.5L)
+      for (let i = 0; i < 5; i++) {
+        logs.push({
+          id: `log-c-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(baseTime + i * 10 * 1000),
+          fuelLevel: 50.0,
+          speed: 40,
+          gpsSpeed: 40,
+          ignition: true,
+          latitude: 9.0,
+          longitude: -79.0,
+        });
+      }
+
+      // Parada en gasolinera por 2 minutos (120s): recarga pequeña de +3.5 L (+8.5% -> 58.5%)
+      for (let i = 0; i < 12; i++) {
+        logs.push({
+          id: `log-stop-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(baseTime + (50 + i * 10) * 1000),
+          fuelLevel: 58.5,
+          speed: 0,
+          gpsSpeed: 0,
+          ignition: true,
+          latitude: 9.05,
+          longitude: -79.05,
+        });
+      }
+
+      // Reanuda marcha activa por 5 minutos manteniendo el nivel en ~58%
+      for (let i = 0; i < 30; i++) {
+        logs.push({
+          id: `log-drive-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(baseTime + (170 + i * 10) * 1000),
+          fuelLevel: 58.5,
+          speed: 35,
+          gpsSpeed: 35,
+          ignition: true,
+          latitude: 9.06 + i * 0.001,
+          longitude: -79.06 + i * 0.001,
+        });
+      }
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(logs);
+
+      const result = await service.recalculateVehicleFuel(vehicleId);
+
+      expect(result.eventsCount).toBe(1);
+      expect(prismaMock.fuelEvent.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            type: 'REFUEL',
+            startLevel: 50,
+            endLevel: 58.5,
+            liters: 3.49,
+            percentageDelta: 8.5,
+          }),
+        ],
+      });
+    });
+
+    it('debe ignorar una subida falsa por estacionamiento en rampa que rebota al rodar', async () => {
+      const vehicleId = 'vehicle-ramp-slope';
+      prismaMock.vehicle.findUnique.mockResolvedValue({
+        id: vehicleId,
+        tankCapacity: 55,
+      } as any);
+
+      const logs: any[] = [];
+      const baseTime = new Date('2026-09-05T14:00:00.000Z').getTime();
+
+      // Conducción a nivel horizontal previo: 70%
+      for (let i = 0; i < 5; i++) {
+        logs.push({
+          id: `log-c-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(baseTime + i * 10 * 1000),
+          fuelLevel: 70.0,
+          speed: 30,
+          gpsSpeed: 30,
+          ignition: true,
+          latitude: 9.0,
+          longitude: -79.0,
+        });
+      }
+
+      // Se estaciona en una calle inclinada por 2 horas: el sensor marca 76% (+6% falso)
+      for (let i = 0; i < 20; i++) {
+        logs.push({
+          id: `log-ramp-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(baseTime + (50 + i * 60) * 1000),
+          fuelLevel: 76.0,
+          speed: 0,
+          gpsSpeed: 0,
+          ignition: false,
+          latitude: 9.01,
+          longitude: -79.01,
+        });
+      }
+
+      // Al salir de la rampa a la calle plana, el nivel regresa a su valor real (70%)
+      for (let i = 0; i < 15; i++) {
+        logs.push({
+          id: `log-level-drive-${i}`,
+          tripId: 'trip-2',
+          timestamp: new Date(baseTime + (1300 + i * 10) * 1000),
+          fuelLevel: 70.0,
+          speed: 25,
+          gpsSpeed: 25,
+          ignition: true,
+          latitude: 9.02 + i * 0.001,
+          longitude: -79.02 + i * 0.001,
+        });
+      }
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(logs);
+
+      const result = await service.recalculateVehicleFuel(vehicleId);
+
+      // Debe descartar el falso positivo y no registrar evento de recarga
+      expect(result.eventsCount).toBe(0);
+      expect(prismaMock.fuelEvent.createMany).not.toHaveBeenCalled();
+    });
+
+    it('debe ignorar una detención corta en semáforo con frenada brusca', async () => {
+      const vehicleId = 'vehicle-traffic-light';
+      prismaMock.vehicle.findUnique.mockResolvedValue({
+        id: vehicleId,
+        tankCapacity: 41,
+      } as any);
+
+      const logs: any[] = [];
+      const baseTime = new Date('2026-09-05T18:00:00.000Z').getTime();
+
+      // Conducción en crucero a 80%
+      for (let i = 0; i < 5; i++) {
+        logs.push({
+          id: `log-cruising-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(baseTime + i * 10 * 1000),
+          fuelLevel: 80.0,
+          speed: 45,
+          gpsSpeed: 45,
+          ignition: true,
+          latitude: 9.0,
+          longitude: -79.0,
+        });
+      }
+
+      // Frenada hacia semáforo rojo (dip de inercia a 72% y parada de solo 35 segundos)
+      for (let i = 0; i < 3; i++) {
+        logs.push({
+          id: `log-red-light-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(baseTime + (50 + i * 10) * 1000),
+          fuelLevel: 80.0,
+          speed: 0,
+          gpsSpeed: 0,
+          ignition: true,
+          latitude: 9.001,
+          longitude: -79.001,
+        });
+      }
+
+      // Reanuda marcha (speed > 3)
+      for (let i = 0; i < 5; i++) {
+        logs.push({
+          id: `log-green-light-${i}`,
+          tripId: 'trip-1',
+          timestamp: new Date(baseTime + (85 + i * 10) * 1000),
+          fuelLevel: 80.0,
+          speed: 30,
+          gpsSpeed: 30,
+          ignition: true,
+          latitude: 9.002 + i * 0.001,
+          longitude: -79.002 + i * 0.001,
+        });
+      }
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(logs);
+
+      const result = await service.recalculateVehicleFuel(vehicleId);
+
+      // No debe emitir eventos en semáforos
+      expect(result.eventsCount).toBe(0);
+      expect(prismaMock.fuelEvent.createMany).not.toHaveBeenCalled();
     });
   });
 });

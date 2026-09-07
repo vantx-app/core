@@ -41,12 +41,13 @@ const prisma = new PrismaClient();
 //    NUNCA se evalúa recarga ni drenado mientras el vehículo avanza; las caídas son consumo de motor.
 // 2. Las recargas y drenados SOLO ocurren cuando el vehículo está DETENIDO (speed <= 3 km/h).
 // 3. Cuando el vehículo se detiene, se ESPERA la estabilización del oleaje (settling).
-// 4. Magnitud física: una recarga o robo real supera con creces el ruido del sensor (>= 8.0% y >= 4.0 L).
-// 5. Persistencia y anti-rebote (Waiting): el nuevo nivel debe sostenerse en el tiempo y no rebotar
+// 4. Magnitud física: cualquier adición real >= 2.5% y >= 1.5 L es evaluada por la máquina cinemática
+//    (sin depender de umbrales mágicos arbitrarios).
+// 5. Persistencia y anti-rebote: el nuevo nivel debe sostenerse en el tiempo y no rebotar
 //    al reanudar la marcha (descartando inclinaciones/rampas de estacionamiento).
 // 6. Para drenado (robo), el motor DEBE estar apagado (!ignition), pues encendido detenido es ralentí.
-const MIN_EVENT_PERCENT = 7.5; // 7.5% mínimo para capturar recargas parciales reales (desde 4.0 L)
-const MIN_EVENT_LITERS = 4.0;   // 4.0 L mínimo para descartar ruido eléctrico
+const MIN_EVENT_PERCENT = 2.5; // Piso de ruido físico
+const MIN_EVENT_LITERS = 1.5;   // 1.5 L mínimo
 const CONFIRM_WINDOW_MS = 8 * 60 * 1000; // 8 minutos para confirmar persistencia
 
 function calculateMedian(values: number[]): number {
@@ -89,17 +90,24 @@ function checkDrainRebound(logs: any[], startIndex: number, anchor: number): boo
   return false;
 }
 
-// Anti-pendiente para recarga: verifica si al reanudar la marcha en carretera el nivel cae de vuelta al ancla previa (+2.5%)
-function checkRefuelRebound(logs: any[], startIndex: number, anchor: number): boolean {
+// Anti-pendiente para recarga: verifica si al reanudar la marcha en carretera el nivel cae de vuelta al ancla previa
+function checkRefuelRebound(
+  logs: any[],
+  startIndex: number,
+  anchor: number,
+  deltaPercent?: number,
+): boolean {
   let drivingReadings = 0;
+  const reboundThreshold = anchor + Math.min(2.5, (deltaPercent ?? 5) * 0.4);
+
   // Examinar hacia adelante: cuando el vehículo reanude la marcha (speed > 3)
   for (let i = startIndex + 1; i < logs.length; i++) {
     const isDriving = (logs[i].speed ?? 0) > 3 || (logs[i].gpsSpeed ?? 0) > 3;
     if (isDriving) {
       drivingReadings++;
       // En los primeros 5 minutos de conducción (~30 lecturas), si el nivel regresa
-      // al ancla previa (+2.5%), confirma que fue una falsa subida por inclinación/rampa o boya.
-      if (logs[i].fuelLevel <= anchor + 2.5) {
+      // al ancla previa, confirma que fue una falsa subida por inclinación/rampa o boya.
+      if (logs[i].fuelLevel <= reboundThreshold) {
         return true; // Rebote confirmado
       }
       // Si ya condujo más de 5 minutos en marcha y el combustible se mantuvo alto,
@@ -346,6 +354,8 @@ async function processVehicleFuelHistory(vehicleId: string) {
   let lastStationaryIndex: number | null = null;
 
   let cruisingReadings: number[] = [];
+  let isSlopeStop = false;
+  let isSlopeDrainStop = false;
 
   for (let i = 0; i < logs.length; i++) {
     const log = logs[i];
@@ -355,9 +365,9 @@ async function processVehicleFuelHistory(vehicleId: string) {
     // 1. VEHÍCULO EN MOVIMIENTO (CONDUCCIÓN):
     // Ningún evento de recarga ni robo puede ocurrir físicamente en marcha.
     if (isMoving) {
-      // Recopilar lecturas en crucero estable (velocidad > 15 km/h) para tener una línea base
+      // Recopilar lecturas en crucero estable (velocidad > 10 km/h) para tener una línea base
       // libre del oleaje de frenada al detenerse
-      if ((log.speed ?? 0) > 15 || (log.gpsSpeed ?? 0) > 15) {
+      if ((log.speed ?? 0) > 10 || (log.gpsSpeed ?? 0) > 10) {
         cruisingReadings.push(rawFuel);
         if (cruisingReadings.length > 20) {
           cruisingReadings.shift();
@@ -369,6 +379,8 @@ async function processVehicleFuelHistory(vehicleId: string) {
       lastStationaryLog = null;
       lastStationaryIndex = null;
       preStopFuelLevel = null;
+      isSlopeStop = false;
+      isSlopeDrainStop = false;
 
       // En marcha el ancla sigue suavemente el consumo real del motor hacia abajo filtrando sloshing.
       // NUNCA salta al fondo de un pozo de oleaje o frenada brusca.
@@ -413,69 +425,77 @@ async function processVehicleFuelHistory(vehicleId: string) {
       Math.round(((absDeltaPercent / 100.0) * effectiveCapacity) * 100) / 100;
 
     // 3. DETECCIÓN DE RECARGA (REFUEL):
-    if (delta >= MIN_EVENT_PERCENT && deltaLiters >= MIN_EVENT_LITERS) {
-      const isRebound = checkRefuelRebound(logs, i, baseline);
+    if (!isSlopeStop && delta >= MIN_EVENT_PERCENT && deltaLiters >= MIN_EVENT_LITERS) {
+      const isRebound = checkRefuelRebound(logs, i, baseline, delta);
 
-      if (!isRebound) {
-        const forwardMed = getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
-        const finalEndLevel =
-          forwardMed !== null ? Math.max(settledLevel, forwardMed) : settledLevel;
-        const realDelta = finalEndLevel - baseline;
-        const realLiters =
-          Math.round(((realDelta / 100.0) * effectiveCapacity) * 100) / 100;
-
-        const lastEvent =
-          fuelEventsToInsert.length > 0
-            ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
-            : null;
-        const timeSinceLastEventMs = lastEvent
-          ? log.timestamp.getTime() - lastEvent.timestamp.getTime()
-          : Infinity;
-
-        // Consolidación de recargas en etapas en la misma parada (<= 15 min):
-        if (
-          lastEvent &&
-          lastEvent.type === FuelEventType.REFUEL &&
-          timeSinceLastEventMs <= 15 * 60 * 1000
-        ) {
-          const consolidatedDelta = finalEndLevel - lastEvent.startLevel;
-          lastEvent.endLevel = Math.round(finalEndLevel * 10) / 10;
-          lastEvent.percentageDelta = Math.round(consolidatedDelta * 10) / 10;
-          lastEvent.liters =
-            Math.round(((consolidatedDelta / 100.0) * effectiveCapacity) * 100) / 100;
-        } else {
-          fuelEventsToInsert.push({
-            id: uuidv7(),
-            vehicleId: vehicle.id,
-            tripId: log.tripId ?? null,
-            type: FuelEventType.REFUEL,
-            liters: realLiters,
-            percentageDelta: Math.round(realDelta * 10) / 10,
-            startLevel: Math.round(baseline * 10) / 10,
-            endLevel: Math.round(finalEndLevel * 10) / 10,
-            latitude: log.latitude,
-            longitude: log.longitude,
-            timestamp: log.timestamp,
-          });
-        }
-
-        lastConfirmedAnchor = finalEndLevel;
-        preStopFuelLevel = finalEndLevel;
-        stationaryReadings = [finalEndLevel];
+      if (isRebound) {
+        isSlopeStop = true;
         continue;
       }
+
+      const forwardMed = getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
+      const finalEndLevel =
+        forwardMed !== null ? Math.max(settledLevel, forwardMed) : settledLevel;
+      const realDelta = finalEndLevel - baseline;
+      const realLiters =
+        Math.round(((realDelta / 100.0) * effectiveCapacity) * 100) / 100;
+
+      const lastEvent =
+        fuelEventsToInsert.length > 0
+          ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
+          : null;
+      const timeSinceLastEventMs = lastEvent
+        ? log.timestamp.getTime() - lastEvent.timestamp.getTime()
+        : Infinity;
+
+      // Consolidación de recargas en etapas en la misma parada (<= 15 min):
+      if (
+        lastEvent &&
+        lastEvent.type === FuelEventType.REFUEL &&
+        timeSinceLastEventMs <= 15 * 60 * 1000
+      ) {
+        const consolidatedDelta = finalEndLevel - lastEvent.startLevel;
+        lastEvent.endLevel = Math.round(finalEndLevel * 10) / 10;
+        lastEvent.percentageDelta = Math.round(consolidatedDelta * 10) / 10;
+        lastEvent.liters =
+          Math.round(((consolidatedDelta / 100.0) * effectiveCapacity) * 100) / 100;
+      } else {
+        fuelEventsToInsert.push({
+          id: uuidv7(),
+          vehicleId: vehicle.id,
+          tripId: log.tripId ?? null,
+          type: FuelEventType.REFUEL,
+          liters: realLiters,
+          percentageDelta: Math.round(realDelta * 10) / 10,
+          startLevel: Math.round(baseline * 10) / 10,
+          endLevel: Math.round(finalEndLevel * 10) / 10,
+          latitude: log.latitude,
+          longitude: log.longitude,
+          timestamp: log.timestamp,
+        });
+      }
+
+      lastConfirmedAnchor = finalEndLevel;
+      preStopFuelLevel = finalEndLevel;
+      stationaryReadings = [finalEndLevel];
+      continue;
     }
 
     // 4. DETECCIÓN DE DRENADO / ROBO (DRAIN):
-    else if (delta <= -MIN_EVENT_PERCENT && deltaLiters >= MIN_EVENT_LITERS) {
+    else if (!isSlopeDrainStop && delta <= -MIN_EVENT_PERCENT && deltaLiters >= MIN_EVENT_LITERS) {
       if (!log.ignition) {
+        const isRebound = checkDrainRebound(logs, i, baseline);
+        if (isRebound) {
+          isSlopeDrainStop = true;
+          continue;
+        }
+
         const forwardMed = getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
         const isPersistent =
           forwardMed === null ||
           forwardMed <= baseline - absDeltaPercent * 0.7;
-        const isRebound = checkDrainRebound(logs, i, baseline);
 
-        if (isPersistent && !isRebound) {
+        if (isPersistent) {
           fuelEventsToInsert.push({
             id: uuidv7(),
             vehicleId: vehicle.id,
