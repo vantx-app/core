@@ -1305,147 +1305,20 @@ export class VehiclesService {
 
   private checkRefuelRebound(logs: any[], startIndex: number, anchor: number): boolean {
     const baseTime = logs[startIndex].timestamp.getTime();
-    const maxLookaheadMs = 45 * 60 * 1000;
+    const maxLookaheadMs = 5 * 60 * 1000; // 5 minutos máximo tras el evento
     let dropCount = 0;
     for (let i = startIndex + 1; i < logs.length; i++) {
       const elapsed = logs[i].timestamp.getTime() - baseTime;
       if (elapsed > maxLookaheadMs) break;
-      if (logs[i].fuelLevel <= anchor + 4.0) {
+      // Si en los primeros 5 min cae de vuelta al ancla (+2%), fue una oscilación falsa
+      if (logs[i].fuelLevel <= anchor + 2.0) {
         dropCount++;
-        if (dropCount >= 5) {
-          return true;
+        if (dropCount >= 3) {
+          return true; // Rebote confirmado
         }
       }
     }
     return false;
-  }
-
-  private findFuelEventSourceLog(
-    logs: any[],
-    currentIndex: number,
-    type: FuelEventType,
-    startAnchor: number,
-    targetLevel: number,
-  ): {
-    timestamp: Date;
-    latitude: number | null;
-    longitude: number | null;
-    tripId: string | null;
-  } {
-    const currentLog = logs[currentIndex];
-
-    if (type === FuelEventType.REFUEL) {
-      let surgeStartIndex = currentIndex;
-      let targetReachedIndex = currentIndex;
-
-      for (let j = currentIndex; j >= 0; j--) {
-        const l = logs[j];
-        if (l.fuelLevel === null || l.fuelLevel === undefined) continue;
-
-        if (l.fuelLevel >= targetLevel - 3.0) {
-          targetReachedIndex = j;
-        }
-
-        if (l.fuelLevel <= startAnchor + 3.0) {
-          surgeStartIndex = Math.min(currentIndex, j + 1);
-          break;
-        }
-      }
-
-      let stationaryLog: any = null;
-      for (let k = targetReachedIndex; k >= surgeStartIndex; k--) {
-        const l = logs[k];
-        const isStopped = (l.speed ?? 0) <= 3 && (l.gpsSpeed ?? 0) <= 3;
-        if (
-          isStopped &&
-          l.latitude !== null &&
-          l.latitude !== undefined &&
-          l.latitude !== 0 &&
-          Math.abs(l.latitude) > 0.0001
-        ) {
-          stationaryLog = l;
-          break;
-        }
-      }
-
-      if (!stationaryLog) {
-        for (let k = surgeStartIndex; k >= Math.max(0, surgeStartIndex - 15); k--) {
-          const l = logs[k];
-          const isStopped = (l.speed ?? 0) <= 3 && (l.gpsSpeed ?? 0) <= 3;
-          if (
-            isStopped &&
-            l.latitude !== null &&
-            l.latitude !== undefined &&
-            l.latitude !== 0 &&
-            Math.abs(l.latitude) > 0.0001
-          ) {
-            stationaryLog = l;
-            break;
-          }
-        }
-      }
-
-      const chosenCoordLog =
-        stationaryLog ??
-        logs[targetReachedIndex] ??
-        logs[surgeStartIndex] ??
-        currentLog;
-      const eventTimeLog = logs[targetReachedIndex] ?? chosenCoordLog;
-
-      return {
-        timestamp: eventTimeLog.timestamp,
-        latitude: chosenCoordLog.latitude ?? currentLog.latitude,
-        longitude: chosenCoordLog.longitude ?? currentLog.longitude,
-        tripId: chosenCoordLog.tripId ?? currentLog.tripId ?? null,
-      };
-    } else {
-      let drainStartIndex = currentIndex;
-      let targetReachedIndex = currentIndex;
-
-      for (let j = currentIndex; j >= 0; j--) {
-        const l = logs[j];
-        if (l.fuelLevel === null || l.fuelLevel === undefined) continue;
-
-        if (l.fuelLevel <= targetLevel + 3.0) {
-          targetReachedIndex = j;
-        }
-
-        if (l.fuelLevel >= startAnchor - 3.0) {
-          drainStartIndex = Math.min(currentIndex, j + 1);
-          break;
-        }
-      }
-
-      let stationaryLog: any = null;
-      for (let k = targetReachedIndex; k >= drainStartIndex; k--) {
-        const l = logs[k];
-        const isStopped = (l.speed ?? 0) <= 3 && (l.gpsSpeed ?? 0) <= 3;
-        if (
-          isStopped &&
-          l.latitude !== null &&
-          l.latitude !== undefined &&
-          l.latitude !== 0 &&
-          Math.abs(l.latitude) > 0.0001
-        ) {
-          stationaryLog = l;
-          break;
-        }
-      }
-
-      const chosenCoordLog =
-        stationaryLog ??
-        logs[targetReachedIndex] ??
-        logs[drainStartIndex] ??
-        currentLog;
-      const eventTimeLog = logs[targetReachedIndex] ?? chosenCoordLog;
-
-      return {
-        timestamp: eventTimeLog.timestamp,
-        latitude: chosenCoordLog.latitude ?? currentLog.latitude,
-        longitude: chosenCoordLog.longitude ?? currentLog.longitude,
-        tripId: chosenCoordLog.tripId ?? currentLog.tripId ?? null,
-      };
-    }
   }
 
   private async resolveEventLocation(
@@ -1455,53 +1328,111 @@ export class VehiclesService {
     fallbackLng: number | null,
   ): Promise<{ latitude: number | null; longitude: number | null }> {
     try {
-      // 1. Prioridad 1: Si ya contamos con una coordenada válida en fallback, la preservamos
-      if (
-        fallbackLat !== null &&
-        fallbackLng !== null &&
-        fallbackLat !== 0 &&
-        fallbackLng !== 0 &&
-        Math.abs(fallbackLat) > 0.0001
-      ) {
-        return {
-          latitude: fallbackLat,
-          longitude: fallbackLng,
-        };
-      }
-
-      // 2. Prioridad 2: Ubicación de llegada/parada previa o en el momento del evento (entrada a la gasolinera/parada)
-      // Buscar el último registro con GPS válido anterior o igual al evento
-      const priorLog = await this.prisma.telemetryLog.findFirst({
+      // 1. Prioridad 1: Salida de la gasolinera (primer movimiento con fix fresco post-recarga)
+      const departureLog = await this.prisma.telemetryLog.findFirst({
         where: {
           vehicleId,
           timestamp: {
-            lte: eventTimestamp,
+            gte: eventTimestamp,
+            lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
           },
+          OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
           latitude: { not: 0 },
           longitude: { not: 0 },
+          ...(fallbackLat !== null && fallbackLng !== null
+            ? {
+                NOT: {
+                  AND: [{ latitude: fallbackLat }, { longitude: fallbackLng }],
+                },
+              }
+            : {}),
+        },
+        orderBy: { timestamp: 'asc' },
+        select: { latitude: true, longitude: true },
+      });
+
+      if (
+        departureLog &&
+        departureLog.latitude !== 0 &&
+        departureLog.longitude !== 0 &&
+        Math.abs(departureLog.latitude) > 0.0001
+      ) {
+        return {
+          latitude: departureLog.latitude,
+          longitude: departureLog.longitude,
+        };
+      }
+
+      // Si no hubo cambio con respecto a fallback, tomar cualquier registro en movimiento post-recarga
+      const anyDepartureLog = await this.prisma.telemetryLog.findFirst({
+        where: {
+          vehicleId,
+          timestamp: {
+            gte: eventTimestamp,
+            lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
+          },
+          OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+          latitude: { not: 0 },
+          longitude: { not: 0 },
+        },
+        orderBy: { timestamp: 'asc' },
+        select: { latitude: true, longitude: true },
+      });
+
+      if (
+        anyDepartureLog &&
+        anyDepartureLog.latitude !== 0 &&
+        anyDepartureLog.longitude !== 0 &&
+        Math.abs(anyDepartureLog.latitude) > 0.0001
+      ) {
+        return {
+          latitude: anyDepartureLog.latitude,
+          longitude: anyDepartureLog.longitude,
+        };
+      }
+
+      // 2. Prioridad 2: Entrada a la gasolinera (último movimiento antes de detenerse a recargar)
+      const arrivalLog = await this.prisma.telemetryLog.findFirst({
+        where: {
+          vehicleId,
+          timestamp: {
+            gte: new Date(eventTimestamp.getTime() - 20 * 60 * 1000),
+            lte: eventTimestamp,
+          },
+          OR: [{ speed: { gt: 3 } }, { gpsSpeed: { gt: 3 } }],
+          latitude: { not: 0 },
+          longitude: { not: 0 },
+          ...(fallbackLat !== null && fallbackLng !== null
+            ? {
+                NOT: {
+                  AND: [{ latitude: fallbackLat }, { longitude: fallbackLng }],
+                },
+              }
+            : {}),
         },
         orderBy: { timestamp: 'desc' },
         select: { latitude: true, longitude: true },
       });
 
       if (
-        priorLog &&
-        priorLog.latitude !== 0 &&
-        priorLog.longitude !== 0 &&
-        Math.abs(priorLog.latitude) > 0.0001
+        arrivalLog &&
+        arrivalLog.latitude !== 0 &&
+        arrivalLog.longitude !== 0 &&
+        Math.abs(arrivalLog.latitude) > 0.0001
       ) {
         return {
-          latitude: priorLog.latitude,
-          longitude: priorLog.longitude,
+          latitude: arrivalLog.latitude,
+          longitude: arrivalLog.longitude,
         };
       }
 
-      // 3. Prioridad 3: Primer registro con GPS válido post-evento como último recurso
-      const postLog = await this.prisma.telemetryLog.findFirst({
+      // 3. Prioridad 3: Primer registro con GPS válido post-evento
+      const anyPostLog = await this.prisma.telemetryLog.findFirst({
         where: {
           vehicleId,
           timestamp: {
             gte: eventTimestamp,
+            lte: new Date(eventTimestamp.getTime() + 20 * 60 * 1000),
           },
           latitude: { not: 0 },
           longitude: { not: 0 },
@@ -1511,14 +1442,14 @@ export class VehiclesService {
       });
 
       if (
-        postLog &&
-        postLog.latitude !== 0 &&
-        postLog.longitude !== 0 &&
-        Math.abs(postLog.latitude) > 0.0001
+        anyPostLog &&
+        anyPostLog.latitude !== 0 &&
+        anyPostLog.longitude !== 0 &&
+        Math.abs(anyPostLog.latitude) > 0.0001
       ) {
         return {
-          latitude: postLog.latitude,
-          longitude: postLog.longitude,
+          latitude: anyPostLog.latitude,
+          longitude: anyPostLog.longitude,
         };
       }
     } catch {
@@ -1597,10 +1528,14 @@ export class VehiclesService {
       timestamp: Date;
     }> = [];
 
-    const initialSample = logs.slice(0, Math.min(10, logs.length)).map((l) => l.fuelLevel!);
+    let initialSample = logs.slice(0, Math.min(10, logs.length)).map((l) => l.fuelLevel!);
     let lastConfirmedAnchor = this.calculateMedian(initialSample);
+    let preStopFuelLevel: number | null = lastConfirmedAnchor;
     let stationaryReadings: number[] = [];
     let stationaryStartTime: number | null = null;
+    let lastStationaryLog: (typeof logs)[0] | null = null;
+    let lastStationaryIndex: number | null = null;
+    let movingBuffer: number[] = [];
 
     for (let i = 0; i < logs.length; i++) {
       const log = logs[i];
@@ -1608,46 +1543,27 @@ export class VehiclesService {
       const isMoving = (log.speed ?? 0) > 3 || (log.gpsSpeed ?? 0) > 3;
 
       // 1. VEHÍCULO EN MOVIMIENTO (CONDUCCIÓN):
+      // Ningún evento de recarga ni robo puede ocurrir físicamente en marcha.
       if (isMoving) {
-        stationaryReadings = [];
-        stationaryStartTime = null;
+        // Si venía de estar detenido, verificar si durante la parada ocurrió una recarga con salida rápida
+        if (lastStationaryLog !== null && preStopFuelLevel !== null && lastStationaryIndex !== null) {
+          const forwardMed = this.getForwardMedian(logs, lastStationaryIndex, CONFIRM_WINDOW_MS);
+          const exitLevel = forwardMed !== null ? Math.max(rawFuel, forwardMed) : rawFuel;
+          const departureDelta = exitLevel - preStopFuelLevel;
+          const departureDeltaLiters =
+            Math.round(((departureDelta / 100.0) * effectiveCapacity) * 100) / 100;
 
-        const movingDelta = rawFuel - lastConfirmedAnchor;
-        const movingDeltaLiters =
-          Math.round(((movingDelta / 100.0) * effectiveCapacity) * 100) / 100;
-
-        // Detección de recarga con salida en marcha: si el nivel se incrementó significativamente
-        if (
-          movingDelta >= MIN_EVENT_PERCENT &&
-          movingDeltaLiters >= MIN_EVENT_LITERS
-        ) {
-          const forwardMed = this.getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
-          const isPersistent =
-            forwardMed === null ||
-            forwardMed >= lastConfirmedAnchor + movingDelta * 0.7;
-          const isRebound = this.checkRefuelRebound(logs, i, lastConfirmedAnchor);
-
-          if (isPersistent && !isRebound) {
-            const finalEndLevel =
-              forwardMed !== null ? Math.max(rawFuel, forwardMed) : rawFuel;
-            const realDelta = finalEndLevel - lastConfirmedAnchor;
-            const realLiters =
-              Math.round(((realDelta / 100.0) * effectiveCapacity) * 100) / 100;
-
-            const sourceLog = this.findFuelEventSourceLog(
-              logs,
-              i,
-              FuelEventType.REFUEL,
-              lastConfirmedAnchor,
-              finalEndLevel,
-            );
-
+          if (
+            departureDelta >= MIN_EVENT_PERCENT &&
+            departureDeltaLiters >= MIN_EVENT_LITERS &&
+            !this.checkRefuelRebound(logs, lastStationaryIndex, preStopFuelLevel)
+          ) {
             const lastEvent =
               fuelEventsToInsert.length > 0
                 ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
                 : null;
             const timeSinceLastEventMs = lastEvent
-              ? sourceLog.timestamp.getTime() - lastEvent.timestamp.getTime()
+              ? lastStationaryLog.timestamp.getTime() - lastEvent.timestamp.getTime()
               : Infinity;
 
             if (
@@ -1655,8 +1571,8 @@ export class VehiclesService {
               lastEvent.type === FuelEventType.REFUEL &&
               timeSinceLastEventMs <= 15 * 60 * 1000
             ) {
-              const consolidatedDelta = finalEndLevel - lastEvent.startLevel;
-              lastEvent.endLevel = Math.round(finalEndLevel * 10) / 10;
+              const consolidatedDelta = exitLevel - lastEvent.startLevel;
+              lastEvent.endLevel = Math.round(exitLevel * 10) / 10;
               lastEvent.percentageDelta = Math.round(consolidatedDelta * 10) / 10;
               lastEvent.liters =
                 Math.round(((consolidatedDelta / 100.0) * effectiveCapacity) * 100) / 100;
@@ -1664,39 +1580,58 @@ export class VehiclesService {
               fuelEventsToInsert.push({
                 id: uuidv7(),
                 vehicleId,
-                tripId: sourceLog.tripId,
+                tripId: lastStationaryLog.tripId ?? null,
                 type: FuelEventType.REFUEL,
-                liters: realLiters,
-                percentageDelta: Math.round(realDelta * 10) / 10,
-                startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
-                endLevel: Math.round(finalEndLevel * 10) / 10,
-                latitude: sourceLog.latitude,
-                longitude: sourceLog.longitude,
-                timestamp: sourceLog.timestamp,
+                liters: departureDeltaLiters,
+                percentageDelta: Math.round(departureDelta * 10) / 10,
+                startLevel: Math.round(preStopFuelLevel * 10) / 10,
+                endLevel: Math.round(exitLevel * 10) / 10,
+                latitude: lastStationaryLog.latitude,
+                longitude: lastStationaryLog.longitude,
+                timestamp: lastStationaryLog.timestamp,
               });
             }
-
-            lastConfirmedAnchor = finalEndLevel;
-            continue;
+            lastConfirmedAnchor = exitLevel;
           }
         }
 
-        if (rawFuel < lastConfirmedAnchor) {
-          lastConfirmedAnchor = 0.02 * rawFuel + 0.98 * lastConfirmedAnchor;
+        stationaryReadings = [];
+        stationaryStartTime = null;
+        lastStationaryLog = null;
+        lastStationaryIndex = null;
+        preStopFuelLevel = null;
+
+        movingBuffer.push(rawFuel);
+        if (movingBuffer.length > 15) {
+          movingBuffer.shift();
+        }
+
+        // En marcha el ancla sigue el consumo real del motor hacia abajo filtrando sloshing
+        if (movingBuffer.length >= 5) {
+          const smoothedMovingFuel = this.calculateMedian(movingBuffer);
+          if (smoothedMovingFuel < lastConfirmedAnchor) {
+            lastConfirmedAnchor = smoothedMovingFuel;
+          }
         }
         continue;
       }
 
       // 2. VEHÍCULO DETENIDO (PARADA O ESTACIONADO):
-      if (!stationaryStartTime) {
+      movingBuffer = [];
+      if (stationaryStartTime === null) {
         stationaryStartTime = log.timestamp.getTime();
+        preStopFuelLevel = lastConfirmedAnchor;
       }
+      lastStationaryLog = log;
+      lastStationaryIndex = i;
+
       stationaryReadings.push(rawFuel);
       if (stationaryReadings.length > 30) {
         stationaryReadings.shift();
       }
 
       const elapsedStationaryMs = log.timestamp.getTime() - stationaryStartTime;
+      // Esperar al menos 5 lecturas o 45 segundos detenido para asentar el oleaje de frenado
       const isSettled =
         stationaryReadings.length >= 5 ||
         (elapsedStationaryMs >= 45_000 && stationaryReadings.length >= 2);
@@ -1706,41 +1641,33 @@ export class VehiclesService {
       }
 
       const settledLevel = this.calculateMedian(stationaryReadings);
-      const delta = settledLevel - lastConfirmedAnchor;
+      const baseline = preStopFuelLevel ?? lastConfirmedAnchor;
+      const delta = settledLevel - baseline;
       const absDeltaPercent = Math.abs(delta);
       const deltaLiters =
         Math.round(((absDeltaPercent / 100.0) * effectiveCapacity) * 100) / 100;
 
       // 3. DETECCIÓN DE RECARGA (REFUEL):
       if (delta >= MIN_EVENT_PERCENT && deltaLiters >= MIN_EVENT_LITERS) {
-        const forwardMed = this.getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
-        const isPersistent =
-          forwardMed === null || forwardMed >= lastConfirmedAnchor + delta * 0.7;
-        const isRebound = this.checkRefuelRebound(logs, i, lastConfirmedAnchor);
+        const isRebound = this.checkRefuelRebound(logs, i, baseline);
 
-        if (isPersistent && !isRebound) {
+        if (!isRebound) {
+          const forwardMed = this.getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
           const finalEndLevel =
             forwardMed !== null ? Math.max(settledLevel, forwardMed) : settledLevel;
-          const realDelta = finalEndLevel - lastConfirmedAnchor;
+          const realDelta = finalEndLevel - baseline;
           const realLiters =
             Math.round(((realDelta / 100.0) * effectiveCapacity) * 100) / 100;
-
-          const sourceLog = this.findFuelEventSourceLog(
-            logs,
-            i,
-            FuelEventType.REFUEL,
-            lastConfirmedAnchor,
-            finalEndLevel,
-          );
 
           const lastEvent =
             fuelEventsToInsert.length > 0
               ? fuelEventsToInsert[fuelEventsToInsert.length - 1]
               : null;
           const timeSinceLastEventMs = lastEvent
-            ? sourceLog.timestamp.getTime() - lastEvent.timestamp.getTime()
+            ? log.timestamp.getTime() - lastEvent.timestamp.getTime()
             : Infinity;
 
+          // Consolidación de recargas en etapas en la misma parada (<= 15 min):
           if (
             lastEvent &&
             lastEvent.type === FuelEventType.REFUEL &&
@@ -1755,18 +1682,20 @@ export class VehiclesService {
             fuelEventsToInsert.push({
               id: uuidv7(),
               vehicleId,
-              tripId: sourceLog.tripId,
+              tripId: log.tripId ?? null,
               type: FuelEventType.REFUEL,
               liters: realLiters,
               percentageDelta: Math.round(realDelta * 10) / 10,
-              startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
+              startLevel: Math.round(baseline * 10) / 10,
               endLevel: Math.round(finalEndLevel * 10) / 10,
-              latitude: sourceLog.latitude,
-              longitude: sourceLog.longitude,
-              timestamp: sourceLog.timestamp,
+              latitude: log.latitude,
+              longitude: log.longitude,
+              timestamp: log.timestamp,
             });
           }
+
           lastConfirmedAnchor = finalEndLevel;
+          preStopFuelLevel = finalEndLevel;
           stationaryReadings = [finalEndLevel];
           continue;
         }
@@ -1778,42 +1707,28 @@ export class VehiclesService {
           const forwardMed = this.getForwardMedian(logs, i, CONFIRM_WINDOW_MS);
           const isPersistent =
             forwardMed === null ||
-            forwardMed <= lastConfirmedAnchor - absDeltaPercent * 0.7;
-          const isRebound = this.checkDrainRebound(logs, i, lastConfirmedAnchor);
+            forwardMed <= baseline - absDeltaPercent * 0.7;
+          const isRebound = this.checkDrainRebound(logs, i, baseline);
 
           if (isPersistent && !isRebound) {
-            const sourceLog = this.findFuelEventSourceLog(
-              logs,
-              i,
-              FuelEventType.DRAIN,
-              lastConfirmedAnchor,
-              settledLevel,
-            );
-
             fuelEventsToInsert.push({
               id: uuidv7(),
               vehicleId,
-              tripId: sourceLog.tripId,
+              tripId: log.tripId ?? null,
               type: FuelEventType.DRAIN,
               liters: deltaLiters,
               percentageDelta: Math.round(delta * 10) / 10,
-              startLevel: Math.round(lastConfirmedAnchor * 10) / 10,
+              startLevel: Math.round(baseline * 10) / 10,
               endLevel: Math.round(settledLevel * 10) / 10,
-              latitude: sourceLog.latitude,
-              longitude: sourceLog.longitude,
-              timestamp: sourceLog.timestamp,
+              latitude: log.latitude,
+              longitude: log.longitude,
+              timestamp: log.timestamp,
             });
 
             lastConfirmedAnchor = settledLevel;
+            preStopFuelLevel = settledLevel;
             stationaryReadings = [settledLevel];
             continue;
-          }
-        }
-      } else {
-        // 5. RALENTÍ Y MICRO-VARIACIONES:
-        if (absDeltaPercent < MIN_EVENT_PERCENT) {
-          if (log.ignition && settledLevel < lastConfirmedAnchor) {
-            lastConfirmedAnchor = 0.05 * settledLevel + 0.95 * lastConfirmedAnchor;
           }
         }
       }

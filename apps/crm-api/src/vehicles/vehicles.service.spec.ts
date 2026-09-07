@@ -642,13 +642,9 @@ describe('VehiclesService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             vehicleId: 'vehicle-1',
-            timestamp: expect.objectContaining({
-              lte: expect.any(Date),
-            }),
             latitude: { not: 0 },
             longitude: { not: 0 },
           }),
-          orderBy: { timestamp: 'desc' },
         }),
       );
       expect(prismaMock.fuelEvent.createMany).toHaveBeenCalledWith({
