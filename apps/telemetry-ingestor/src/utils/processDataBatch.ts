@@ -485,8 +485,36 @@ async function processDataBatchInternal(records: any[], imei: string) {
       vehicle.liveState?.virtualState &&
       typeof vehicle.liveState.virtualState === "object"
     ) {
-      virtualState = vehicle.liveState
-        .virtualState as unknown as FuelVirtualState;
+      const vs = vehicle.liveState.virtualState as any;
+      virtualState = {
+        currentDisplayPercent:
+          typeof vs.currentDisplayPercent === "number"
+            ? vs.currentDisplayPercent
+            : (vehicle.liveState.lastFuelLevel ?? null),
+        lastValidAnchorPercent:
+          typeof vs.lastValidAnchorPercent === "number"
+            ? vs.lastValidAnchorPercent
+            : (vehicle.liveState.lastFuelLevel ?? null),
+        vehicleState: vs.vehicleState === "MOVING" ? "MOVING" : "PARKED",
+        segmentReadings: Array.isArray(vs.segmentReadings)
+          ? vs.segmentReadings
+          : [],
+        distanceAccumulator:
+          typeof vs.distanceAccumulator === "number" ? vs.distanceAccumulator : 0,
+        timeAccumulator:
+          typeof vs.timeAccumulator === "number" ? vs.timeAccumulator : 0,
+        ignitionOnTime:
+          typeof vs.ignitionOnTime === "number" ? vs.ignitionOnTime : null,
+        ignitionOnReadings: Array.isArray(vs.ignitionOnReadings)
+          ? vs.ignitionOnReadings
+          : [],
+        session: vs.session ?? {
+          type: "NONE",
+          startAnchor: null,
+          stableCounter: 0,
+          lastMedian: null,
+        },
+      };
     } else {
       const initialLevel = vehicle.liveState?.lastFuelLevel ?? null;
       virtualState = {
@@ -510,6 +538,19 @@ async function processDataBatchInternal(records: any[], imei: string) {
     fuelVirtualStateCache.set(vehicle.id, virtualState);
   }
 
+  // Defensive fallback ensuring arrays and accumulators are never undefined
+  if (!Array.isArray(virtualState.segmentReadings)) {
+    virtualState.segmentReadings = [];
+  }
+  if (!Array.isArray(virtualState.ignitionOnReadings)) {
+    virtualState.ignitionOnReadings = [];
+  }
+  if (typeof virtualState.distanceAccumulator !== "number") {
+    virtualState.distanceAccumulator = 0;
+  }
+  if (typeof virtualState.timeAccumulator !== "number") {
+    virtualState.timeAccumulator = 0;
+  }
   if (!virtualState.session) {
     virtualState.session = {
       type: "NONE",

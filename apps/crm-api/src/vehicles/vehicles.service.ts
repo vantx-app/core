@@ -1805,26 +1805,36 @@ export class VehiclesService {
 
     // 4. Actualizar liveState
     const lastLog = logs[logs.length - 1];
+    const roundedFuel = Math.round(lastConfirmedAnchor * 100) / 100;
+    const fullVirtualState = {
+      currentDisplayPercent: roundedFuel,
+      lastValidAnchorPercent: roundedFuel,
+      vehicleState: 'PARKED',
+      segmentReadings: [roundedFuel],
+      distanceAccumulator: 0,
+      timeAccumulator: 0,
+      ignitionOnTime: null,
+      ignitionOnReadings: [],
+      session: {
+        type: 'NONE',
+        startAnchor: null,
+        stableCounter: 0,
+        lastMedian: null,
+      },
+    };
+
     await this.prisma.vehicleLiveState.upsert({
       where: { vehicleId },
       update: {
-        lastFuelLevel: Math.round(lastConfirmedAnchor * 100) / 100,
-        virtualState: {
-          currentDisplayPercent: lastConfirmedAnchor,
-          lastValidAnchorPercent: lastConfirmedAnchor,
-          vehicleState: 'PARKED',
-        } as any,
+        lastFuelLevel: roundedFuel,
+        virtualState: fullVirtualState as any,
       },
       create: {
         vehicleId,
         lastLat: lastLog.latitude ?? 0,
         lastLng: lastLog.longitude ?? 0,
-        lastFuelLevel: Math.round(lastConfirmedAnchor * 100) / 100,
-        virtualState: {
-          currentDisplayPercent: lastConfirmedAnchor,
-          lastValidAnchorPercent: lastConfirmedAnchor,
-          vehicleState: 'PARKED',
-        } as any,
+        lastFuelLevel: roundedFuel,
+        virtualState: fullVirtualState as any,
         lastUpdate: new Date(),
       },
     });

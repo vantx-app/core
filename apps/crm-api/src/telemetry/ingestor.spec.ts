@@ -2004,5 +2004,51 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       expect(logs[2].status).toBe('EXCESSIVE_IDLING');
       expect(logs[3].status).toBe('IDLING'); // Debe haber vuelto a IDLING (desactivado)
     });
+
+    it('debe manejar de forma segura un vehicleLiveState con virtualState incompleto (sin segmentReadings) sin lanzar TypeError', async () => {
+      const mockVehicleId = 'vehicle-uuid-incomplete-virtual-state';
+      const mockImei = '868018072994695';
+
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-1',
+        tankCapacity: 60,
+        device: {
+          imei: mockImei,
+          model: 'FMC150',
+        },
+        liveState: {
+          currentStatus: 'STOPPED',
+          lastFuelLevel: 80,
+          virtualState: {
+            currentDisplayPercent: 80,
+            lastValidAnchorPercent: 80,
+            vehicleState: 'PARKED',
+            // segmentReadings omitido deliberadamente
+          },
+        },
+      });
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98,
+          longitude: -79.52,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 0,
+          priority: 1,
+          eventId: 0,
+          ioData: {
+            239: 0,
+            84: 80, // Fuel Level
+          },
+        },
+      ];
+
+      await expect(processDataBatch(records, mockImei)).resolves.not.toThrow();
+      expect(mockPrisma.vehicleLiveState.upsert).toHaveBeenCalled();
+    });
   });
 });
