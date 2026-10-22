@@ -22,6 +22,7 @@ import { UpdateVehicleDto } from './dto/update-vehicle.dto';
 import { AssignDriverDto } from './dto/assign-driver.dto';
 import { CreateTrackingLinkDto } from './dto/create-tracking-link.dto';
 import { CalibrateTankDto } from './dto/calibrate-tank.dto';
+import { DownloadLogsDto } from './dto/download-logs.dto';
 import { ROLES } from 'src/common/enums/roles.enum';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { Public } from 'src/common/decorators/public.decorator';
@@ -255,6 +256,32 @@ export class VehiclesController {
   ) {
     await this.vehiclesService.verifyVehicleAccess(id, req.user);
     return this.vehiclesService.calibrateTank(id, dto);
+  }
+
+  @Get(':id/diagnostics/download')
+  async downloadDiagnostics(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request & { user: AccessTokenPayload },
+    @Query() query: DownloadLogsDto,
+    @Res() res: Response,
+  ) {
+    await this.vehiclesService.verifyVehicleAccess(id, req.user);
+    const format =
+      query.format === 'json' || query.format === 'csv'
+        ? query.format
+        : 'csv';
+    const result = await this.vehiclesService.generateDiagnosticsExport(
+      id,
+      query.from,
+      query.to,
+      format,
+    );
+    res.set({
+      'Content-Type': result.contentType,
+      'Content-Disposition': `attachment; filename="${result.filename}"`,
+      'Content-Length': result.buffer.length.toString(),
+    });
+    res.end(result.buffer);
   }
 
   @Public()

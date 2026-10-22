@@ -974,6 +974,125 @@ export class VehiclesService {
   }
 
   /**
+   * Genera un archivo de diagnóstico (CSV o JSON) con los registros de
+   * telemetría crudos de un vehículo para un rango de fechas dado.
+   * Máximo 7 días por descarga.
+   */
+  async generateDiagnosticsExport(
+    vehicleId: string,
+    fromStr?: string,
+    toStr?: string,
+    format: 'csv' | 'json' = 'csv',
+  ): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
+    const toDate = toStr ? new Date(toStr) : new Date();
+    const defaultFrom = new Date(toDate.getTime() - 24 * 60 * 60 * 1000);
+    const fromDate = fromStr ? new Date(fromStr) : defaultFrom;
+
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      throw new BadRequestException('Las fechas proporcionadas no son válidas.');
+    }
+
+    const diffMs = toDate.getTime() - fromDate.getTime();
+    const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+    if (diffDays > 7) {
+      throw new BadRequestException(
+        'El rango máximo permitido es de 7 días por descarga.',
+      );
+    }
+
+    if (fromDate >= toDate) {
+      throw new BadRequestException(
+        'La fecha de inicio debe ser anterior a la fecha de fin.',
+      );
+    }
+
+    const vehicle = await this.prisma.vehicle.findUnique({
+      where: { id: vehicleId },
+      select: { alias: true, plateNumber: true },
+    });
+
+    if (!vehicle) {
+      throw new NotFoundException('Vehículo no encontrado.');
+    }
+
+    const logs = await this.prisma.telemetryLog.findMany({
+      where: {
+        vehicleId,
+        timestamp: { gte: fromDate, lte: toDate },
+      },
+      orderBy: { timestamp: 'asc' },
+    });
+
+    const slug = (vehicle.alias || vehicle.plateNumber)
+      .replace(/\s+/g, '_')
+      .replace(/[^a-zA-Z0-9_-]/g, '');
+    const dateTag = fromDate.toISOString().slice(0, 10);
+
+    if (format === 'json') {
+      const buffer = Buffer.from(JSON.stringify(logs, null, 2), 'utf-8');
+      return {
+        buffer,
+        filename: `diagnostico_${slug}_${dateTag}.json`,
+        contentType: 'application/json',
+      };
+    }
+
+    // CSV
+    const headers = [
+      'timestamp',
+      'latitude',
+      'longitude',
+      'speed',
+      'gpsSpeed',
+      'angle',
+      'altitude',
+      'satellites',
+      'rpm',
+      'engineLoad',
+      'coolantTemp',
+      'powerSupply',
+      'ignition',
+      'movement',
+      'unplugged',
+      'status',
+      'odometer',
+      'engineHours',
+      'dtcCount',
+      'faultCodes',
+      'fuelLevel',
+      'fuelConsumption',
+      'fuelRate',
+      'accelX',
+      'accelY',
+      'accelZ',
+    ];
+
+    const escape = (val: unknown): string => {
+      if (val == null) return '';
+      const str = String(val instanceof Date ? val.toISOString() : val);
+      if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    let csv = headers.join(',') + '\n';
+    for (const log of logs) {
+      csv +=
+        headers
+          .map((h) => escape((log as Record<string, unknown>)[h]))
+          .join(',') + '\n';
+    }
+
+    return {
+      buffer: Buffer.from(csv, 'utf-8'),
+      filename: `diagnostico_${slug}_${dateTag}.csv`,
+      contentType: 'text/csv; charset=utf-8',
+    };
+  }
+
+  /**
    * Obtiene las estadísticas acumuladas de la flota para una organización
    * basadas en los rollups diarios de telemetría.
    */

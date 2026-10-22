@@ -33,6 +33,8 @@ import {
   AlertTriangle,
   Sliders,
   CheckCircle2,
+  Terminal,
+  Download,
 } from "lucide-react";
 import {
   DailyTelemetryRollup,
@@ -117,7 +119,7 @@ export function VehicleDetailClient({
     : (vehicle.initialEngineHours ?? 0) + (vehicle.liveState?.lastEngineHours ?? 0);
 
   const [activeTab, setActiveTab] = useState<
-    "overview" | "scores" | "rollups" | "fuel"
+    "overview" | "scores" | "rollups" | "fuel" | "diagnostics"
   >("overview");
 
   const [fuelAnalysis, setFuelAnalysis] = useState<any>(null);
@@ -126,6 +128,19 @@ export function VehicleDetailClient({
   const [fuelError, setFuelError] = useState<string | null>(null);
   const [fuelEventsPage, setFuelEventsPage] = useState<number>(1);
   const lastLoadedFuelDaysRef = useRef<number | null>(null);
+
+  // Diagnostics tab state
+  const [diagFrom, setDiagFrom] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().slice(0, 16);
+  });
+  const [diagTo, setDiagTo] = useState<string>(() =>
+    new Date().toISOString().slice(0, 16),
+  );
+  const [diagFormat, setDiagFormat] = useState<"csv" | "json">("csv");
+  const [diagLoading, setDiagLoading] = useState(false);
+  const [diagError, setDiagError] = useState<string | null>(null);
 
   // Hover interactivo para la gráfica de combustible
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
@@ -321,6 +336,46 @@ export function VehicleDetailClient({
       }
     }
     setHoveredPoint(closest);
+  };
+
+  const handleDiagnosticsDownload = async () => {
+    setDiagLoading(true);
+    setDiagError(null);
+    try {
+      const params = new URLSearchParams({
+        from: new Date(diagFrom).toISOString(),
+        to: new Date(diagTo).toISOString(),
+        format: diagFormat,
+      });
+      const response = await api.get(
+        `/vehicles/${initialVehicle.id}/diagnostics/download?${params.toString()}`,
+        { responseType: "blob" },
+      );
+      const ext = diagFormat === "json" ? "json" : "csv";
+      const disposition = response.headers["content-disposition"] as
+        | string
+        | undefined;
+      let filename = `diagnostico_${initialVehicle.id}.${ext}`;
+      if (disposition) {
+        const match = disposition.match(/filename="?([^"]+)"?/);
+        if (match?.[1]) filename = match[1];
+      }
+      const url = URL.createObjectURL(new Blob([response.data]));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      setDiagError(
+        err.response?.data?.message ||
+          "Error al descargar los datos de diagnóstico.",
+      );
+    } finally {
+      setDiagLoading(false);
+    }
   };
 
   const currentDriver = vehicle.assignments?.[0]?.driver;
@@ -899,6 +954,17 @@ export function VehicleDetailClient({
         >
           <Fuel className="size-3.5 mr-1.5" />
           Combustible
+        </button>
+        <button
+          onClick={() => setActiveTab("diagnostics")}
+          className={`tab flex-1 rounded-lg font-semibold text-xs transition-all ${
+            activeTab === "diagnostics"
+              ? "tab-active bg-base-100 shadow-sm text-primary"
+              : "text-base-content/60"
+          }`}
+        >
+          <Terminal className="size-3.5 mr-1.5" />
+          Diagnóstico
         </button>
       </div>
 
@@ -2134,6 +2200,179 @@ export function VehicleDetailClient({
           </div>
         </form>
       </Modal>
+
+      {/* TAB: DIAGNOSTICS */}
+      {activeTab === "diagnostics" && (
+        <div className="space-y-6 animate-in fade-in duration-200">
+          {/* Header */}
+          <div className="glass-card p-6 space-y-4">
+            <div className="flex items-center gap-2">
+              <Terminal className="size-5 text-primary" />
+              <h3 className="text-base font-bold">
+                Descarga de Datos de Diagnóstico
+              </h3>
+            </div>
+            <p className="text-xs text-base-content/60 leading-relaxed">
+              Exporta los registros de telemetría cruda del dispositivo para
+              analizar fallas intermitentes como batería baja al arranque,
+              códigos DTC activos, o lecturas anómalas de sensores. Máximo{" "}
+              <strong>7 días</strong> por descarga.
+            </p>
+
+            {/* Date range & format controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-base-content/50">
+                  Desde
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={diagFrom}
+                  onChange={(e) => setDiagFrom(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-base-content/50">
+                  Hasta
+                </label>
+                <Input
+                  type="datetime-local"
+                  value={diagTo}
+                  onChange={(e) => setDiagTo(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold uppercase text-base-content/50">
+                  Formato
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDiagFormat("csv")}
+                    className={`btn btn-sm flex-1 ${
+                      diagFormat === "csv"
+                        ? "btn-primary"
+                        : "btn-outline border-base-300"
+                    }`}
+                  >
+                    CSV
+                  </button>
+                  <button
+                    onClick={() => setDiagFormat("json")}
+                    className={`btn btn-sm flex-1 ${
+                      diagFormat === "json"
+                        ? "btn-primary"
+                        : "btn-outline border-base-300"
+                    }`}
+                  >
+                    JSON
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {diagError && (
+              <div className="alert alert-error bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-300 rounded-xl text-sm p-3">
+                <AlertCircle className="size-4 shrink-0" />
+                {diagError}
+              </div>
+            )}
+
+            <Button
+              variant="primary"
+              size="sm"
+              isLoading={diagLoading}
+              disabled={diagLoading || !diagFrom || !diagTo}
+              onClick={handleDiagnosticsDownload}
+              className="w-full sm:w-auto gap-2"
+            >
+              <Download className="size-4" />
+              Descargar{" "}
+              {diagFormat === "csv" ? "CSV" : "JSON"}
+            </Button>
+          </div>
+
+          {/* Field reference card */}
+          <div className="glass-card p-6 space-y-4">
+            <h4 className="text-sm font-bold flex items-center gap-2">
+              <Info className="size-4 text-primary" />
+              Campos clave para diagnóstico de arranque
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                {
+                  field: "powerSupply",
+                  label: "Voltaje de Batería (V)",
+                  color: "amber",
+                  desc: "Valores < 11.5 V al arranque indican batería descargada.",
+                },
+                {
+                  field: "ignition",
+                  label: "Ignición",
+                  color: "blue",
+                  desc: "Confirma el momento exacto en que se giró la llave.",
+                },
+                {
+                  field: "rpm",
+                  label: "RPM",
+                  color: "indigo",
+                  desc: "Perfil de RPM en arranque en frío vs motor caliente.",
+                },
+                {
+                  field: "coolantTemp",
+                  label: "Temperatura del Refrigerante (°C)",
+                  color: "rose",
+                  desc: "Motor frío en arranques repetidos puede indicar problema eléctrico.",
+                },
+                {
+                  field: "faultCodes",
+                  label: "Códigos DTC",
+                  color: "purple",
+                  desc: "Códigos OBD-II activos lanzados durante el arranque.",
+                },
+                {
+                  field: "dtcCount",
+                  label: "Cantidad de DTCs",
+                  color: "purple",
+                  desc: "Número de fallas activas reportadas por la ECU.",
+                },
+                {
+                  field: "movement",
+                  label: "Movimiento",
+                  color: "emerald",
+                  desc: "¿El vehículo se movía cuando ocurrió la falla?",
+                },
+                {
+                  field: "unplugged",
+                  label: "Dispositivo Desconectado",
+                  color: "neutral",
+                  desc: "Pérdida de alimentación del dispositivo GPS.",
+                },
+              ].map(({ field, label, color, desc }) => (
+                <div
+                  key={field}
+                  className="flex gap-3 p-3 rounded-xl bg-base-200/30 border border-base-200/60"
+                >
+                  <div
+                    className={`mt-0.5 size-2 rounded-full shrink-0 bg-${color}-500`}
+                  />
+                  <div>
+                    <p className="text-xs font-bold text-base-content/90">
+                      {label}{" "}
+                      <span className="font-mono text-base-content/40">
+                        ({field})
+                      </span>
+                    </p>
+                    <p className="text-[11px] text-base-content/55 mt-0.5 leading-relaxed">
+                      {desc}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
