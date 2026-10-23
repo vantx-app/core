@@ -35,6 +35,9 @@ import {
   CheckCircle2,
   Terminal,
   Download,
+  RefreshCw,
+  Clock,
+  BatteryCharging,
 } from "lucide-react";
 import {
   DailyTelemetryRollup,
@@ -46,6 +49,7 @@ import {
 import {
   formatDate,
   formatDateOnly,
+  formatDateTimeWithSeconds,
   getScoreBadgeColor,
   formatHours,
   condenseDailyRollupsByDriver,
@@ -129,18 +133,40 @@ export function VehicleDetailClient({
   const [fuelEventsPage, setFuelEventsPage] = useState<number>(1);
   const lastLoadedFuelDaysRef = useRef<number | null>(null);
 
-  // Diagnostics tab state
+  // Diagnostics tab state - Manejo de fecha y hora local
+  const formatToLocalInput = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const parseLocalDatetimeToUTC = (localStr: string): string => {
+    if (!localStr) return new Date().toISOString();
+    const [datePart, timePart] = localStr.split("T");
+    if (!datePart || !timePart) return new Date(localStr).toISOString();
+    const [year, month, day] = datePart.split("-").map(Number);
+    const [hours, minutes] = timePart.split(":").map(Number);
+    const localDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
+    return localDate.toISOString();
+  };
+
   const [diagFrom, setDiagFrom] = useState<string>(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
-    return d.toISOString().slice(0, 16);
+    const d = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return formatToLocalInput(d);
   });
-  const [diagTo, setDiagTo] = useState<string>(() =>
-    new Date().toISOString().slice(0, 16),
-  );
+  const [diagTo, setDiagTo] = useState<string>(() => {
+    return formatToLocalInput(new Date());
+  });
+  const [diagPreset, setDiagPreset] = useState<
+    "1h" | "6h" | "24h" | "3d" | "7d" | "custom"
+  >("24h");
   const [diagFormat, setDiagFormat] = useState<"csv" | "json">("csv");
   const [diagLoading, setDiagLoading] = useState(false);
   const [diagError, setDiagError] = useState<string | null>(null);
+
+  // Vista previa interactiva de registros de diagnóstico
+  const [diagLogs, setDiagLogs] = useState<any[]>([]);
+  const [diagTotal, setDiagTotal] = useState<number | null>(null);
+  const [diagLogsLoading, setDiagLogsLoading] = useState(false);
 
   // Hover interactivo para la gráfica de combustible
   const [hoveredPoint, setHoveredPoint] = useState<any>(null);
@@ -338,41 +364,141 @@ export function VehicleDetailClient({
     setHoveredPoint(closest);
   };
 
+  const fetchDiagLogs = async (fromVal?: string, toVal?: string) => {
+    const f = fromVal ?? diagFrom;
+    const t = toVal ?? diagTo;
+    if (!f || !t) return;
+
+    setDiagLogsLoading(true);
+    setDiagError(null);
+    try {
+      const fromUTC = parseLocalDatetimeToUTC(f);
+      const toUTC = parseLocalDatetimeToUTC(t);
+      const res = await api.get(
+        `/vehicles/${initialVehicle.id}/diagnostics/logs?from=${encodeURIComponent(fromUTC)}&to=${encodeURIComponent(toUTC)}&limit=50`,
+      );
+      setDiagLogs(res.data?.logs || []);
+      setDiagTotal(res.data?.total ?? 0);
+    } catch (err: any) {
+      console.error("Error fetching diagnostics logs preview:", err);
+      setDiagLogs([]);
+      setDiagTotal(0);
+    } finally {
+      setDiagLogsLoading(false);
+    }
+  };
+
+  const handleApplyPreset = (preset: "1h" | "6h" | "24h" | "3d" | "7d") => {
+    setDiagPreset(preset);
+    const now = new Date();
+    let past = new Date();
+    if (preset === "1h") past = new Date(now.getTime() - 1 * 3600 * 1000);
+    else if (preset === "6h") past = new Date(now.getTime() - 6 * 3600 * 1000);
+    else if (preset === "24h") past = new Date(now.getTime() - 24 * 3600 * 1000);
+    else if (preset === "3d") past = new Date(now.getTime() - 3 * 86400 * 1000);
+    else if (preset === "7d") past = new Date(now.getTime() - 7 * 86400 * 1000);
+
+    const fromVal = formatToLocalInput(past);
+    const toVal = formatToLocalInput(now);
+    setDiagFrom(fromVal);
+    setDiagTo(toVal);
+    fetchDiagLogs(fromVal, toVal);
+  };
+
+  useEffect(() => {
+    if (activeTab === "diagnostics") {
+      fetchDiagLogs();
+    }
+  }, [activeTab]);
+
+  const batteryStats = useMemo(() => {
+    if (!diagLogs || diagLogs.length === 0) return null;
+    const voltages = diagLogs
+      .map((l) => l.powerSupply)
+      .filter((v): v is number => typeof v === "number" && !isNaN(v) && v > 0);
+    const min = voltages.length > 0 ? Math.min(...voltages) : null;
+    const max = voltages.length > 0 ? Math.max(...voltages) : null;
+    const avg =
+      voltages.length > 0
+        ? Math.round((voltages.reduce((a, b) => a + b, 0) / voltages.length) * 10) / 10
+        : null;
+    const ignitionCount = diagLogs.filter((l) => l.ignition).length;
+    const dtcItems = Array.from(
+      new Set(
+        diagLogs
+          .map((l) => l.faultCodes)
+          .filter(Boolean)
+          .flatMap((c) => String(c).split(/[,; ]+/).filter(Boolean)),
+      ),
+    );
+    return { min, max, avg, ignitionCount, dtcItems };
+  }, [diagLogs]);
+
   const handleDiagnosticsDownload = async () => {
     setDiagLoading(true);
     setDiagError(null);
     try {
+      const fromUTC = parseLocalDatetimeToUTC(diagFrom);
+      const toUTC = parseLocalDatetimeToUTC(diagTo);
+
       const params = new URLSearchParams({
-        from: new Date(diagFrom).toISOString(),
-        to: new Date(diagTo).toISOString(),
+        from: fromUTC,
+        to: toUTC,
         format: diagFormat,
       });
+
       const response = await api.get(
         `/vehicles/${initialVehicle.id}/diagnostics/download?${params.toString()}`,
         { responseType: "blob" },
       );
+
       const ext = diagFormat === "json" ? "json" : "csv";
       const disposition = response.headers["content-disposition"] as
         | string
         | undefined;
-      let filename = `diagnostico_${initialVehicle.id}.${ext}`;
+      const slug = (initialVehicle.alias || initialVehicle.plateNumber)
+        .replace(/\s+/g, "_")
+        .replace(/[^a-zA-Z0-9_-]/g, "");
+      let filename = `diagnostico_${slug}_${diagFrom.slice(0, 10)}.${ext}`;
       if (disposition) {
         const match = disposition.match(/filename="?([^"]+)"?/);
         if (match?.[1]) filename = match[1];
       }
-      const url = URL.createObjectURL(new Blob([response.data]));
+
+      const mimeType =
+        diagFormat === "json"
+          ? "application/json"
+          : "text/csv;charset=utf-8;";
+      const blob = new Blob([response.data], { type: mimeType });
+      const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
       document.body.appendChild(a);
       a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+
+      // En Android Chrome y navegadores móviles, liberar el ObjectURL con retraso
+      // para evitar que el gestor de descargas cancele o descargue vacío el archivo
+      setTimeout(() => {
+        a.remove();
+        URL.revokeObjectURL(url);
+      }, 1500);
     } catch (err: any) {
-      setDiagError(
-        err.response?.data?.message ||
-          "Error al descargar los datos de diagnóstico.",
-      );
+      let message = "Error al descargar los datos de diagnóstico.";
+      if (err.response?.data) {
+        if (err.response.data instanceof Blob) {
+          try {
+            const text = await err.response.data.text();
+            const parsed = JSON.parse(text);
+            if (parsed.message) message = parsed.message;
+          } catch {
+            // fallback
+          }
+        } else if (err.response.data.message) {
+          message = err.response.data.message;
+        }
+      }
+      setDiagError(message);
     } finally {
       setDiagLoading(false);
     }
@@ -2204,49 +2330,100 @@ export function VehicleDetailClient({
       {/* TAB: DIAGNOSTICS */}
       {activeTab === "diagnostics" && (
         <div className="space-y-6 animate-in fade-in duration-200">
-          {/* Header */}
+          {/* Header & Local Time Banner */}
           <div className="glass-card p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Terminal className="size-5 text-primary" />
-              <h3 className="text-base font-bold">
-                Descarga de Datos de Diagnóstico
-              </h3>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Terminal className="size-5 text-primary" />
+                <h3 className="text-base font-bold">
+                  Diagnóstico y Telemetría de Arranque
+                </h3>
+              </div>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-base-200/60 border border-base-200 text-xs font-medium text-base-content/70">
+                <Clock className="size-3.5 text-primary" />
+                <span>
+                  Hora local del dispositivo:{" "}
+                  <strong className="text-base-content">
+                    {new Date().toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })}
+                  </strong>
+                </span>
+              </div>
             </div>
+
             <p className="text-xs text-base-content/60 leading-relaxed">
-              Exporta los registros de telemetría cruda del dispositivo para
-              analizar fallas intermitentes como batería baja al arranque,
-              códigos DTC activos, o lecturas anómalas de sensores. Máximo{" "}
-              <strong>7 días</strong> por descarga.
+              Analiza los registros de telemetría de alta frecuencia capturados por el dispositivo para
+              identificar caídas de voltaje de batería al arranque, códigos de falla DTC activos o desconexiones.
+              Todas las fechas y horas se configuran y muestran en tu <strong>horario local</strong>.
             </p>
+
+            {/* Quick Presets */}
+            <div className="space-y-1.5 pt-1">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-base-content/50">
+                Rangos Rápidos
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { key: "1h", label: "Última 1 hora" },
+                  { key: "6h", label: "Últimas 6 horas" },
+                  { key: "24h", label: "Últimas 24 horas" },
+                  { key: "3d", label: "Últimos 3 días" },
+                  { key: "7d", label: "Últimos 7 días" },
+                ].map((p) => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    onClick={() => handleApplyPreset(p.key as any)}
+                    className={`btn btn-xs rounded-lg transition-all ${
+                      diagPreset === p.key
+                        ? "btn-primary shadow-sm"
+                        : "btn-outline border-base-300 hover:bg-base-200 text-base-content/70"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Date range & format controls */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase text-base-content/50">
-                  Desde
+                <label className="text-[11px] font-bold uppercase text-base-content/50 flex items-center justify-between">
+                  <span>Desde (Hora Local)</span>
                 </label>
                 <Input
                   type="datetime-local"
                   value={diagFrom}
-                  onChange={(e) => setDiagFrom(e.target.value)}
+                  onChange={(e) => {
+                    setDiagFrom(e.target.value);
+                    setDiagPreset("custom");
+                  }}
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-[11px] font-bold uppercase text-base-content/50">
-                  Hasta
+                <label className="text-[11px] font-bold uppercase text-base-content/50 flex items-center justify-between">
+                  <span>Hasta (Hora Local)</span>
                 </label>
                 <Input
                   type="datetime-local"
                   value={diagTo}
-                  onChange={(e) => setDiagTo(e.target.value)}
+                  onChange={(e) => {
+                    setDiagTo(e.target.value);
+                    setDiagPreset("custom");
+                  }}
                 />
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-bold uppercase text-base-content/50">
-                  Formato
+                  Formato de Descarga
                 </label>
                 <div className="flex gap-2">
                   <button
+                    type="button"
                     onClick={() => setDiagFormat("csv")}
                     className={`btn btn-sm flex-1 ${
                       diagFormat === "csv"
@@ -2254,9 +2431,10 @@ export function VehicleDetailClient({
                         : "btn-outline border-base-300"
                     }`}
                   >
-                    CSV
+                    CSV (Excel)
                   </button>
                   <button
+                    type="button"
                     onClick={() => setDiagFormat("json")}
                     className={`btn btn-sm flex-1 ${
                       diagFormat === "json"
@@ -2273,29 +2451,313 @@ export function VehicleDetailClient({
             {diagError && (
               <div className="alert alert-error bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-300 rounded-xl text-sm p-3">
                 <AlertCircle className="size-4 shrink-0" />
-                {diagError}
+                <span>{diagError}</span>
               </div>
             )}
 
-            <Button
-              variant="primary"
-              size="sm"
-              isLoading={diagLoading}
-              disabled={diagLoading || !diagFrom || !diagTo}
-              onClick={handleDiagnosticsDownload}
-              className="w-full sm:w-auto gap-2"
-            >
-              <Download className="size-4" />
-              Descargar{" "}
-              {diagFormat === "csv" ? "CSV" : "JSON"}
-            </Button>
+            {/* Action Buttons */}
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                isLoading={diagLogsLoading}
+                onClick={() => fetchDiagLogs()}
+                className="gap-2 border-base-300"
+              >
+                <RefreshCw className={`size-3.5 ${diagLogsLoading ? "animate-spin" : ""}`} />
+                Actualizar Vista Previa
+              </Button>
+
+              <Button
+                variant="primary"
+                size="sm"
+                isLoading={diagLoading}
+                disabled={diagLoading || !diagFrom || !diagTo || diagTotal === 0}
+                onClick={handleDiagnosticsDownload}
+                className="gap-2"
+              >
+                <Download className="size-4" />
+                Descargar {diagFormat === "csv" ? "CSV" : "JSON"}
+                {diagTotal !== null && diagTotal > 0 ? ` (${diagTotal} regs)` : ""}
+              </Button>
+
+              {diagTotal !== null && (
+                <span className="text-xs text-base-content/60 font-medium">
+                  {diagTotal === 0
+                    ? "0 registros encontrados en el rango"
+                    : `${diagTotal} registros encontrados en este rango`}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Warning when 0 logs found */}
+          {!diagLogsLoading && diagTotal === 0 && (
+            <div className="alert alert-warning bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-300 rounded-2xl flex items-start gap-3 p-4 shadow-sm animate-in fade-in duration-200">
+              <AlertTriangle className="size-5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+              <div className="space-y-1">
+                <h4 className="font-bold text-sm">
+                  No hay registros de telemetría en el rango seleccionado
+                </h4>
+                <p className="text-xs opacity-90 leading-relaxed">
+                  El dispositivo no reportó datos entre{" "}
+                  <strong>{diagFrom.replace("T", " ")}</strong> y{" "}
+                  <strong>{diagTo.replace("T", " ")}</strong>. Esto ocurre comúnmente si el vehículo estuvo apagado por varios días o si la fecha de inicio es muy reciente.
+                  Prueba haciendo clic en el botón <strong>&quot;Últimas 24 horas&quot;</strong> o <strong>&quot;Últimos 7 días&quot;</strong>.
+                </p>
+                {vehicle.liveState?.lastUpdate && (
+                  <p className="text-xs font-semibold text-amber-900 dark:text-amber-200 pt-1">
+                    Último reporte registrado del vehículo:{" "}
+                    {formatDateTimeWithSeconds(vehicle.liveState.lastUpdate)} (Hora local)
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Battery & Startup Key Metrics Card */}
+          {batteryStats && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="glass-card p-4 rounded-2xl border border-base-200/60 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
+                  Voltaje Mínimo (Arranque)
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-black font-mono text-base-content">
+                    {batteryStats.min !== null ? `${batteryStats.min.toFixed(1)} V` : "N/D"}
+                  </span>
+                  {batteryStats.min !== null && batteryStats.min < 11.5 && (
+                    <span className="badge badge-xs bg-rose-500/10 text-rose-600 border border-rose-500/30 font-bold">
+                      Agotada
+                    </span>
+                  )}
+                  {batteryStats.min !== null && batteryStats.min >= 11.5 && batteryStats.min < 12.2 && (
+                    <span className="badge badge-xs bg-amber-500/10 text-amber-600 border border-amber-500/30 font-bold">
+                      Baja
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-base-content/50">
+                  {batteryStats.min !== null && batteryStats.min < 11.5
+                    ? "Caída crítica de voltaje al dar arranque"
+                    : "Dentro de parámetros operativos"}
+                </p>
+              </div>
+
+              <div className="glass-card p-4 rounded-2xl border border-base-200/60 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
+                  Voltaje Promedio / Máx
+                </span>
+                <div className="text-xl font-black font-mono text-base-content">
+                  {batteryStats.avg !== null ? `${batteryStats.avg.toFixed(1)} V` : "N/D"}
+                  {batteryStats.max !== null && (
+                    <span className="text-xs text-base-content/40 font-normal ml-1.5">
+                      (máx: {batteryStats.max.toFixed(1)} V)
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-base-content/50">
+                  {batteryStats.max !== null && batteryStats.max > 13.5
+                    ? "Alternador cargando correctamente"
+                    : "Monitoreo continuo de alimentación"}
+                </p>
+              </div>
+
+              <div className="glass-card p-4 rounded-2xl border border-base-200/60 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
+                  Eventos con Ignición ON
+                </span>
+                <div className="text-xl font-black font-mono text-primary">
+                  {batteryStats.ignitionCount}
+                </div>
+                <p className="text-[10px] text-base-content/50">
+                  Registros capturados con llave en marcha
+                </p>
+              </div>
+
+              <div className="glass-card p-4 rounded-2xl border border-base-200/60 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-base-content/50">
+                  Fallas DTC Detectadas
+                </span>
+                <div className="text-xl font-black font-mono">
+                  {batteryStats.dtcItems.length > 0 ? (
+                    <span className="text-rose-600 font-bold">
+                      {batteryStats.dtcItems.length} código(s)
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600 font-semibold text-base">
+                      Sin fallas DTC
+                    </span>
+                  )}
+                </div>
+                <p className="text-[10px] text-base-content/50 truncate">
+                  {batteryStats.dtcItems.length > 0
+                    ? batteryStats.dtcItems.join(", ")
+                    : "No se registraron fallas activas"}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Interactive Logs Preview Table */}
+          <div className="glass-card p-6 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <h4 className="text-sm font-bold flex items-center gap-2">
+                  <Activity className="size-4 text-primary" />
+                  Registros de Telemetría Recientes (Hora Local)
+                </h4>
+                <p className="text-xs text-base-content/50 mt-0.5">
+                  Mostrando los {diagLogs.length} registros más recientes del rango seleccionado.
+                </p>
+              </div>
+              {diagTotal !== null && diagTotal > diagLogs.length && (
+                <span className="text-xs text-base-content/60 bg-base-200/60 px-2.5 py-1 rounded-lg">
+                  Descarga el CSV para analizar los <strong>{diagTotal}</strong> registros completos
+                </span>
+              )}
+            </div>
+
+            {diagLogsLoading ? (
+              <div className="flex flex-col items-center justify-center py-12 space-y-2">
+                <span className="loading loading-spinner loading-md text-primary" />
+                <span className="text-xs text-base-content/50">Cargando registros de diagnóstico...</span>
+              </div>
+            ) : diagLogs.length === 0 ? (
+              <div className="p-8 text-center text-xs text-base-content/40 bg-base-200/20 rounded-2xl border border-dashed border-base-200">
+                No hay registros disponibles para mostrar. Selecciona un rango con actividad y haz clic en &quot;Actualizar Vista Previa&quot;.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="table table-xs w-full">
+                  <thead>
+                    <tr className="border-b border-base-200/70 text-base-content/60">
+                      <th>Hora Local</th>
+                      <th>Batería (V)</th>
+                      <th>Ignición</th>
+                      <th>RPM</th>
+                      <th>Fallas DTC</th>
+                      <th>Temp. Refrigerante</th>
+                      <th>Velocidad</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {diagLogs.map((log) => {
+                      const v = log.powerSupply;
+                      let badge = (
+                        <span className="text-base-content/40 font-mono">-</span>
+                      );
+                      if (v != null && !isNaN(v) && v > 0) {
+                        if (v < 11.5) {
+                          badge = (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/15 text-rose-600 border border-rose-500/30 font-mono animate-pulse">
+                              <Zap className="size-3" />
+                              {v.toFixed(1)} V
+                            </span>
+                          );
+                        } else if (v < 12.2) {
+                          badge = (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-500/15 text-amber-600 border border-amber-500/30 font-mono">
+                              <Zap className="size-3" />
+                              {v.toFixed(1)} V
+                            </span>
+                          );
+                        } else if (v > 13.5) {
+                          badge = (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-blue-500/15 text-blue-600 border border-blue-500/30 font-mono">
+                              <BatteryCharging className="size-3" />
+                              {v.toFixed(1)} V
+                            </span>
+                          );
+                        } else {
+                          badge = (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 font-mono">
+                              {v.toFixed(1)} V
+                            </span>
+                          );
+                        }
+                      }
+
+                      return (
+                        <tr
+                          key={log.id}
+                          className="hover:bg-base-200/40 border-b border-base-200/40 transition-colors"
+                        >
+                          <td className="font-mono font-medium text-base-content/90 text-xs whitespace-nowrap">
+                            {formatDateTimeWithSeconds(log.timestamp)}
+                          </td>
+                          <td>{badge}</td>
+                          <td>
+                            {log.ignition ? (
+                              <span className="badge badge-xs bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30 font-bold">
+                                ON
+                              </span>
+                            ) : (
+                              <span className="badge badge-xs bg-base-200 text-base-content/50 border-base-300 font-medium">
+                                OFF
+                              </span>
+                            )}
+                          </td>
+                          <td className="font-mono text-xs">
+                            {log.rpm != null && log.rpm > 0 ? (
+                              <span className="font-semibold text-base-content/85">
+                                {log.rpm}
+                              </span>
+                            ) : (
+                              <span className="text-base-content/30">-</span>
+                            )}
+                          </td>
+                          <td>
+                            {log.faultCodes ? (
+                              <span className="badge badge-xs bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 font-bold font-mono">
+                                {log.faultCodes}
+                              </span>
+                            ) : log.dtcCount > 0 ? (
+                              <span className="badge badge-xs bg-purple-500/15 text-purple-700 border-purple-500/30 font-bold">
+                                {log.dtcCount} DTC
+                              </span>
+                            ) : (
+                              <span className="text-base-content/30">-</span>
+                            )}
+                          </td>
+                          <td className="font-mono text-xs">
+                            {log.coolantTemp != null ? (
+                              <span
+                                className={
+                                  log.coolantTemp > 105
+                                    ? "text-rose-600 font-bold"
+                                    : "text-base-content/80"
+                                }
+                              >
+                                {log.coolantTemp} °C
+                              </span>
+                            ) : (
+                              <span className="text-base-content/30">-</span>
+                            )}
+                          </td>
+                          <td className="font-mono text-xs">
+                            {log.speed != null ? `${log.speed} km/h` : "-"}
+                          </td>
+                          <td>
+                            <span className="text-[10px] font-semibold text-base-content/60 uppercase">
+                              {log.status || (log.movement ? "MOVIMIENTO" : "DETENIDO")}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
 
           {/* Field reference card */}
           <div className="glass-card p-6 space-y-4">
             <h4 className="text-sm font-bold flex items-center gap-2">
               <Info className="size-4 text-primary" />
-              Campos clave para diagnóstico de arranque
+              Campos clave para diagnóstico de arranque y batería
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
@@ -2303,49 +2765,49 @@ export function VehicleDetailClient({
                   field: "powerSupply",
                   label: "Voltaje de Batería (V)",
                   color: "amber",
-                  desc: "Valores < 11.5 V al arranque indican batería descargada.",
+                  desc: "Valores < 11.5 V al dar marcha indican batería descargada o dañada.",
                 },
                 {
                   field: "ignition",
                   label: "Ignición",
                   color: "blue",
-                  desc: "Confirma el momento exacto en que se giró la llave.",
+                  desc: "Confirma el momento exacto en que se giró la llave a posición de contacto.",
                 },
                 {
                   field: "rpm",
-                  label: "RPM",
+                  label: "RPM del Motor",
                   color: "indigo",
-                  desc: "Perfil de RPM en arranque en frío vs motor caliente.",
+                  desc: "Indica si el motor llegó a girar y encender o si se quedó en el intento.",
                 },
                 {
                   field: "coolantTemp",
                   label: "Temperatura del Refrigerante (°C)",
                   color: "rose",
-                  desc: "Motor frío en arranques repetidos puede indicar problema eléctrico.",
+                  desc: "Permite diferenciar arranques en frío vs arranques en caliente.",
                 },
                 {
                   field: "faultCodes",
                   label: "Códigos DTC",
                   color: "purple",
-                  desc: "Códigos OBD-II activos lanzados durante el arranque.",
+                  desc: "Códigos OBD-II registrados por la computadora durante la anomalía.",
                 },
                 {
                   field: "dtcCount",
                   label: "Cantidad de DTCs",
                   color: "purple",
-                  desc: "Número de fallas activas reportadas por la ECU.",
+                  desc: "Número de fallas activas reportadas por la centralita del vehículo.",
                 },
                 {
                   field: "movement",
                   label: "Movimiento",
                   color: "emerald",
-                  desc: "¿El vehículo se movía cuando ocurrió la falla?",
+                  desc: "Determina si el vehículo llegó a desplazarse o si permaneció varado.",
                 },
                 {
                   field: "unplugged",
                   label: "Dispositivo Desconectado",
                   color: "neutral",
-                  desc: "Pérdida de alimentación del dispositivo GPS.",
+                  desc: "Pérdida de alimentación o manipulación física del GPS.",
                 },
               ].map(({ field, label, color, desc }) => (
                 <div

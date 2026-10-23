@@ -284,6 +284,22 @@ export class VehiclesController {
     res.end(result.buffer);
   }
 
+  @Get(':id/diagnostics/logs')
+  async getDiagnosticsLogs(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Req() req: Request & { user: AccessTokenPayload },
+    @Query() query: DownloadLogsDto,
+  ) {
+    await this.vehiclesService.verifyVehicleAccess(id, req.user);
+    const limit = query.limit ? parseInt(query.limit, 10) : 50;
+    return this.vehiclesService.getDiagnosticsLogs(
+      id,
+      query.from,
+      query.to,
+      isNaN(limit) ? 50 : Math.min(limit, 200),
+    );
+  }
+
   @Public()
   @Get('tracking-links/public/:linkId')
   async getPublicTrackingDetails(

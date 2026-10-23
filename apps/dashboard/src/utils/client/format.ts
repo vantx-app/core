@@ -109,6 +109,20 @@ export const formatDate = (dateString: string | Date): string => {
   });
 };
 
+export const formatDateTimeWithSeconds = (
+  dateString: string | Date,
+): string => {
+  return baseFormatDate(dateString, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  });
+};
+
 export const formatDateOnly = (dateString: string | Date): string => {
   return baseFormatDate(
     dateString,

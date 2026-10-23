@@ -1024,6 +1024,12 @@ export class VehiclesService {
       orderBy: { timestamp: 'asc' },
     });
 
+    if (logs.length === 0) {
+      throw new NotFoundException(
+        'No se encontraron registros de telemetría en el rango seleccionado.',
+      );
+    }
+
     const slug = (vehicle.alias || vehicle.plateNumber)
       .replace(/\s+/g, '_')
       .replace(/[^a-zA-Z0-9_-]/g, '');
@@ -1090,6 +1096,62 @@ export class VehiclesService {
       filename: `diagnostico_${slug}_${dateTag}.csv`,
       contentType: 'text/csv; charset=utf-8',
     };
+  }
+
+  /**
+   * Obtiene registros de telemetría de diagnóstico para visualización directa en el UI.
+   */
+  async getDiagnosticsLogs(
+    vehicleId: string,
+    fromStr?: string,
+    toStr?: string,
+    limit = 50,
+  ) {
+    const toDate = toStr ? new Date(toStr) : new Date();
+    const defaultFrom = new Date(toDate.getTime() - 24 * 60 * 60 * 1000);
+    const fromDate = fromStr ? new Date(fromStr) : defaultFrom;
+
+    if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+      throw new BadRequestException('Las fechas proporcionadas no son válidas.');
+    }
+
+    const [logs, total] = await Promise.all([
+      this.prisma.telemetryLog.findMany({
+        where: {
+          vehicleId,
+          timestamp: { gte: fromDate, lte: toDate },
+        },
+        orderBy: { timestamp: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          timestamp: true,
+          latitude: true,
+          longitude: true,
+          speed: true,
+          gpsSpeed: true,
+          rpm: true,
+          engineLoad: true,
+          coolantTemp: true,
+          powerSupply: true,
+          ignition: true,
+          movement: true,
+          unplugged: true,
+          status: true,
+          dtcCount: true,
+          faultCodes: true,
+          fuelLevel: true,
+        },
+      }),
+      this.prisma.telemetryLog.count({
+        where: {
+          vehicleId,
+          timestamp: { gte: fromDate, lte: toDate },
+        },
+      }),
+    ]);
+
+    return { logs, total };
   }
 
   /**
