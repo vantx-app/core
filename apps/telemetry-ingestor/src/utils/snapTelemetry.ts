@@ -18,8 +18,13 @@ export async function snapTelemetryRecords(
     // Safe check for prisma.mapLink mock compatibility in testing
     if (!(prisma as any).mapLink) return records;
 
-    // Create a new array with cloned objects to avoid mutating original inputs
-    const processedRecords = records.map((rec) => ({ ...rec }));
+    // Create a new array with cloned objects to avoid mutating original inputs,
+    // preserving unmodified raw GPS coordinates prior to road snapping
+    const processedRecords = records.map((rec) => ({
+      ...rec,
+      rawLatitude: rec.rawLatitude ?? rec.latitude,
+      rawLongitude: rec.rawLongitude ?? rec.longitude,
+    }));
     const validProcessedRecords = processedRecords.filter(
       (r) => r.latitude !== 0 && r.longitude !== 0,
     );

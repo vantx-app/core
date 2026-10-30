@@ -49,13 +49,27 @@ export interface ParsedTelemetry {
   // Nuevos campos normalizados
   engineHours: number | null;
   fuelLevel: number | null;
+  fuelLevelLiters: number | null;
   fuelConsumption: number | null;
   fuelRate: number | null;
+  maf: number | null;
+  throttlePosition: number | null;
+  intakeAirTemp: number | null;
+  intakeMap: number | null;
+  ambientAirTemp: number | null;
+  barometricPressure: number | null;
+  oilTemp: number | null;
+  fuelPressure: number | null;
+  shortFuelTrim: number | null;
+  vehicleWeight: number | null;
 
   // Accelerometer values
   accelX: number | null;
   accelY: number | null;
   accelZ: number | null;
+
+  // Copia íntegra de los valores I/O crudos antes de deduplicación o escalado
+  rawIoData: Record<number | string, any> | null;
 }
 
 // Función auxiliar para obtener el valor de un AVL ID aplicando su multiplicador si existe
@@ -242,12 +256,36 @@ export function parseTelemetryRecord(
   // Nuevos campos dinámicos
   const engineHours = getAvlValue(rec.ioData, mapping.engineHours);
   const fuelLevel = getAvlValue(rec.ioData, mapping.fuelLevel);
+  const rawFuelLevelLiters = getAvlValue(rec.ioData, mapping.fuelLevelLiters);
+  const fuelLevelLiters =
+    rawFuelLevelLiters !== null
+      ? Math.round(rawFuelLevelLiters * 100) / 100
+      : null;
 
   const fuelConsumption = getAvlValue(rec.ioData, mapping.fuelConsumption);
-  const fuelRate = getAvlValue(rec.ioData, mapping.fuelRate);
+  const rawFuelRate = getAvlValue(rec.ioData, mapping.fuelRate);
+  const fuelRate =
+    rawFuelRate !== null ? Math.round(rawFuelRate * 100) / 100 : null;
+  const rawMaf = getAvlValue(rec.ioData, mapping.maf);
+  const maf = rawMaf !== null ? Math.round(rawMaf * 100) / 100 : null;
+  const throttlePosition = getAvlValue(rec.ioData, mapping.throttlePosition);
+  const intakeAirTemp = getAvlValue(rec.ioData, mapping.intakeAirTemp);
+  const intakeMap = getAvlValue(rec.ioData, mapping.intakeMap);
+  const ambientAirTemp = getAvlValue(rec.ioData, mapping.ambientAirTemp);
+  const barometricPressure = getAvlValue(
+    rec.ioData,
+    mapping.barometricPressure,
+  );
+  const oilTemp = getAvlValue(rec.ioData, mapping.oilTemp);
+  const fuelPressure = getAvlValue(rec.ioData, mapping.fuelPressure);
+  const shortFuelTrim = getAvlValue(rec.ioData, mapping.shortFuelTrim);
+  const vehicleWeight = getAvlValue(rec.ioData, mapping.vehicleWeight);
   const accelX = getAvlValue(rec.ioData, mapping.accelX);
   const accelY = getAvlValue(rec.ioData, mapping.accelY);
   const accelZ = getAvlValue(rec.ioData, mapping.accelZ);
+
+  // Preservar copia íntegra del diccionario I/O crudo para entrenamiento de IA
+  const rawIoData = rec.ioData ? { ...rec.ioData } : null;
 
   // Deduplicación dinámica de I/O extra (se eliminan las claves ya mapeadas)
   const extraIoData = { ...rec.ioData };
@@ -317,10 +355,22 @@ export function parseTelemetryRecord(
     tripActive,
     detectedFuelType,
     fuelLevel,
+    fuelLevelLiters,
     fuelConsumption,
     fuelRate,
+    maf,
+    throttlePosition,
+    intakeAirTemp,
+    intakeMap,
+    ambientAirTemp,
+    barometricPressure,
+    oilTemp,
+    fuelPressure,
+    shortFuelTrim,
+    vehicleWeight,
     accelX,
     accelY,
     accelZ,
+    rawIoData,
   };
 }

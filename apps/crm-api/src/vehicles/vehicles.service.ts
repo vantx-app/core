@@ -1049,6 +1049,8 @@ export class VehiclesService {
       'timestamp',
       'latitude',
       'longitude',
+      'rawLatitude',
+      'rawLongitude',
       'speed',
       'gpsSpeed',
       'angle',
@@ -1057,6 +1059,16 @@ export class VehiclesService {
       'rpm',
       'engineLoad',
       'coolantTemp',
+      'maf',
+      'throttlePosition',
+      'intakeAirTemp',
+      'intakeMap',
+      'ambientAirTemp',
+      'barometricPressure',
+      'oilTemp',
+      'fuelPressure',
+      'shortFuelTrim',
+      'vehicleWeight',
       'powerSupply',
       'ignition',
       'movement',
@@ -1067,16 +1079,34 @@ export class VehiclesService {
       'dtcCount',
       'faultCodes',
       'fuelLevel',
+      'fuelLevelLiters',
       'fuelConsumption',
       'fuelRate',
       'accelX',
       'accelY',
       'accelZ',
+      'harshAcceleration',
+      'harshBraking',
+      'harshCornering',
+      'harshAccelerationDuration',
+      'harshBrakingDuration',
+      'harshCorneringDuration',
+      'harshAccelerationAverage',
+      'harshBrakingAverage',
+      'harshCorneringAverage',
+      'eventId',
+      'rawIoData',
+      'extra',
     ];
 
     const escape = (val: unknown): string => {
       if (val == null) return '';
-      const str = String(val instanceof Date ? val.toISOString() : val);
+      const str =
+        val instanceof Date
+          ? val.toISOString()
+          : typeof val === 'object'
+            ? JSON.stringify(val)
+            : String(val);
       if (str.includes(',') || str.includes('\n') || str.includes('"')) {
         return `"${str.replace(/"/g, '""')}"`;
       }
@@ -1128,11 +1158,23 @@ export class VehiclesService {
           timestamp: true,
           latitude: true,
           longitude: true,
+          rawLatitude: true,
+          rawLongitude: true,
           speed: true,
           gpsSpeed: true,
           rpm: true,
           engineLoad: true,
           coolantTemp: true,
+          maf: true,
+          throttlePosition: true,
+          intakeAirTemp: true,
+          intakeMap: true,
+          ambientAirTemp: true,
+          barometricPressure: true,
+          oilTemp: true,
+          fuelPressure: true,
+          shortFuelTrim: true,
+          vehicleWeight: true,
           powerSupply: true,
           ignition: true,
           movement: true,
@@ -1141,6 +1183,9 @@ export class VehiclesService {
           dtcCount: true,
           faultCodes: true,
           fuelLevel: true,
+          fuelLevelLiters: true,
+          eventId: true,
+          rawIoData: true,
         },
       }),
       this.prisma.telemetryLog.count({

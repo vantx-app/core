@@ -899,6 +899,9 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
       // Debe haber cambiado las coordenadas originales por el snapping
       expect(telemetryPushed.latitude).not.toBe(8.98);
       expect(telemetryPushed.longitude).not.toBe(-79.52);
+      // Y debe haber preservado las coordenadas GPS crudas originales antes del snapping
+      expect(telemetryPushed.rawLatitude).toBe(8.98);
+      expect(telemetryPushed.rawLongitude).toBe(-79.52);
     });
 
     it('debe saltarse el snapping si la ignición está apagada', async () => {
@@ -2049,6 +2052,206 @@ describe('Teltonika Ingestor & Parser Refactor Tests', () => {
 
       await expect(processDataBatch(records, mockImei)).resolves.not.toThrow();
       expect(mockPrisma.vehicleLiveState.upsert).toHaveBeenCalled();
+    });
+
+    it('debe almacenar maf (AVL ID 40 en g/s), eventId y rawIoData íntegro para entrenamiento de IA en TELTONIKA_STANDARD y FMC150', async () => {
+      const mockVehicleId = 'vehicle-uuid-maf-raw-test';
+      const mockImei = 'imei-maf-raw-test';
+
+      mockPrisma.vehicle.findFirst.mockResolvedValue({
+        id: mockVehicleId,
+        orgId: 'org-uuid-1',
+        alias: 'AI Training Vehicle',
+        capabilities: ['gps'],
+        device: {
+          imei: mockImei,
+          model: 'FMC150',
+        },
+      });
+      mockPrisma.vehicle.update.mockResolvedValue({});
+
+      const rawIoPayload = {
+        239: 1, // Ignition
+        250: 1, // Trip status
+        85: 1850, // FMC150 RPM
+        40: 1425, // OBD MAF: 1425 * 0.01 = 14.25 g/s
+        999: 77, // Unmapped IO
+      };
+
+      const records = [
+        {
+          timestamp: new Date(1716570000000),
+          latitude: 8.98123,
+          longitude: -79.52456,
+          altitude: 100,
+          angle: 90,
+          satellites: 12,
+          gpsSpeed: 45,
+          priority: 1,
+          eventId: 40,
+          ioData: rawIoPayload,
+        },
+      ];
+
+      await processDataBatch(records, mockImei);
+
+      expect(mockPrisma.telemetryLog.createMany).toHaveBeenCalled();
+      const pushedLog =
+        mockPrisma.telemetryLog.createMany.mock.calls[
+          mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+        ][0].data[0];
+
+      expect(pushedLog.maf).toBe(14.25);
+      expect(pushedLog.eventId).toBe(40);
+      expect(pushedLog.rawLatitude).toBe(8.98123);
+      expect(pushedLog.rawLongitude).toBe(-79.52456);
+      expect(pushedLog.rawIoData).toEqual(rawIoPayload);
+      // extra no debe tener el ID 40 mapeado, pero rawIoData sí lo conserva intacto
+      expect(pushedLog.extra[40]).toBeUndefined();
+      expect(pushedLog.rawIoData[40]).toBe(1425);
+
+      // Debe auto-detectar la capacidad 'maf' en el vehículo
+      expect(mockPrisma.vehicle.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockVehicleId },
+          data: expect.objectContaining({
+            capabilities: expect.arrayContaining(['gps', 'rpm', 'maf']),
+          }),
+        }),
+      );
+    });
+
+    it('debe extraer correctamente los parámetros adicionales de entrenamiento de IA en FMC003, FMC150, FMC650 y FMC650_FMS según los CSV de Teltonika', async () => {
+      // 1. Prueba FMC150 (CAN + OBD)
+      mockPrisma.vehicle.findFirst.mockResolvedValueOnce({
+        id: 'vehicle-fmc150-ai',
+        orgId: 'org-uuid-1',
+        alias: 'FMC150 AI Truck',
+        capabilities: ['gps'],
+        device: { imei: 'imei-fmc150-ai', model: 'FMC150' },
+      });
+      mockPrisma.vehicle.update.mockResolvedValue({});
+
+      await processDataBatch(
+        [
+          {
+            timestamp: new Date(1716570000000),
+            latitude: 8.98,
+            longitude: -79.52,
+            altitude: 100,
+            angle: 90,
+            satellites: 12,
+            gpsSpeed: 60,
+            priority: 1,
+            eventId: 0,
+            ioData: {
+              239: 1, // Ignition
+              85: 2100, // CAN RPM
+              81: 62, // CAN Speed
+              82: 45, // CAN Throttle position (%)
+              84: 355, // CAN Fuel Level (0.1 L -> 35.5 L)
+              60: 840, // CAN/OBD Fuel Rate (L/h*100 -> 8.4 L/h)
+              102: 120, // CAN Engine Worktime (120 min -> 2.0 hours)
+              1353: 38, // CAN Intake Air Temp (°C)
+              1352: 115, // CAN Intake MAP (kPa)
+              1396: 29, // CAN Ambient Air Temp (°C)
+              50: 101, // Barometric Pressure (kPa)
+              1270: 94, // CAN Engine Oil Temp (°C)
+              34: 310, // OBD Fuel Pressure (kPa)
+              33: 0xfffb, // OBD Short Fuel Trim (-5 %, 16-bit two's complement)
+              1220: 14500, // CAN Load Weight (kg)
+            },
+          },
+        ],
+        'imei-fmc150-ai',
+      );
+
+      const fmc150Log =
+        mockPrisma.telemetryLog.createMany.mock.calls[
+          mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+        ][0].data[0];
+
+      expect(fmc150Log.rpm).toBe(2100);
+      expect(fmc150Log.speed).toBe(62);
+      expect(fmc150Log.throttlePosition).toBe(45);
+      expect(fmc150Log.fuelLevelLiters).toBe(35.5);
+      expect(fmc150Log.fuelRate).toBe(8.4);
+      expect(fmc150Log.engineHours).toBe(2);
+      expect(fmc150Log.intakeAirTemp).toBe(38);
+      expect(fmc150Log.intakeMap).toBe(115);
+      expect(fmc150Log.ambientAirTemp).toBe(29);
+      expect(fmc150Log.barometricPressure).toBe(101);
+      expect(fmc150Log.oilTemp).toBe(94);
+      expect(fmc150Log.fuelPressure).toBe(310);
+      expect(fmc150Log.shortFuelTrim).toBe(-5);
+      expect(fmc150Log.vehicleWeight).toBe(14500);
+
+      // 2. Prueba FMC650 (LVCAN)
+      mockPrisma.vehicle.findFirst.mockResolvedValueOnce({
+        id: 'vehicle-fmc650-ai',
+        orgId: 'org-uuid-1',
+        alias: 'FMC650 LVCAN Truck',
+        capabilities: ['gps'],
+        device: { imei: 'imei-fmc650-ai', model: 'FMC650' },
+      });
+
+      await processDataBatch(
+        [
+          {
+            timestamp: new Date(1716570000000),
+            latitude: 8.98,
+            longitude: -79.52,
+            altitude: 100,
+            angle: 90,
+            satellites: 12,
+            gpsSpeed: 70,
+            priority: 1,
+            eventId: 0,
+            ioData: {
+              239: 1,
+              35: 1650, // LVCAN Engine RPM
+              30: 72, // Vehicle speed (km/h)
+              23: 68, // LVCAN Engine Load (%)
+              31: 55, // LVCAN Accelerator Pedal Position (%)
+              25: 880, // LVCAN Engine Temp (88.0 °C)
+              14: 300, // LVCAN Engine Worktime (300 min -> 5.0 h)
+              34: 1850, // LVCAN Fuel Level Liters (0.1 L -> 185.0 L)
+              33: 4200, // LVCAN Fuel Consumed (0.1 L -> 420.0 L)
+              18: 225, // LVCAN Fuel Rate (0.1 L/h -> 22.5 L/h)
+              176: 2, // LVCAN DTC Errors
+              525: 'P0100.P0200', // LVCAN Fault Codes
+              521: 24000, // LVCAN Load Weight (kg)
+              128: 31, // Ambient Air Temperature (°C)
+              236: 120, // Axis X (0.12 G)
+              237: 0xffce, // Axis Y (-50 mG = -0.05 G)
+              238: 980, // Axis Z (0.98 G)
+            },
+          },
+        ],
+        'imei-fmc650-ai',
+      );
+
+      const fmc650Log =
+        mockPrisma.telemetryLog.createMany.mock.calls[
+          mockPrisma.telemetryLog.createMany.mock.calls.length - 1
+        ][0].data[0];
+
+      expect(fmc650Log.rpm).toBe(1650);
+      expect(fmc650Log.speed).toBe(72);
+      expect(fmc650Log.engineLoad).toBe(68);
+      expect(fmc650Log.throttlePosition).toBe(55);
+      expect(fmc650Log.coolantTemp).toBe(88);
+      expect(fmc650Log.engineHours).toBe(5);
+      expect(fmc650Log.fuelLevelLiters).toBe(185);
+      expect(fmc650Log.fuelConsumption).toBe(420);
+      expect(fmc650Log.fuelRate).toBe(22.5);
+      expect(fmc650Log.dtcCount).toBe(2);
+      expect(fmc650Log.faultCodes).toBe('P0100.P0200');
+      expect(fmc650Log.vehicleWeight).toBe(24000);
+      expect(fmc650Log.ambientAirTemp).toBe(31);
+      expect(fmc650Log.accelX).toBe(0.12);
+      expect(fmc650Log.accelY).toBe(-0.05);
+      expect(fmc650Log.accelZ).toBe(0.98);
     });
   });
 });

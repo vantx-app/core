@@ -4,6 +4,8 @@ model TelemetryLog {
   timestamp         DateTime
   latitude          Float
   longitude         Float
+  rawLatitude       Float?
+  rawLongitude      Float?
   angle             Int                   @default(0) @db.SmallInt
   altitude          Int?                  @db.SmallInt
   satellites        Int?                  @db.SmallInt
@@ -12,6 +14,16 @@ model TelemetryLog {
   rpm               Int?                  @db.SmallInt
   engineLoad        Int?                  @db.SmallInt
   coolantTemp       Int?                  @db.SmallInt
+  maf               Float?
+  throttlePosition  Float?
+  intakeAirTemp     Float?
+  intakeMap         Float?
+  ambientAirTemp    Float?
+  barometricPressure Float?
+  oilTemp           Float?
+  fuelPressure      Float?
+  shortFuelTrim     Float?
+  vehicleWeight     Float?
   powerSupply       Float?
   harshAcceleration Int                   @default(0) @db.SmallInt
   harshBraking      Int                   @default(0) @db.SmallInt
@@ -33,6 +45,7 @@ model TelemetryLog {
   vin               String?               @db.VarChar(50)
   
   fuelLevel         Float?
+  fuelLevelLiters   Float?
   fuelConsumption   Float?
   fuelRate          Float?
   
@@ -40,6 +53,8 @@ model TelemetryLog {
   accelY            Float?
   accelZ            Float?
   
+  eventId           Int?
+  rawIoData         Json?
   extra             Json?
   tripId            String?               @db.Uuid
   trip              Trip?                 @relation(fields: [tripId], references: [id])

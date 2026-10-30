@@ -230,7 +230,12 @@ export async function saveTelemetryBatchData({
     if (log.engineHours !== null && log.engineHours !== undefined)
       detectedKeys.add("engineHours");
     if (log.coolantTemp !== null) detectedKeys.add("coolantTemp");
+    if (log.maf !== null && log.maf !== undefined) detectedKeys.add("maf");
+    if (log.throttlePosition !== null && log.throttlePosition !== undefined)
+      detectedKeys.add("throttlePosition");
     if (log.fuelLevel !== null) detectedKeys.add("fuelLevel");
+    if (log.fuelLevelLiters !== null && log.fuelLevelLiters !== undefined)
+      detectedKeys.add("fuelLevelLiters");
     if (log.fuelConsumption !== null) detectedKeys.add("fuelConsumption");
     if (log.fuelRate !== null) detectedKeys.add("fuelRate");
   });

@@ -2636,6 +2636,7 @@ export function VehicleDetailClient({
                       <th>Batería (V)</th>
                       <th>Ignición</th>
                       <th>RPM</th>
+                      <th>MAF</th>
                       <th>Fallas DTC</th>
                       <th>Temp. Refrigerante</th>
                       <th>Velocidad</th>
@@ -2703,6 +2704,15 @@ export function VehicleDetailClient({
                             {log.rpm != null && log.rpm > 0 ? (
                               <span className="font-semibold text-base-content/85">
                                 {log.rpm}
+                              </span>
+                            ) : (
+                              <span className="text-base-content/30">-</span>
+                            )}
+                          </td>
+                          <td className="font-mono text-xs">
+                            {log.maf != null ? (
+                              <span className="font-semibold text-base-content/85">
+                                {log.maf} g/s
                               </span>
                             ) : (
                               <span className="text-base-content/30">-</span>
@@ -2778,6 +2788,12 @@ export function VehicleDetailClient({
                   label: "RPM del Motor",
                   color: "indigo",
                   desc: "Indica si el motor llegó a girar y encender o si se quedó en el intento.",
+                },
+                {
+                  field: "maf",
+                  label: "Flujo de Masa de Aire (g/s)",
+                  color: "cyan",
+                  desc: "Tasa de entrada de aire al motor (MAF) para cálculo preciso de mezcla y consumo.",
                 },
                 {
                   field: "coolantTemp",
