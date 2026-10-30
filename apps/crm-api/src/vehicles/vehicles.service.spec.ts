@@ -30,6 +30,7 @@ describe('VehiclesService', () => {
     telemetryLog: {
       findMany: jest.Mock;
       findFirst: jest.Mock;
+      count: jest.Mock;
     };
     fuelEvent: {
       findMany: jest.Mock;
@@ -74,6 +75,7 @@ describe('VehiclesService', () => {
       telemetryLog: {
         findMany: jest.fn(),
         findFirst: jest.fn().mockResolvedValue(null),
+        count: jest.fn().mockResolvedValue(0),
       },
       fuelEvent: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -1015,6 +1017,188 @@ describe('VehiclesService', () => {
       // No debe emitir eventos en semáforos
       expect(result.eventsCount).toBe(0);
       expect(prismaMock.fuelEvent.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('generateDiagnosticsExport & getDiagnosticsLogs', () => {
+    const mockVehicleId = 'vehicle-uuid-diag-test';
+
+    it('debe exportar todas las columnas diagnósticas incluyendo rawIoData en CSV por defecto', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        alias: 'Truck Diag 01',
+        plateNumber: 'AB1234',
+      } as any);
+
+      const mockLogs = [
+        {
+          id: 'log-1',
+          vehicleId: mockVehicleId,
+          timestamp: new Date('2026-10-30T10:00:00Z'),
+          powerSupply: 12.8,
+          ignition: true,
+          movement: true,
+          unplugged: false,
+          status: 'MOVING',
+          speed: 60,
+          gpsSpeed: 59,
+          rpm: 2100,
+          maf: 14.5,
+          throttlePosition: 35,
+          coolantTemp: 88,
+          intakeMap: 105,
+          eventId: 40,
+          rawIoData: { 239: 1, 85: 2100, 40: 1450 },
+          extra: { 999: 'val' },
+          vin: '1HGCR2F83HA000000',
+          tripId: 'trip-diag-1',
+          latitude: 8.98,
+          longitude: -79.52,
+          rawLatitude: 8.981,
+          rawLongitude: -79.521,
+          odometer: 15400,
+          fuelLevel: 75,
+        },
+      ];
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs as any);
+
+      const result = await service.generateDiagnosticsExport(
+        mockVehicleId,
+        '2026-10-30T00:00:00Z',
+        '2026-10-30T12:00:00Z',
+        'csv',
+      );
+
+      expect(result.contentType).toBe('text/csv; charset=utf-8');
+      expect(result.filename).toMatch(/^diagnostico_Truck_Diag_01_\d{4}-\d{2}-\d{2}\.csv$/);
+
+      const csvContent = result.buffer.toString('utf-8');
+      const headerLine = csvContent.split('\n')[0];
+      expect(headerLine).toContain('rawIoData');
+      expect(headerLine).toContain('eventId');
+      expect(headerLine).toContain('powerSupply');
+      expect(headerLine).toContain('maf');
+      expect(headerLine).toContain('throttlePosition');
+      expect(headerLine).toContain('vin');
+      expect(headerLine).toContain('tripId');
+      expect(headerLine).toContain('rawLatitude');
+      expect(headerLine).toContain('rawLongitude');
+
+      // Verifica que el contenido CSV incluye el JSON escapado de rawIoData
+      expect(csvContent).toContain('""239"":1');
+      expect(csvContent).toContain('""85"":2100');
+      expect(csvContent).toContain('""40"":1450');
+    });
+
+    it('debe permitir seleccionar columnas personalizadas incluyendo rawIoData para descarga', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        alias: 'Truck Custom',
+        plateNumber: 'CC9988',
+      } as any);
+
+      const mockLogs = [
+        {
+          id: 'log-1',
+          timestamp: new Date('2026-10-30T10:00:00Z'),
+          powerSupply: 12.4,
+          rawIoData: { 239: 1, 66: 12400 },
+          eventId: 239,
+        },
+      ];
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs as any);
+
+      const result = await service.generateDiagnosticsExport(
+        mockVehicleId,
+        '2026-10-30T00:00:00Z',
+        '2026-10-30T12:00:00Z',
+        'csv',
+        'timestamp,powerSupply,rawIoData,eventId',
+      );
+
+      const csvContent = result.buffer.toString('utf-8');
+      const lines = csvContent.trim().split('\n');
+      expect(lines[0]).toBe('timestamp,powerSupply,rawIoData,eventId');
+      expect(lines[1]).toContain('""239"":1');
+      expect(lines[1]).toContain('""66"":12400');
+    });
+
+    it('debe filtrar columnas en formato JSON cuando se solicitan columnas específicas', async () => {
+      prismaMock.vehicle.findUnique.mockResolvedValue({
+        id: mockVehicleId,
+        alias: 'Truck JSON',
+        plateNumber: 'JSON01',
+      } as any);
+
+      const mockLogs = [
+        {
+          id: 'log-1',
+          timestamp: new Date('2026-10-30T10:00:00Z'),
+          powerSupply: 13.5,
+          rpm: 1800,
+          rawIoData: { 85: 1800 },
+        },
+      ];
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs as any);
+
+      const result = await service.generateDiagnosticsExport(
+        mockVehicleId,
+        '2026-10-30T00:00:00Z',
+        '2026-10-30T12:00:00Z',
+        'json',
+        ['rawIoData', 'powerSupply'],
+      );
+
+      expect(result.contentType).toBe('application/json');
+      const parsed = JSON.parse(result.buffer.toString('utf-8'));
+      expect(parsed).toEqual([
+        {
+          rawIoData: { 85: 1800 },
+          powerSupply: 13.5,
+        },
+      ]);
+    });
+
+    it('debe obtener registros de diagnóstico con todos los campos seleccionados en getDiagnosticsLogs', async () => {
+      const mockLogs = [
+        {
+          id: 'log-1',
+          timestamp: new Date('2026-10-30T10:00:00Z'),
+          powerSupply: 12.6,
+          rawIoData: { 239: 1 },
+          maf: 12.3,
+          throttlePosition: 20,
+        },
+      ];
+
+      prismaMock.telemetryLog.findMany.mockResolvedValue(mockLogs as any);
+      prismaMock.telemetryLog.count.mockResolvedValue(1);
+
+      const res = await service.getDiagnosticsLogs(
+        mockVehicleId,
+        '2026-10-30T00:00:00Z',
+        '2026-10-30T12:00:00Z',
+        10,
+      );
+
+      expect(res.logs).toEqual(mockLogs);
+      expect(res.total).toBe(1);
+      expect(prismaMock.telemetryLog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          select: expect.objectContaining({
+            rawIoData: true,
+            eventId: true,
+            extra: true,
+            vin: true,
+            tripId: true,
+            odometer: true,
+            engineHours: true,
+          }),
+        }),
+      );
     });
   });
 });

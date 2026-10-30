@@ -3,4 +3,6 @@ export class DownloadLogsDto {
   to?: string;
   format?: 'csv' | 'json';
   limit?: string;
+  columns?: string | string[];
 }
+

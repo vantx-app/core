@@ -38,6 +38,11 @@ import {
   RefreshCw,
   Clock,
   BatteryCharging,
+  Cpu,
+  Copy,
+  Check,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   DailyTelemetryRollup,
@@ -68,6 +73,481 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useFleet } from "@/context/FleetContext";
 import api from "@/utils/client/api-client";
+
+interface DiagnosticColumnDef {
+  key: string;
+  label: string;
+  category: "io" | "engine" | "dtc" | "fuel" | "gps" | "accel" | "ids";
+  description: string;
+  recommended?: boolean;
+}
+
+const DIAGNOSTIC_COLUMNS: DiagnosticColumnDef[] = [
+  // I/O Crudo & Diagnóstico Avanzado
+  {
+    key: "rawIoData",
+    label: "Datos I/O Crudos AVL (rawIoData)",
+    category: "io",
+    description: "Mapa completo de entradas/salidas y IDs AVL del rastreador sin procesar",
+    recommended: true,
+  },
+  {
+    key: "eventId",
+    label: "ID de Evento AVL (eventId)",
+    category: "io",
+    description: "ID del disparador específico que generó la transmisión",
+    recommended: true,
+  },
+  {
+    key: "extra",
+    label: "I/O Adicional no mapeado (extra)",
+    category: "io",
+    description: "Parámetros I/O secundarios recibidos fuera del perfil base",
+    recommended: false,
+  },
+
+  // Motor y Sensores OBD-II / CAN
+  {
+    key: "powerSupply",
+    label: "Voltaje de Batería (V)",
+    category: "engine",
+    description: "Alimentación eléctrica externa del vehículo",
+    recommended: true,
+  },
+  {
+    key: "ignition",
+    label: "Ignición (Llave de Contacto)",
+    category: "engine",
+    description: "Estado del switch de encendido (true/false)",
+    recommended: true,
+  },
+  {
+    key: "rpm",
+    label: "RPM del Motor",
+    category: "engine",
+    description: "Revoluciones por minuto reportadas por CAN/OBD",
+    recommended: true,
+  },
+  {
+    key: "engineLoad",
+    label: "Carga del Motor (%)",
+    category: "engine",
+    description: "Porcentaje de esfuerzo y exigencia del motor",
+    recommended: true,
+  },
+  {
+    key: "coolantTemp",
+    label: "Temp. de Refrigerante (°C)",
+    category: "engine",
+    description: "Temperatura del líquido refrigerante del motor",
+    recommended: true,
+  },
+  {
+    key: "maf",
+    label: "Flujo Masa de Aire MAF (g/s)",
+    category: "engine",
+    description: "Masa de aire aspirada para mezcla aire-combustible",
+    recommended: true,
+  },
+  {
+    key: "throttlePosition",
+    label: "Posición del Acelerador (%)",
+    category: "engine",
+    description: "Apertura del pedal o mariposa de admisión",
+    recommended: true,
+  },
+  {
+    key: "intakeAirTemp",
+    label: "Temp. Aire de Admisión (°C)",
+    category: "engine",
+    description: "Temperatura del aire que ingresa al múltiple",
+    recommended: true,
+  },
+  {
+    key: "intakeMap",
+    label: "Presión Múltiple MAP (kPa)",
+    category: "engine",
+    description: "Presión absoluta en el colector de admisión",
+    recommended: true,
+  },
+  {
+    key: "ambientAirTemp",
+    label: "Temp. Ambiente (°C)",
+    category: "engine",
+    description: "Temperatura exterior circundante",
+    recommended: false,
+  },
+  {
+    key: "barometricPressure",
+    label: "Presión Barométrica (kPa)",
+    category: "engine",
+    description: "Presión atmosférica externa",
+    recommended: false,
+  },
+  {
+    key: "oilTemp",
+    label: "Temp. de Aceite (°C)",
+    category: "engine",
+    description: "Temperatura del lubricante del motor",
+    recommended: true,
+  },
+  {
+    key: "fuelPressure",
+    label: "Presión de Combustible (kPa)",
+    category: "engine",
+    description: "Presión del riel de combustible",
+    recommended: true,
+  },
+  {
+    key: "shortFuelTrim",
+    label: "Ajuste de Combustible STFT (%)",
+    category: "engine",
+    description: "Compensación de inyección a corto plazo",
+    recommended: true,
+  },
+  {
+    key: "vehicleWeight",
+    label: "Peso / Carga Vehicular (kg)",
+    category: "engine",
+    description: "Peso bruto combinado o carga según CAN/FMS",
+    recommended: false,
+  },
+
+  // Diagnóstico DTC & Odometría
+  {
+    key: "dtcCount",
+    label: "Cantidad Fallas DTC",
+    category: "dtc",
+    description: "Número de códigos de avería activos",
+    recommended: true,
+  },
+  {
+    key: "faultCodes",
+    label: "Códigos de Falla OBD-II",
+    category: "dtc",
+    description: "Lista de códigos DTC registrados (ej. P0300)",
+    recommended: true,
+  },
+  {
+    key: "vin",
+    label: "VIN del Vehículo",
+    category: "dtc",
+    description: "Número de identificación vehicular extraído de centralita",
+    recommended: false,
+  },
+  {
+    key: "odometer",
+    label: "Odómetro Total",
+    category: "dtc",
+    description: "Kilometraje acumulado por odómetro/tacógrafo",
+    recommended: true,
+  },
+  {
+    key: "engineHours",
+    label: "Horas de Motor (h)",
+    category: "dtc",
+    description: "Total de horas de operación acumuladas",
+    recommended: true,
+  },
+  {
+    key: "unplugged",
+    label: "Dispositivo Desconectado",
+    category: "dtc",
+    description: "Alerta por desconexión o pérdida de alimentación",
+    recommended: true,
+  },
+
+  // Combustible
+  {
+    key: "fuelLevel",
+    label: "Nivel de Combustible (%)",
+    category: "fuel",
+    description: "Porcentaje de tanque restante",
+    recommended: true,
+  },
+  {
+    key: "fuelLevelLiters",
+    label: "Nivel de Combustible (Litros)",
+    category: "fuel",
+    description: "Volumen calibrado en litros",
+    recommended: true,
+  },
+  {
+    key: "fuelConsumption",
+    label: "Consumo Total Acumulado (L)",
+    category: "fuel",
+    description: "Litros consumidos acumulados reportados por CAN",
+    recommended: true,
+  },
+  {
+    key: "fuelRate",
+    label: "Flujo de Combustible (L/h)",
+    category: "fuel",
+    description: "Tasa instantánea de consumo por hora",
+    recommended: true,
+  },
+
+  // GPS y Cinemática
+  {
+    key: "timestamp",
+    label: "Marca de Tiempo (UTC)",
+    category: "gps",
+    description: "Fecha y hora exacta del reporte de telemetría",
+    recommended: true,
+  },
+  {
+    key: "latitude",
+    label: "Latitud Filtrada",
+    category: "gps",
+    description: "Latitud tras corrección y snapping",
+    recommended: true,
+  },
+  {
+    key: "longitude",
+    label: "Longitud Filtrada",
+    category: "gps",
+    description: "Longitud tras corrección y snapping",
+    recommended: true,
+  },
+  {
+    key: "rawLatitude",
+    label: "Latitud GPS Cruda",
+    category: "gps",
+    description: "Latitud original del módem GPS antes de snapping",
+    recommended: true,
+  },
+  {
+    key: "rawLongitude",
+    label: "Longitud GPS Cruda",
+    category: "gps",
+    description: "Longitud original del módem GPS antes de snapping",
+    recommended: true,
+  },
+  {
+    key: "speed",
+    label: "Velocidad CAN / Odómetro (km/h)",
+    category: "gps",
+    description: "Velocidad de ruedas o tacógrafo",
+    recommended: true,
+  },
+  {
+    key: "gpsSpeed",
+    label: "Velocidad GPS (km/h)",
+    category: "gps",
+    description: "Velocidad calculada por satélites",
+    recommended: true,
+  },
+  {
+    key: "angle",
+    label: "Rumbo / Ángulo (°)",
+    category: "gps",
+    description: "Orientación respecto al norte (0-359°)",
+    recommended: false,
+  },
+  {
+    key: "altitude",
+    label: "Altitud (m)",
+    category: "gps",
+    description: "Metros sobre el nivel del mar",
+    recommended: false,
+  },
+  {
+    key: "satellites",
+    label: "Satélites en Vista",
+    category: "gps",
+    description: "Calidad de fijación satelital GPS",
+    recommended: false,
+  },
+  {
+    key: "status",
+    label: "Estado de Movimiento",
+    category: "gps",
+    description: "MOVING, IDLING, STOPPED, PARKED",
+    recommended: true,
+  },
+  {
+    key: "movement",
+    label: "Indicador de Movimiento",
+    category: "gps",
+    description: "Detección por acelerómetro de traslación",
+    recommended: false,
+  },
+
+  // Acelerómetro y Conducción
+  {
+    key: "accelX",
+    label: "Acelerómetro Eje X (g)",
+    category: "accel",
+    description: "Aceleración longitudinal",
+    recommended: false,
+  },
+  {
+    key: "accelY",
+    label: "Acelerómetro Eje Y (g)",
+    category: "accel",
+    description: "Aceleración lateral",
+    recommended: false,
+  },
+  {
+    key: "accelZ",
+    label: "Acelerómetro Eje Z (g)",
+    category: "accel",
+    description: "Aceleración vertical",
+    recommended: false,
+  },
+  {
+    key: "harshAcceleration",
+    label: "Aceleración Brusca",
+    category: "accel",
+    description: "Indicador de acelerón súbito",
+    recommended: false,
+  },
+  {
+    key: "harshBraking",
+    label: "Frenado Brusco",
+    category: "accel",
+    description: "Indicador de frenada severa",
+    recommended: false,
+  },
+  {
+    key: "harshCornering",
+    label: "Giro Brusco",
+    category: "accel",
+    description: "Indicador de viraje violento",
+    recommended: false,
+  },
+  {
+    key: "harshAccelerationDuration",
+    label: "Duración Aceleración Brusca",
+    category: "accel",
+    description: "Milisegundos del evento",
+    recommended: false,
+  },
+  {
+    key: "harshBrakingDuration",
+    label: "Duración Frenado Brusco",
+    category: "accel",
+    description: "Milisegundos del evento",
+    recommended: false,
+  },
+  {
+    key: "harshCorneringDuration",
+    label: "Duración Giro Brusco",
+    category: "accel",
+    description: "Milisegundos del evento",
+    recommended: false,
+  },
+  {
+    key: "harshAccelerationAverage",
+    label: "Promedio Aceleración Brusca",
+    category: "accel",
+    description: "Magnitud media del impacto",
+    recommended: false,
+  },
+  {
+    key: "harshBrakingAverage",
+    label: "Promedio Frenado Brusco",
+    category: "accel",
+    description: "Magnitud media del impacto",
+    recommended: false,
+  },
+  {
+    key: "harshCorneringAverage",
+    label: "Promedio Giro Brusco",
+    category: "accel",
+    description: "Magnitud media del impacto",
+    recommended: false,
+  },
+
+  // Identificadores
+  {
+    key: "id",
+    label: "UUID del Registro (id)",
+    category: "ids",
+    description: "Identificador único global del log",
+    recommended: false,
+  },
+  {
+    key: "tripId",
+    label: "UUID de Viaje (tripId)",
+    category: "ids",
+    description: "Identificador del viaje agrupador",
+    recommended: false,
+  },
+];
+
+const DIAGNOSTIC_CATEGORIES = [
+  { id: "io", label: "I/O Crudo & AVL", icon: Cpu, badgeClass: "badge-primary" },
+  { id: "engine", label: "Motor & Sensores", icon: Zap, badgeClass: "badge-warning" },
+  { id: "dtc", label: "DTC & Odometría", icon: AlertTriangle, badgeClass: "badge-secondary" },
+  { id: "fuel", label: "Combustible", icon: Fuel, badgeClass: "badge-accent" },
+  { id: "gps", label: "GPS & Cinemática", icon: MapPin, badgeClass: "badge-info" },
+  { id: "accel", label: "Manejo & Acelerómetro", icon: Activity, badgeClass: "badge-ghost" },
+  { id: "ids", label: "Identificadores", icon: FileText, badgeClass: "badge-ghost" },
+] as const;
+
+const TELTONIKA_AVL_DESCRIPTIONS: Record<number, { name: string; unit?: string }> = {
+  1: { name: "Digital Input 1 (Entrada Digital 1)" },
+  2: { name: "Digital Input 2 (Entrada Digital 2)" },
+  3: { name: "Digital Input 3 (Entrada Digital 3)" },
+  4: { name: "Digital Input 4 (Entrada Digital 4)" },
+  9: { name: "Analog Input 1 (Entrada Analógica 1)", unit: "mV" },
+  10: { name: "Analog Input 2 (Entrada Analógica 2)", unit: "mV" },
+  11: { name: "SIM ICCID" },
+  14: { name: "Engine Worktime (Horas de Motor)", unit: "min" },
+  16: { name: "Total Odometer (Odómetro)", unit: "m" },
+  17: { name: "Axis X (Acelerómetro X)", unit: "mg" },
+  18: { name: "Axis Y (Acelerómetro Y)", unit: "mg" },
+  19: { name: "Axis Z (Acelerómetro Z)", unit: "mg" },
+  21: { name: "GSM Signal (Nivel de Señal Móvil)" },
+  24: { name: "Speed (Velocidad Odómetro)", unit: "km/h" },
+  25: { name: "Engine Coolant Temp (Temp. Refrigerante)", unit: "°C" },
+  30: { name: "DTC Faults Count (Cantidad Fallas)" },
+  31: { name: "Accelerator Pedal Position (Posición Pedal)", unit: "%" },
+  32: { name: "Fuel Consumed (Total Combustible Consumido)", unit: "L" },
+  33: { name: "Short Term Fuel Trim (STFT)", unit: "%" },
+  34: { name: "Fuel Pressure (Presión de Combustible)", unit: "kPa" },
+  36: { name: "CAN Total Distance (Odómetro CAN)", unit: "m" },
+  37: { name: "CAN Fuel Level (Nivel Combustible)", unit: "%" },
+  40: { name: "OBD MAF (Flujo Masa de Aire)", unit: "0.01 g/s" },
+  44: { name: "Intake Air Temp (Temp. Aire Admisión)", unit: "°C" },
+  45: { name: "Intake Manifold Pressure (MAP)", unit: "kPa" },
+  46: { name: "Ambient Air Temp (Temp. Ambiente)", unit: "°C" },
+  50: { name: "Barometric Pressure (Presión Barométrica)", unit: "kPa" },
+  66: { name: "External Voltage (Voltaje Batería Vehículo)", unit: "mV" },
+  67: { name: "Battery Voltage (Batería Interna GPS)", unit: "mV" },
+  68: { name: "Battery Current (Corriente Batería)", unit: "mA" },
+  80: { name: "FMS Wheel Speed (Velocidad FMS)", unit: "km/h" },
+  81: { name: "CAN Vehicle Speed (Velocidad CAN)", unit: "km/h" },
+  82: { name: "CAN Accelerator Pedal (Acelerador CAN)", unit: "%" },
+  84: { name: "CAN Fuel Level (Combustible CAN)", unit: "0.1 L" },
+  85: { name: "CAN Engine Speed (RPM Motor CAN)", unit: "rpm" },
+  86: { name: "FMS Total Fuel Used (Consumo Total FMS)", unit: "L" },
+  87: { name: "FMS Fuel Level (Nivel Combustible FMS)", unit: "%" },
+  88: { name: "FMS Engine Speed (RPM Motor FMS)", unit: "rpm" },
+  102: { name: "Engine Worktime (Tiempo Operación Motor)", unit: "s" },
+  104: { name: "FMS Engine Total Hours (Horas Motor FMS)", unit: "h" },
+  127: { name: "FMS Coolant Temp (Temp. Refrigerante FMS)", unit: "°C" },
+  128: { name: "Ambient Air Temp (Temp. Ambiente)", unit: "°C" },
+  135: { name: "FMS Fuel Rate (Flujo Combustible FMS)", unit: "0.1 L/h" },
+  139: { name: "Gross Vehicle Weight (Peso Vehicular)", unit: "kg" },
+  176: { name: "LVCAN DTC Faults" },
+  192: { name: "Tachograph / CAN Odometer", unit: "m" },
+  236: { name: "Axis X (Acelerómetro X)", unit: "mg" },
+  237: { name: "Axis Y (Acelerómetro Y)", unit: "mg" },
+  238: { name: "Axis Z (Acelerómetro Z)", unit: "mg" },
+  239: { name: "Ignition (Ignición / Switch Contacto)", unit: "1/0" },
+  240: { name: "Movement (Movimiento)", unit: "1/0" },
+  241: { name: "GSM Operator (Operador Móvil)" },
+  243: { name: "Idling (Ralentí Excesivo)" },
+  250: { name: "Trip Status (Estado de Viaje)" },
+  252: { name: "Unplugged (Desconexión de Rastreador)", unit: "1/0" },
+  253: { name: "Eco Driving Type (Tipo Evento Conducción)" },
+  257: { name: "Crash Trace (Colisión Detectada)" },
+  258: { name: "Eco Driving Value Max (Valor Máximo Eco)" },
+  259: { name: "Eco Driving Average (Promedio Eco)" },
+  260: { name: "Eco Driving Duration (Duración Eco)", unit: "ms" },
+};
 
 export function VehicleDetailClient({
   vehicle: initialVehicle,
@@ -162,6 +642,48 @@ export function VehicleDetailClient({
   const [diagFormat, setDiagFormat] = useState<"csv" | "json">("csv");
   const [diagLoading, setDiagLoading] = useState(false);
   const [diagError, setDiagError] = useState<string | null>(null);
+
+  // Column selection for diagnostics export
+  const [selectedDiagColumns, setSelectedDiagColumns] = useState<string[]>(() =>
+    DIAGNOSTIC_COLUMNS.map((c) => c.key),
+  );
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
+
+  // Inspector modal for Raw I/O
+  const [selectedRawIoLog, setSelectedRawIoLog] = useState<any | null>(null);
+  const [ioCopied, setIoCopied] = useState(false);
+
+  const handleSelectAllColumns = () => {
+    setSelectedDiagColumns(DIAGNOSTIC_COLUMNS.map((c) => c.key));
+  };
+
+  const handleSelectRecommendedColumns = () => {
+    setSelectedDiagColumns(
+      DIAGNOSTIC_COLUMNS.filter((c) => c.recommended).map((c) => c.key),
+    );
+  };
+
+  const handleDeselectAllColumns = () => {
+    setSelectedDiagColumns([]);
+  };
+
+  const handleToggleColumn = (key: string) => {
+    setSelectedDiagColumns((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  };
+
+  const handleToggleCategory = (category: string) => {
+    const catCols = DIAGNOSTIC_COLUMNS.filter((c) => c.category === category).map(
+      (c) => c.key,
+    );
+    const allSelected = catCols.every((k) => selectedDiagColumns.includes(k));
+    if (allSelected) {
+      setSelectedDiagColumns((prev) => prev.filter((k) => !catCols.includes(k)));
+    } else {
+      setSelectedDiagColumns((prev) => Array.from(new Set([...prev, ...catCols])));
+    }
+  };
 
   // Vista previa interactiva de registros de diagnóstico
   const [diagLogs, setDiagLogs] = useState<any[]>([]);
@@ -435,6 +957,10 @@ export function VehicleDetailClient({
   }, [diagLogs]);
 
   const handleDiagnosticsDownload = async () => {
+    if (selectedDiagColumns.length === 0) {
+      setDiagError("Debes seleccionar al menos una columna para la descarga.");
+      return;
+    }
     setDiagLoading(true);
     setDiagError(null);
     try {
@@ -446,6 +972,8 @@ export function VehicleDetailClient({
         to: toUTC,
         format: diagFormat,
       });
+
+      params.append("columns", selectedDiagColumns.join(","));
 
       const response = await api.get(
         `/vehicles/${initialVehicle.id}/diagnostics/download?${params.toString()}`,
@@ -2448,6 +2976,157 @@ export function VehicleDetailClient({
               </div>
             </div>
 
+            {/* Column Selection for Export */}
+            <div className="border border-base-200/80 rounded-2xl bg-base-200/30 p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Sliders className="size-4 text-primary" />
+                  <span className="text-xs font-bold text-base-content">
+                    Columnas para Descarga
+                  </span>
+                  <span className="badge badge-sm badge-primary badge-outline font-mono text-[11px]">
+                    {selectedDiagColumns.length} de {DIAGNOSTIC_COLUMNS.length} seleccionadas
+                  </span>
+                  {selectedDiagColumns.includes("rawIoData") && (
+                    <span className="badge badge-sm bg-primary/10 text-primary border-primary/20 font-bold text-[10px] gap-1">
+                      <Cpu className="size-2.5" />
+                      rawIoData incluido
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleSelectAllColumns}
+                    className="btn btn-ghost btn-xs text-[11px] text-primary"
+                  >
+                    Seleccionar Todo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSelectRecommendedColumns}
+                    className="btn btn-ghost btn-xs text-[11px] text-base-content/70"
+                  >
+                    Recomendadas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeselectAllColumns}
+                    className="btn btn-ghost btn-xs text-[11px] text-base-content/50"
+                  >
+                    Limpiar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowColumnSelector(!showColumnSelector)}
+                    className="btn btn-outline btn-xs border-base-300 gap-1 text-[11px]"
+                  >
+                    {showColumnSelector ? "Ocultar Columnas" : "Personalizar Columnas"}
+                    {showColumnSelector ? (
+                      <ChevronUp className="size-3" />
+                    ) : (
+                      <ChevronDown className="size-3" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Collapsible Column Picker */}
+              {showColumnSelector && (
+                <div className="pt-2 border-t border-base-200/60 space-y-4 animate-in fade-in duration-150">
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                    {DIAGNOSTIC_CATEGORIES.map((cat) => {
+                      const CatIcon = cat.icon;
+                      const catCols = DIAGNOSTIC_COLUMNS.filter(
+                        (c) => c.category === cat.id,
+                      );
+                      const allCatSelected = catCols.every((c) =>
+                        selectedDiagColumns.includes(c.key),
+                      );
+                      const someCatSelected = catCols.some((c) =>
+                        selectedDiagColumns.includes(c.key),
+                      );
+
+                      return (
+                        <div
+                          key={cat.id}
+                          className="p-3 rounded-xl bg-base-100/70 border border-base-200/70 space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <button
+                              type="button"
+                              onClick={() => handleToggleCategory(cat.id)}
+                              className="flex items-center gap-1.5 text-xs font-bold text-base-content hover:text-primary transition-colors text-left"
+                            >
+                              <CatIcon className="size-3.5 text-primary shrink-0" />
+                              <span>{cat.label}</span>
+                              <span className="text-[10px] text-base-content/40 font-mono font-normal">
+                                ({catCols.filter((c) => selectedDiagColumns.includes(c.key)).length}/{catCols.length})
+                              </span>
+                            </button>
+                            <input
+                              type="checkbox"
+                              checked={allCatSelected}
+                              ref={(el) => {
+                                if (el) {
+                                  el.indeterminate = !allCatSelected && someCatSelected;
+                                }
+                              }}
+                              onChange={() => handleToggleCategory(cat.id)}
+                              className="checkbox checkbox-xs checkbox-primary"
+                            />
+                          </div>
+
+                          <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                            {catCols.map((col) => {
+                              const isChecked = selectedDiagColumns.includes(col.key);
+                              const isRawIo = col.key === "rawIoData";
+                              return (
+                                <label
+                                  key={col.key}
+                                  className={`flex items-start justify-between gap-2 p-1.5 rounded-lg text-[11px] cursor-pointer transition-colors ${
+                                    isRawIo
+                                      ? isChecked
+                                        ? "bg-primary/10 border border-primary/25"
+                                        : "bg-base-200/40 border border-dashed border-primary/30"
+                                      : isChecked
+                                        ? "bg-base-200/50"
+                                        : "hover:bg-base-200/30 text-base-content/60"
+                                  }`}
+                                >
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1">
+                                      <span className="font-semibold truncate">
+                                        {col.label}
+                                      </span>
+                                      {isRawIo && (
+                                        <span className="badge badge-xs bg-primary text-primary-content text-[9px] font-bold shrink-0">
+                                          RAW
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-base-content/45 leading-tight truncate">
+                                      {col.key} · {col.description}
+                                    </p>
+                                  </div>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleToggleColumn(col.key)}
+                                    className="checkbox checkbox-xs checkbox-primary mt-0.5 shrink-0"
+                                  />
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+
             {diagError && (
               <div className="alert alert-error bg-red-500/10 border-red-500/20 text-red-700 dark:text-red-300 rounded-xl text-sm p-3">
                 <AlertCircle className="size-4 shrink-0" />
@@ -2472,12 +3151,21 @@ export function VehicleDetailClient({
                 variant="primary"
                 size="sm"
                 isLoading={diagLoading}
-                disabled={diagLoading || !diagFrom || !diagTo || diagTotal === 0}
+                disabled={
+                  diagLoading ||
+                  !diagFrom ||
+                  !diagTo ||
+                  diagTotal === 0 ||
+                  selectedDiagColumns.length === 0
+                }
                 onClick={handleDiagnosticsDownload}
                 className="gap-2"
               >
                 <Download className="size-4" />
                 Descargar {diagFormat === "csv" ? "CSV" : "JSON"}
+                {selectedDiagColumns.length < DIAGNOSTIC_COLUMNS.length
+                  ? ` (${selectedDiagColumns.length} cols)`
+                  : ""}
                 {diagTotal !== null && diagTotal > 0 ? ` (${diagTotal} regs)` : ""}
               </Button>
 
@@ -2640,6 +3328,7 @@ export function VehicleDetailClient({
                       <th>Fallas DTC</th>
                       <th>Temp. Refrigerante</th>
                       <th>Velocidad</th>
+                      <th>Raw I/O</th>
                       <th>Estado</th>
                     </tr>
                   </thead>
@@ -2749,6 +3438,26 @@ export function VehicleDetailClient({
                           <td className="font-mono text-xs">
                             {log.speed != null ? `${log.speed} km/h` : "-"}
                           </td>
+                          <td className="font-mono text-xs whitespace-nowrap">
+                            {log.rawIoData &&
+                            typeof log.rawIoData === "object" &&
+                            Object.keys(log.rawIoData).length > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedRawIoLog(log);
+                                  setIoCopied(false);
+                                }}
+                                className="btn btn-ghost btn-xs text-[11px] font-mono px-2 py-0.5 rounded-md bg-primary/10 hover:bg-primary/20 text-primary border border-primary/25 inline-flex items-center gap-1 transition-colors"
+                                title="Ver detalles y valores de entradas/salidas AVL"
+                              >
+                                <Cpu className="size-3 shrink-0" />
+                                <span>I/O ({Object.keys(log.rawIoData).length})</span>
+                              </button>
+                            ) : (
+                              <span className="text-base-content/30">-</span>
+                            )}
+                          </td>
                           <td>
                             <span className="text-[10px] font-semibold text-base-content/60 uppercase">
                               {log.status || (log.movement ? "MOVIMIENTO" : "DETENIDO")}
@@ -2820,6 +3529,54 @@ export function VehicleDetailClient({
                   desc: "Determina si el vehículo llegó a desplazarse o si permaneció varado.",
                 },
                 {
+                  field: "rawIoData",
+                  label: "Datos I/O Crudos AVL",
+                  color: "primary",
+                  desc: "Diccionario completo con IDs y valores crudos de telemetría de Teltonika para IA y diagnóstico forense.",
+                },
+                {
+                  field: "eventId",
+                  label: "ID de Evento AVL",
+                  color: "indigo",
+                  desc: "Identificador del evento AVL que provocó el registro (ej. encendido, frenado brusco, apagado).",
+                },
+                {
+                  field: "throttlePosition",
+                  label: "Posición del Acelerador (%)",
+                  color: "cyan",
+                  desc: "Porcentaje de apertura del acelerador o mariposa (0-100%) para correlacionar con esfuerzo y RPM.",
+                },
+                {
+                  field: "intakeMap",
+                  label: "Presión Múltiple Admisión MAP (kPa)",
+                  color: "blue",
+                  desc: "Presión absoluta de aire en el colector (kPa), fundamental para el cálculo volumétrico de inyección.",
+                },
+                {
+                  field: "oilTemp",
+                  label: "Temperatura de Aceite (°C)",
+                  color: "amber",
+                  desc: "Supervisión térmica crítica del motor (°C) para prevenir sobrecalentamiento y fallas mecánicas.",
+                },
+                {
+                  field: "shortFuelTrim",
+                  label: "Ajuste de Combustible STFT (%)",
+                  color: "emerald",
+                  desc: "Corrección dinámica de mezcla aire/combustible (-100% a +99%) para diagnosticar fallas de inyección.",
+                },
+                {
+                  field: "odometer",
+                  label: "Odómetro Total",
+                  color: "neutral",
+                  desc: "Kilometraje reportado directamente por la centralita del vehículo vía CAN bus o tacógrafo.",
+                },
+                {
+                  field: "engineHours",
+                  label: "Horas de Motor (h)",
+                  color: "neutral",
+                  desc: "Tiempo total de funcionamiento acumulado del motor para planes de mantenimiento preventivo.",
+                },
+                {
                   field: "unplugged",
                   label: "Dispositivo Desconectado",
                   color: "neutral",
@@ -2848,6 +3605,125 @@ export function VehicleDetailClient({
               ))}
             </div>
           </div>
+
+          {/* Modal de Inspección de Raw I/O */}
+          <Modal
+            isOpen={!!selectedRawIoLog}
+            onClose={() => setSelectedRawIoLog(null)}
+            title="Inspección de Entradas / Salidas Crudas (AVL Raw I/O)"
+          >
+            {selectedRawIoLog && (
+              <div className="space-y-4 pt-1">
+                <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-xl bg-base-200/50 border border-base-200 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Clock className="size-3.5 text-primary" />
+                    <span>
+                      Hora Local:{" "}
+                      <strong className="font-mono text-base-content">
+                        {formatDateTimeWithSeconds(selectedRawIoLog.timestamp)}
+                      </strong>
+                    </span>
+                  </div>
+                  {selectedRawIoLog.eventId != null && (
+                    <div className="flex items-center gap-1.5 font-mono">
+                      <span className="text-base-content/50">Event ID:</span>
+                      <span className="badge badge-sm badge-primary font-bold">
+                        {selectedRawIoLog.eventId}
+                      </span>
+                    </div>
+                  )}
+                  {selectedRawIoLog.powerSupply != null && (
+                    <div className="flex items-center gap-1 font-mono">
+                      <span className="text-base-content/50">Voltaje:</span>
+                      <span className="font-bold text-base-content">
+                        {selectedRawIoLog.powerSupply.toFixed(1)} V
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold text-base-content/70 uppercase tracking-wider">
+                      Parámetros Teltonika Decodificados
+                    </h5>
+                    <span className="text-[11px] text-base-content/50 font-mono">
+                      {Object.keys(selectedRawIoLog.rawIoData || {}).length} parámetros encontrados
+                    </span>
+                  </div>
+
+                  <div className="max-h-60 overflow-y-auto rounded-xl border border-base-200 divide-y divide-base-200/60 bg-base-100">
+                    {Object.entries(selectedRawIoLog.rawIoData || {}).map(([id, val]) => {
+                      const numId = Number(id);
+                      const meta = TELTONIKA_AVL_DESCRIPTIONS[numId];
+                      return (
+                        <div
+                          key={id}
+                          className="flex items-center justify-between p-2.5 hover:bg-base-200/30 text-xs transition-colors"
+                        >
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono font-bold text-primary px-1.5 py-0.5 rounded bg-primary/10 text-[11px]">
+                                ID {id}
+                              </span>
+                              <span className="font-semibold text-base-content/85">
+                                {meta?.name || "Parámetro AVL Teltonika"}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-right font-mono font-bold text-base-content">
+                            {String(val)}
+                            {meta?.unit ? (
+                              <span className="text-base-content/40 text-[11px] font-normal ml-1">
+                                {meta.unit}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between">
+                    <h5 className="text-xs font-bold text-base-content/70 uppercase tracking-wider">
+                      JSON Crudo
+                    </h5>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (navigator.clipboard) {
+                          navigator.clipboard.writeText(
+                            JSON.stringify(selectedRawIoLog.rawIoData, null, 2),
+                          );
+                          setIoCopied(true);
+                          setTimeout(() => setIoCopied(false), 2000);
+                        }
+                      }}
+                      className="btn btn-ghost btn-xs gap-1 text-[11px] text-primary"
+                    >
+                      {ioCopied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+                      {ioCopied ? "¡Copiado!" : "Copiar JSON"}
+                    </button>
+                  </div>
+                  <pre className="p-3 rounded-xl bg-base-300/40 border border-base-300 font-mono text-[11px] text-base-content/80 max-h-40 overflow-y-auto">
+                    {JSON.stringify(selectedRawIoLog.rawIoData, null, 2)}
+                  </pre>
+                </div>
+
+                <div className="flex justify-end pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedRawIoLog(null)}
+                  >
+                    Cerrar
+                  </Button>
+                </div>
+              </div>
+            )}
+          </Modal>
         </div>
       )}
 

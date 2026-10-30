@@ -976,13 +976,14 @@ export class VehiclesService {
   /**
    * Genera un archivo de diagnóstico (CSV o JSON) con los registros de
    * telemetría crudos de un vehículo para un rango de fechas dado.
-   * Máximo 7 días por descarga.
+   * Máximo 7 días por descarga. Permite filtrar columnas específicas.
    */
   async generateDiagnosticsExport(
     vehicleId: string,
     fromStr?: string,
     toStr?: string,
     format: 'csv' | 'json' = 'csv',
+    columnsParam?: string | string[],
   ): Promise<{ buffer: Buffer; filename: string; contentType: string }> {
     const toDate = toStr ? new Date(toStr) : new Date();
     const defaultFrom = new Date(toDate.getTime() - 24 * 60 * 60 * 1000);
@@ -1035,18 +1036,11 @@ export class VehiclesService {
       .replace(/[^a-zA-Z0-9_-]/g, '');
     const dateTag = fromDate.toISOString().slice(0, 10);
 
-    if (format === 'json') {
-      const buffer = Buffer.from(JSON.stringify(logs, null, 2), 'utf-8');
-      return {
-        buffer,
-        filename: `diagnostico_${slug}_${dateTag}.json`,
-        contentType: 'application/json',
-      };
-    }
-
-    // CSV
-    const headers = [
+    const allAvailableColumns = [
+      'id',
       'timestamp',
+      'tripId',
+      'vin',
       'latitude',
       'longitude',
       'rawLatitude',
@@ -1056,6 +1050,11 @@ export class VehiclesService {
       'angle',
       'altitude',
       'satellites',
+      'powerSupply',
+      'ignition',
+      'movement',
+      'unplugged',
+      'status',
       'rpm',
       'engineLoad',
       'coolantTemp',
@@ -1069,11 +1068,6 @@ export class VehiclesService {
       'fuelPressure',
       'shortFuelTrim',
       'vehicleWeight',
-      'powerSupply',
-      'ignition',
-      'movement',
-      'unplugged',
-      'status',
       'odometer',
       'engineHours',
       'dtcCount',
@@ -1098,6 +1092,46 @@ export class VehiclesService {
       'rawIoData',
       'extra',
     ];
+
+    let selectedColumns = allAvailableColumns;
+    if (columnsParam) {
+      const requestedList = (
+        Array.isArray(columnsParam)
+          ? columnsParam.flatMap((c) => c.split(','))
+          : columnsParam.split(',')
+      )
+        .map((c) => c.trim())
+        .filter(Boolean);
+
+      const validRequested = requestedList.filter((col) =>
+        allAvailableColumns.includes(col),
+      );
+      if (validRequested.length > 0) {
+        selectedColumns = validRequested;
+      }
+    }
+
+    if (format === 'json') {
+      const formattedLogs = logs.map((log) => {
+        const item: Record<string, unknown> = {};
+        for (const col of selectedColumns) {
+          item[col] = (log as Record<string, unknown>)[col];
+        }
+        return item;
+      });
+      const buffer = Buffer.from(
+        JSON.stringify(formattedLogs, null, 2),
+        'utf-8',
+      );
+      return {
+        buffer,
+        filename: `diagnostico_${slug}_${dateTag}.json`,
+        contentType: 'application/json',
+      };
+    }
+
+    // CSV
+    const headers = selectedColumns;
 
     const escape = (val: unknown): string => {
       if (val == null) return '';
@@ -1162,6 +1196,9 @@ export class VehiclesService {
           rawLongitude: true,
           speed: true,
           gpsSpeed: true,
+          angle: true,
+          altitude: true,
+          satellites: true,
           rpm: true,
           engineLoad: true,
           coolantTemp: true,
@@ -1180,12 +1217,22 @@ export class VehiclesService {
           movement: true,
           unplugged: true,
           status: true,
+          odometer: true,
+          engineHours: true,
           dtcCount: true,
           faultCodes: true,
+          vin: true,
           fuelLevel: true,
           fuelLevelLiters: true,
+          fuelConsumption: true,
+          fuelRate: true,
+          accelX: true,
+          accelY: true,
+          accelZ: true,
           eventId: true,
           rawIoData: true,
+          extra: true,
+          tripId: true,
         },
       }),
       this.prisma.telemetryLog.count({

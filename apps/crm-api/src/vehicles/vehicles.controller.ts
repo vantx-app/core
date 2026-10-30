@@ -275,6 +275,7 @@ export class VehiclesController {
       query.from,
       query.to,
       format,
+      query.columns,
     );
     res.set({
       'Content-Type': result.contentType,
